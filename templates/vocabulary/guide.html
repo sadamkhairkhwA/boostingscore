@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vocabulary guide — Boosting Score{% endblock %}
+{% block body_class %}vocab-app{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'vocabulary/css/guide.css' %}" />
+{% endblock %}
+
+{% block content %}
+  <div class="guide-page">
+    <a class="guide-back" href="{% url 'vocabulary:home' %}">← Back to vocabulary</a>
+    <h1 class="guide-title">Vocabulary guide</h1>
+    <p class="guide-sub">
+      Methods, tips, and how bands relate to what you practice here.
+    </p>
+
+    <div class="guide-tabs guide-swTab" id="swTab" role="tablist" aria-label="Guide sections">
+      <button type="button" class="g-tab on" data-tab="methods" role="tab" aria-selected="true">Methods</button>
+      <button type="button" class="g-tab" data-tab="bands" role="tab" aria-selected="false">Bands</button>
+      <button type="button" class="g-tab" data-tab="plan" role="tab" aria-selected="false">Study plan</button>
+    </div>
+
+    <div id="guide-panel-methods" class="g-section on" role="tabpanel">
+      <p class="g-sec-lbl">Study modes</p>
+      <div class="g-mcard">
+        <div class="g-mcard-hd">
+          <div class="g-mcard-icon" aria-hidden="true">📇</div>
+          <div class="g-mcard-info">
+            <div class="g-mcard-title">Flashcards</div>
+            <div class="g-mcard-sub">Mark Easy or Hard; due cards come back on your schedule.</div>
+          </div>
+          <span class="g-badge g-badge-review">Review</span>
+        </div>
+      </div>
+      <div class="g-mcard">
+        <div class="g-mcard-hd">
+          <div class="g-mcard-icon" aria-hidden="true">⌨</div>
+          <div class="g-mcard-info">
+            <div class="g-mcard-title">Type it</div>
+            <div class="g-mcard-sub">Practice producing sentences; useful for writing and speaking.</div>
+          </div>
+          <span class="g-badge g-badge-mixed">Mixed</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="guide-panel-bands" class="g-section" role="tabpanel">
+      <p class="g-sec-lbl">IELTS-style feedback</p>
+      <p style="font-size: 14px; color: #4b5563; line-height: 1.6">
+        Type it can return a band-style score. Treat it as formative feedback: focus on patterns
+        (collocations, precision, range) rather than a single number.
+      </p>
+    </div>
+
+    <div id="guide-panel-plan" class="g-section" role="tabpanel">
+      <p class="g-sec-lbl">Suggested rhythm</p>
+      <p style="font-size: 14px; color: #4b5563; line-height: 1.6">
+        Short daily sessions beat long occasional cramming. Mix flashcards with a little Type it
+        on the same topic to strengthen recognition and production together.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.getElementById("swTab");
+      if (!root) return;
+      var tabs = root.querySelectorAll(".g-tab");
+      var panels = {
+        methods: document.getElementById("guide-panel-methods"),
+        bands: document.getElementById("guide-panel-bands"),
+        plan: document.getElementById("guide-panel-plan"),
+      };
+      function show(key) {
+        Object.keys(panels).forEach(function (k) {
+          var p = panels[k];
+          if (!p) return;
+          p.classList.toggle("on", k === key);
+        });
+        tabs.forEach(function (t) {
+          var on = t.getAttribute("data-tab") === key;
+          t.classList.toggle("on", on);
+          t.setAttribute("aria-selected", on ? "true" : "false");
+        });
+      }
+      tabs.forEach(function (t) {
+        t.addEventListener("click", function () {
+          show(t.getAttribute("data-tab") || "methods");
+        });
+      });
+    })();
+  </script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Reading practice — Boosting Score{% endblock %}
+
+{% block content %}
+  <div class="reading-studio shell">
+    <header class="rw-studio-header rw-studio-header--split">
+      <div>
+        <h1 class="rw-page-title">Reading practice</h1>
+        <p class="rw-page-sub">Choose a topic and level to begin</p>
+      </div>
+      <p class="rw-studio-badge">{{ passages_ready }} passage{{ passages_ready|pluralize }} ready</p>
+    </header>
+
+    <section class="rw-ielts-callout" aria-label="IELTS full tests">
+      <div>
+        <h2 class="rw-ielts-title">IELTS full reading tests</h2>
+        <p class="rw-ielts-sub">Computer-delivered style screen with 40 questions and timed navigation.</p>
+      </div>
+      <a class="rw-ielts-btn" href="{% url 'reading:ielts' %}">
+        Open IELTS tests
+      </a>
+    </section>
+
+    <div class="rw-filter-block" role="navigation" aria-label="Topics">
+      <span class="rw-filter-label">Topic</span>
+      <div class="rw-filter-pills">
+        {% for value, label in topic_choices %}
+          <a
+            class="rw-pill rw-pill--topic{% if value == current_topic %} is-active{% endif %}"
+            href="{% url 'reading:index' %}?topic={{ value }}&level={{ current_level }}"
+            {% if value == current_topic %}aria-current="true"{% endif %}
+          >{{ label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="rw-filter-block" role="navigation" aria-label="Levels">
+      <span class="rw-filter-label">Level</span>
+      <div class="rw-filter-pills">
+        {% for code, label in level_choices %}
+          <a
+            class="rw-pill rw-pill--level{% if code == current_level %} is-active{% endif %}"
+            href="{% url 'reading:index' %}?topic={{ current_topic }}&level={{ code }}"
+            {% if code == current_level %}aria-current="true"{% endif %}
+          >{{ label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if passages %}
+      <ul class="reading-pass-list rw-pass-list" id="reading-passages">
+        {% for p in passages %}
+          <li>
+            <a class="reading-pass-card rw-pass-card" href="{% url 'reading:detail' p.pk %}">
+              <span class="reading-pass-card__dot reading-pass-card__dot--{{ p.level }}" aria-hidden="true"></span>
+              <div class="reading-pass-card__body">
+                <p class="reading-pass-card__title">{{ p.title }}</p>
+                <p class="reading-pass-card__meta">
+                  Level {{ p.level }} · {{ p.get_topic_display }} · {{ p.questions.count }} question{{ p.questions.count|pluralize }} · {{ p.word_count }} words
+                </p>
+              </div>
+              <span class="reading-pass-card__cta">
+                {% if p.level == 1 %}Beginner{% elif p.level == 2 %}Intermediate{% else %}Advanced{% endif %}
+                <span class="reading-pass-card__arrow" aria-hidden="true">→</span>
+              </span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="rw-empty-card" id="reading-passages">
+        <p class="rw-empty-card__text">
+          No passages for this filter yet. Add them in
+          <a href="{% url 'admin:reading_readingpassage_changelist' %}">the admin</a>.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

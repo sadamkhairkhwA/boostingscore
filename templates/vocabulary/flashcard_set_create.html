@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create flashcard set — Boosting Score{% endblock %}
+
+{% block body_class %}fc-create-page-body vocab-app{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/fc_create.css' %}?v=5" />
+{% endblock %}
+
+{% block content %}
+  <div class="fc-create-page">
+    <div class="fc-create-layout">
+      <section class="fc-create-deck" aria-labelledby="fc-create-heading">
+        <p class="fc-create-back">
+          <a href="{% url 'vocabulary:index' %}">← Back to vocabulary</a>
+        </p>
+        <header class="fc-create-page-head">
+          <h1 class="fc-create-heading" id="fc-create-heading">Create a new flashcard set</h1>
+          <button
+            type="button"
+            class="fc-create-btn fc-create-btn--primary fc-create-save"
+            id="fc-create-save-top"
+          >
+            Save deck
+          </button>
+        </header>
+
+        <div class="fc-create-set-fields" id="fc-create-set-fields">
+          <div class="fc-create-field fc-create-field--set">
+            <label class="fc-create-label" for="fc-set-title">Title</label>
+            <input
+              type="text"
+              id="fc-set-title"
+              class="fc-create-input fc-create-input--set"
+              maxlength="120"
+              autocomplete="off"
+              placeholder="Name your set"
+            />
+          </div>
+          <div class="fc-create-field fc-create-field--set">
+            <label class="fc-create-label" for="fc-set-description">Description</label>
+            <textarea
+              id="fc-set-description"
+              class="fc-create-textarea fc-create-textarea--set"
+              rows="2"
+              maxlength="4000"
+              placeholder="Add a description…"
+            ></textarea>
+          </div>
+        </div>
+
+        <p class="fc-create-subtitle fc-create-subtitle--cards">Add terms and definitions below. Use the tools on the right to generate or fill with AI.</p>
+        <p class="fc-create-ready-count" id="fc-create-ready-count" aria-live="polite">0 cards ready to save</p>
+        <p class="fc-create-valid-line" id="fc-create-valid-line" hidden aria-live="polite"></p>
+
+        <div class="fc-create-cards-toolbar">
+          <button type="button" class="fc-create-btn fc-create-btn--outline" id="fc-add-card-row">
+            + Add card
+          </button>
+        </div>
+
+        <div class="fc-create-loading" id="fc-create-loading" hidden>
+          <p class="fc-create-loading__title">AI is generating your cards…</p>
+          <p class="fc-create-loading__sub">This usually takes a few seconds.</p>
+          <div class="fc-create-skeleton" aria-hidden="true">
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+          </div>
+        </div>
+
+        <div class="fc-create-list" id="fc-create-list"></div>
+        <p class="fc-create-empty-hint" id="fc-create-empty-hint">No cards yet — generate with AI or add one manually.</p>
+
+        <div class="fc-create-save-row">
+          <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-btn--large fc-create-save" id="fc-create-save">
+            Save all cards to deck
+          </button>
+          <p class="fc-create-save-meta" id="fc-create-save-meta"></p>
+        </div>
+      </section>
+
+      <aside class="fc-create-sidebar" aria-label="Tools">
+        <form id="fc-deck-csrf" class="fc-create-csrf" aria-hidden="true">{% csrf_token %}</form>
+
+        <div class="fc-create-panel fc-create-panel--ai">
+          <h2 class="fc-create-panel__title">AI generator</h2>
+          <p class="fc-create-panel__subtitle">Describe what you need; cards appear in the grid.</p>
+
+          <div class="fc-create-field">
+            <label class="fc-create-label" for="fc-create-prompt">Prompt</label>
+            <textarea
+              id="fc-create-prompt"
+              class="fc-create-textarea fc-create-textarea--prompt"
+              rows="4"
+              maxlength="120000"
+              placeholder="e.g. IELTS environment vocabulary for Task 2&#10;e.g. Medical terms for healthcare essays"
+            ></textarea>
+          </div>
+
+          <div class="fc-create-field">
+            <span class="fc-create-label" id="fc-create-count-label">How many cards?</span>
+            <div class="fc-create-pills" role="group" aria-labelledby="fc-create-count-label">
+              <button type="button" class="fc-create-pill" data-count="5">5</button>
+              <button type="button" class="fc-create-pill is-selected" data-count="10">10</button>
+              <button type="button" class="fc-create-pill" data-count="15">15</button>
+              <button type="button" class="fc-create-pill" data-count="20">20</button>
+              <button type="button" class="fc-create-pill" data-count="25">25</button>
+            </div>
+          </div>
+
+          <p class="fc-create-panel__subtitle" style="margin: 0 0 0.75rem; font-size: 0.875rem">
+            AI uses your vocabulary level (<strong>{{ user_vocab_level }}</strong>). Change it from <a href="{% url 'profile_settings' %}">profile</a> after retaking placement.
+          </p>
+
+          <div class="fc-create-field">
+            <span class="fc-create-label" id="fc-create-topic-label">Topic</span>
+            <div class="fc-create-topic-pills" role="group" aria-labelledby="fc-create-topic-label">
+              {% for value, label in topic_choices %}
+                <button
+                  type="button"
+                  class="fc-create-topic-pill{% if value == 'other' %} fc-create-topic-pill--my-vocab{% endif %}{% if value == initial_topic %} is-selected{% endif %}"
+                  data-topic="{{ value }}"
+                  data-topic-label="{% if value == 'other' %}Personal vocabulary{% else %}{{ label|escape }}{% endif %}"
+                >{% if value == 'other' %}Personal vocabulary{% else %}{{ label }}{% endif %}</button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="button" class="fc-create-generate" id="fc-create-generate">
+            <span class="fc-create-generate__spinner" aria-hidden="true"></span>
+            <span class="fc-create-generate__text">Generate with AI</span>
+          </button>
+          <p class="fc-create-panel__foot">Uses your OpenAI API key</p>
+          <p class="fc-create-panel__status" id="fc-create-panel-status" hidden role="status"></p>
+        </div>
+
+        <div class="fc-create-panel fc-create-panel--manual">
+          <h2 class="fc-create-panel__title">Add one card manually</h2>
+          <p class="fc-create-panel__subtitle">Type a word, optionally fill definition and example, or use AI fill.</p>
+
+          <div class="fc-create-field">
+            <label class="fc-create-label" for="fc-manual-word">Word</label>
+            <input type="text" id="fc-manual-word" class="fc-create-input" maxlength="255" autocomplete="off" />
+          </div>
+          <div class="fc-create-field">
+            <label class="fc-create-label" for="fc-manual-def">Definition</label>
+            <textarea id="fc-manual-def" class="fc-create-textarea" rows="3"></textarea>
+          </div>
+          <div class="fc-create-field">
+            <label class="fc-create-label" for="fc-manual-ex">Example sentence</label>
+            <textarea id="fc-manual-ex" class="fc-create-textarea" rows="3"></textarea>
+          </div>
+          <div class="fc-create-manual-actions">
+            <button type="button" class="fc-create-btn fc-create-btn--outline" id="fc-manual-ai-fill">Fill with AI</button>
+            <button type="button" class="fc-create-btn fc-create-btn--primary" id="fc-manual-add">Add to list</button>
+          </div>
+          <p class="fc-create-manual-hint" id="fc-manual-hint" hidden aria-live="polite"></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const indexUrl = "{% url 'vocabulary:index' %}";
+      const maxCards = {{ max_cards|default:30 }};
+      const aiFillUrl = "{% url 'vocabulary:custom_ai_fill' %}";
+
+      const LEVEL_NAMES = { 1: "Beginner", 2: "Standard", 3: "Advanced" };
+
+      function csrf() {
+        const t = document.querySelector("#fc-deck-csrf [name=csrfmiddlewaretoken]");
+        return t ? t.value : "";
+      }
+
+      let selectedTopic = "{{ initial_topic|escapejs }}";
+      let topicLabel = "";
+      (function initTopicLabel() {
+        const sel = document.querySelector(".fc-create-topic-pill.is-selected");
+        topicLabel = sel && sel.getAttribute("data-topic-label") ? sel.getAttribute("data-topic-label") : selectedTopic;
+      })();
+
+      const selectedLevel = {{ user_vocab_level }};
+      let selectedCount = 10;
+
+      const listEl = document.getElementById("fc-create-list");
+      const loadingEl = document.getElementById("fc-create-loading");
+      const emptyHint = document.getElementById("fc-create-empty-hint");
+      const readyCountEl = document.getElementById("fc-create-ready-count");
+      const validLineEl = document.getElementById("fc-create-valid-line");
+      const saveMetaEl = document.getElementById("fc-create-save-meta");
+      const panelStatus = document.getElementById("fc-create-panel-status");
+      const promptEl = document.getElementById("fc-create-prompt");
+      const genBtn = document.getElementById("fc-create-generate");
+      const setFieldsWrap = document.getElementById("fc-create-set-fields");
+      const setTitleInput = document.getElementById("fc-set-title");
+      const setDescInput = document.getElementById("fc-set-description");
+      const addCardBtn = document.getElementById("fc-add-card-row");
+      const manualWord = document.getElementById("fc-manual-word");
+      const manualDef = document.getElementById("fc-manual-def");
+      const manualEx = document.getElementById("fc-manual-ex");
+      const manualAiBtn = document.getElementById("fc-manual-ai-fill");
+      const manualAddBtn = document.getElementById("fc-manual-add");
+      const manualHint = document.getElementById("fc-manual-hint");
+
+      function setPanelStatus(msg, show) {
+        if (!panelStatus) return;
+        panelStatus.hidden = !show;
+        panelStatus.textContent = msg || "";
+      }
+
+      function setManualHint(msg, show) {
+        if (!manualHint) return;
+        manualHint.hidden = !show;
+        manualHint.textContent = msg || "";
+      }
+
+      function updateSaveMeta() {
+        if (!saveMetaEl) return;
+        const lvl = LEVEL_NAMES[selectedLevel] || "Standard";
+        saveMetaEl.textContent =
+          "Saving to " + topicLabel + " · Level " + selectedLevel + " (" + lvl + ")";
+      }
+
+      function syncSetFieldsVisibility() {
+        if (!setFieldsWrap) return;
+        const isPersonal = selectedTopic === "other";
+        setFieldsWrap.hidden = !isPersonal;
+        if (setTitleInput) {
+          setTitleInput.required = isPersonal;
+          setTitleInput.setAttribute("aria-required", isPersonal ? "true" : "false");
+        }
+      }
+
+      function setSaveButtonsDisabled(on) {
+        document.querySelectorAll(".fc-create-save").forEach(function (b) {
+          b.disabled = on;
+        });
+      }
+
+      function renumberCards() {
+        if (!listEl) return;
+        listEl.querySelectorAll(".fc-create-card").forEach(function (row, idx) {
+          const num = row.querySelector(".fc-create-card__num");
+          if (num) num.textContent = String(idx + 1);
+        });
+      }
+
+      updateSaveMeta();
+      syncSetFieldsVisibility();
+
+      function cardCount() {
+        return listEl ? listEl.querySelectorAll(".fc-create-card").length : 0;
+      }
+
+      function validCount() {
+        if (!listEl) return { valid: 0, total: 0 };
+        const cards = listEl.querySelectorAll(".fc-create-card");
+        let v = 0;
+        cards.forEach(function (row) {
+          const inp = row.querySelector('[data-field="word"]');
+          if (inp && inp.value.trim()) v += 1;
+        });
+        return { valid: v, total: cards.length };
+      }
+
+      function clearInvalidHighlights() {
+        if (!listEl) return;
+        listEl.querySelectorAll(".fc-create-card--invalid").forEach(function (el) {
+          el.classList.remove("fc-create-card--invalid");
+        });
+      }
+
+      function updateCounts() {
+        const n = cardCount();
+        if (readyCountEl) {
+          readyCountEl.textContent = n + " card" + (n === 1 ? "" : "s") + " ready to save";
+        }
+        if (emptyHint) emptyHint.hidden = n > 0;
+
+        const { valid, total } = validCount();
+        if (validLineEl) {
+          if (total === 0) {
+            validLineEl.hidden = true;
+            validLineEl.textContent = "";
+          } else if (valid === total) {
+            validLineEl.hidden = false;
+            validLineEl.className = "fc-create-valid-line fc-create-valid-line--ok";
+            validLineEl.textContent = "All " + total + " card" + (total === 1 ? "" : "s") + " valid";
+          } else {
+            validLineEl.hidden = false;
+            validLineEl.className = "fc-create-valid-line fc-create-valid-line--warn";
+            validLineEl.textContent = valid + " of " + total + " valid — each row needs a term";
+          }
+        }
+        renumberCards();
+      }
+
+      function escapeAttr(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
+      }
+      function escapeText(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      }
+
+      function createCardEl(word, definition, example, useEnter) {
+        const wrap = document.createElement("div");
+        wrap.className = "fc-create-card";
+        if (useEnter) wrap.classList.add("fc-create-card--enter");
+        const w = word != null ? word : "";
+        const d = definition != null ? definition : "";
+        const e = example != null ? example : "";
+        wrap.innerHTML =
+          '<div class="fc-create-card__head">' +
+          '<span class="fc-create-card__num" aria-hidden="true">1</span>' +
+          '<button type="button" class="fc-create-del" title="Remove row" aria-label="Remove row">×</button>' +
+          "</div>" +
+          '<div class="fc-create-row">' +
+          '<div class="fc-create-cell fc-create-cell--word">' +
+          '<span class="fc-create-mini-label">Term</span>' +
+          '<input type="text" class="fc-create-input" data-field="word" value="' +
+          escapeAttr(w) +
+          '" />' +
+          "</div>" +
+          '<div class="fc-create-cell fc-create-cell--def">' +
+          '<span class="fc-create-mini-label">Definition</span>' +
+          '<textarea class="fc-create-textarea fc-create-textarea--cell" rows="2" data-field="definition">' +
+          escapeText(d) +
+          "</textarea>" +
+          "</div>" +
+          '<div class="fc-create-cell fc-create-cell--ex">' +
+          '<span class="fc-create-mini-label">Example</span>' +
+          '<textarea class="fc-create-textarea fc-create-textarea--cell" rows="2" data-field="example_sentence">' +
+          escapeText(e) +
+          "</textarea>" +
+          "</div>" +
+          "</div>";
+        return wrap;
+      }
+
+      function appendCard(word, definition, example, useEnter) {
+        if (!listEl) return;
+        const el = createCardEl(word, definition, example, useEnter);
+        listEl.appendChild(el);
+        updateCounts();
+        return el;
+      }
+
+      function renderCardsStaggered(cards) {
+        if (!listEl) return;
+        listEl.innerHTML = "";
+        cards.forEach(function (c, i) {
+          setTimeout(function () {
+            const row = appendCard(c.word, c.definition, c.example_sentence, true);
+            if (row) row.style.animationDelay = i * 50 + "ms";
+          }, i * 50);
+        });
+        setTimeout(updateCounts, Math.max(0, cards.length - 1) * 50 + 400);
+      }
+
+      if (listEl) {
+        listEl.addEventListener("input", function () {
+          clearInvalidHighlights();
+          updateCounts();
+        });
+        listEl.addEventListener("click", function (ev) {
+          const t = ev.target;
+          if (t && t.closest && t.closest(".fc-create-del")) {
+            const row = t.closest(".fc-create-card");
+            if (row) {
+              row.remove();
+              updateCounts();
+            }
+          }
+        });
+      }
+
+      document.querySelectorAll(".fc-create-pill").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".fc-create-pill").forEach(function (b) {
+            b.classList.remove("is-selected");
+          });
+          btn.classList.add("is-selected");
+          selectedCount = parseInt(btn.getAttribute("data-count"), 10) || 10;
+        });
+      });
+
+      document.querySelectorAll(".fc-create-topic-pill").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".fc-create-topic-pill").forEach(function (b) {
+            b.classList.remove("is-selected");
+          });
+          btn.classList.add("is-selected");
+          selectedTopic = btn.getAttribute("data-topic") || selectedTopic;
+          topicLabel = btn.getAttribute("data-topic-label") || topicLabel;
+          updateSaveMeta();
+          syncSetFieldsVisibility();
+        });
+      });
+
+      if (addCardBtn) {
+        addCardBtn.addEventListener("click", function () {
+          appendCard("", "", "", true);
+          setPanelStatus("", false);
+        });
+      }
+
+      function setLoading(on) {
+        if (loadingEl) loadingEl.hidden = !on;
+        if (genBtn) {
+          genBtn.disabled = on;
+          genBtn.classList.toggle("is-loading", on);
+        }
+        if (listEl) listEl.classList.toggle("is-muted", on);
+      }
+
+      if (genBtn) {
+        genBtn.addEventListener("click", async function () {
+          const prompt = promptEl && promptEl.value ? promptEl.value.trim() : "";
+          if (!prompt) {
+            setPanelStatus("Enter a prompt first.", true);
+            return;
+          }
+          let n = selectedCount;
+          if (n > maxCards) n = maxCards;
+
+          setPanelStatus("", false);
+          setLoading(true);
+          if (listEl) listEl.innerHTML = "";
+          updateCounts();
+
+          try {
+            const r = await fetch("{% url 'vocabulary:flashcard_set_generate' %}", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf(),
+              },
+              body: JSON.stringify({
+                prompt: prompt,
+                count: n,
+                level: selectedLevel,
+                topic: selectedTopic,
+              }),
+            });
+            const data = await r.json();
+            if (!data.ok) {
+              setPanelStatus(data.error || "Could not generate.", true);
+              setLoading(false);
+              updateCounts();
+              return;
+            }
+            if (data.topic_label) topicLabel = data.topic_label;
+            updateSaveMeta();
+
+            renderCardsStaggered(data.cards || []);
+            if (data.warn) setPanelStatus(data.warn, true);
+            else setPanelStatus("Review the grid, then save.", true);
+          } catch (e) {
+            setPanelStatus("Network error.", true);
+          } finally {
+            setLoading(false);
+          }
+        });
+      }
+
+      if (manualAiBtn) {
+        manualAiBtn.addEventListener("click", async function () {
+          const w = manualWord && manualWord.value ? manualWord.value.trim() : "";
+          if (!w) {
+            setManualHint("Enter a word first.", true);
+            return;
+          }
+          setManualHint("Generating…", true);
+          manualAiBtn.disabled = true;
+          try {
+            const r = await fetch(aiFillUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf(),
+              },
+              body: JSON.stringify({
+                word: w,
+                topic: selectedTopic,
+                level: selectedLevel,
+              }),
+            });
+            const data = await r.json();
+            if (!data.ok) {
+              setManualHint(data.error || "Could not fill.", true);
+              return;
+            }
+            if (manualDef) manualDef.value = data.definition || "";
+            if (manualEx) manualEx.value = data.example_sentence || "";
+            setManualHint("Definition and example filled.", true);
+          } catch (e) {
+            setManualHint("Network error.", true);
+          } finally {
+            manualAiBtn.disabled = false;
+          }
+        });
+      }
+
+      if (manualAddBtn) {
+        manualAddBtn.addEventListener("click", function () {
+          const w = manualWord && manualWord.value ? manualWord.value.trim() : "";
+          if (!w) {
+            setManualHint("Enter a word to add a row.", true);
+            return;
+          }
+          const d = manualDef ? manualDef.value.trim() : "";
+          const e = manualEx ? manualEx.value.trim() : "";
+          appendCard(w, d, e, true);
+          if (manualWord) manualWord.value = "";
+          if (manualDef) manualDef.value = "";
+          if (manualEx) manualEx.value = "";
+          setManualHint("", false);
+        });
+      }
+
+      document.querySelectorAll(".fc-create-save").forEach(function (saveBtn) {
+        saveBtn.addEventListener("click", async function () {
+          if (!listEl) return;
+          clearInvalidHighlights();
+
+          if (selectedTopic === "other") {
+            const t = setTitleInput && setTitleInput.value ? setTitleInput.value.trim() : "";
+            if (!t) {
+              setPanelStatus("Add a title for your flashcard set.", true);
+              if (setTitleInput && setTitleInput.focus) setTitleInput.focus();
+              if (setFieldsWrap && setFieldsWrap.scrollIntoView) {
+                setFieldsWrap.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              }
+              return;
+            }
+          }
+
+          const rows = listEl.querySelectorAll(".fc-create-card");
+          let firstInvalid = null;
+          rows.forEach(function (row) {
+            const inp = row.querySelector('[data-field="word"]');
+            if (!inp || !inp.value.trim()) {
+              row.classList.add("fc-create-card--invalid");
+              if (!firstInvalid) firstInvalid = row;
+            }
+          });
+          updateCounts();
+          const { valid, total } = validCount();
+          if (total === 0) {
+            setPanelStatus("Add or generate cards before saving.", true);
+            return;
+          }
+          if (valid !== total) {
+            setPanelStatus("Fill every term field or remove empty rows.", true);
+            if (firstInvalid && firstInvalid.scrollIntoView) {
+              firstInvalid.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+            return;
+          }
+
+          const cards = [];
+          rows.forEach(function (row) {
+            const w = row.querySelector('[data-field="word"]');
+            const d = row.querySelector('[data-field="definition"]');
+            const e = row.querySelector('[data-field="example_sentence"]');
+            cards.push({
+              word: w ? w.value.trim() : "",
+              definition: d ? d.value.trim() : "",
+              example_sentence: e ? e.value.trim() : "",
+            });
+          });
+
+          setSaveButtonsDisabled(true);
+          setPanelStatus("Saving…", true);
+
+          try {
+            const r = await fetch("{% url 'vocabulary:flashcard_set_save' %}", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf(),
+              },
+              body: JSON.stringify({
+                topic: selectedTopic,
+                level: selectedLevel,
+                set_title: setTitleInput ? setTitleInput.value.trim() : "",
+                set_description: setDescInput ? setDescInput.value.trim() : "",
+                cards: cards,
+              }),
+            });
+            const data = await r.json();
+            if (!data.ok) {
+              setPanelStatus(data.error || "Save failed.", true);
+              return;
+            }
+            let msg = "Saved " + data.created + " card(s).";
+            if (data.skipped && data.skipped.length) {
+              msg += " Skipped duplicates: " + data.skipped.slice(0, 4).join(", ");
+              if (data.skipped.length > 4) msg += "…";
+            }
+            setPanelStatus(msg, true);
+            const t = data.topic || selectedTopic;
+            if (data.created > 0) {
+              window.location.href = indexUrl + "?topic=" + encodeURIComponent(t);
+            }
+          } catch (e) {
+            setPanelStatus("Network error.", true);
+          } finally {
+            setSaveButtonsDisabled(false);
+          }
+        });
+      });
+    })();
+  </script>
+{% endblock %}

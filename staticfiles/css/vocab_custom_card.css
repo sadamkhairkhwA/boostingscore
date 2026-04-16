@@ -1,0 +1,352 @@
+/* Single create/edit flashcard — green #3B6D11 (matches vocabulary studio) */
+body.vcustom-form-page-body {
+  background-color: #f9fff6 !important;
+  background-image: none !important;
+  background-attachment: scroll !important;
+}
+
+body.vcustom-form-page-body .site-main.shell {
+  max-width: 100%;
+  padding-left: clamp(1rem, 3vw, 2rem);
+  padding-right: clamp(1rem, 3vw, 2rem);
+}
+
+.vcustom-page {
+  padding-bottom: 2rem;
+}
+
+.vcustom-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+@media (max-width: 880px) {
+  .vcustom-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vcustom-heading {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a3310;
+}
+
+.vcustom-back {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+}
+
+.vcustom-back a {
+  color: #3b6d11;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.vcustom-back a:hover {
+  text-decoration: underline;
+  color: #2f5a0e;
+}
+
+.vcustom-card {
+  background: #fff;
+  border: 1px solid #c5dfa5;
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 2px 8px rgba(59, 109, 17, 0.08);
+}
+
+.vcustom-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 880px) {
+  .vcustom-aside {
+    position: static;
+  }
+}
+
+.vcustom-panel {
+  background: #fff;
+  border: 1px solid #c5dfa5;
+  border-radius: 12px;
+  padding: 1.15rem 1.2rem;
+  box-shadow: 0 2px 8px rgba(59, 109, 17, 0.08);
+}
+
+.vcustom-panel__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a3310;
+}
+
+.vcustom-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2d4a1f;
+  margin-bottom: 0.4rem;
+}
+
+.vcustom-field {
+  margin-bottom: 1rem;
+}
+
+.vcustom-field:last-of-type {
+  margin-bottom: 0;
+}
+
+.vcustom-input,
+.vcustom-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.9375rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #a3c97a;
+  background: #fbfff7;
+  color: #1a3310;
+}
+
+.vcustom-input:focus,
+.vcustom-textarea:focus {
+  outline: none;
+  border-color: #3b6d11;
+  box-shadow: 0 0 0 2px rgba(59, 109, 17, 0.2);
+}
+
+.vcustom-textarea {
+  resize: vertical;
+  line-height: 1.45;
+  min-height: 5rem;
+}
+
+.vcustom-errors {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.vcustom-form-actions {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dce8cf;
+}
+
+.vcustom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.6rem 1.15rem;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2px solid #3b6d11;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.vcustom-btn--outline {
+  background: #fff;
+  color: #3b6d11;
+  width: 100%;
+  margin-bottom: 0.45rem;
+}
+
+.vcustom-btn--outline:hover {
+  background: #eaf3de;
+}
+
+.vcustom-btn--outline:last-of-type {
+  margin-bottom: 0;
+}
+
+.vcustom-btn--primary {
+  background: #3b6d11;
+  color: #fff;
+  border-color: #3b6d11;
+  min-width: 11rem;
+}
+
+.vcustom-btn--primary:hover {
+  background: #2f5a0e;
+  border-color: #2f5a0e;
+}
+
+.vcustom-ai-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: #5a6b52;
+  line-height: 1.4;
+}
+
+.vcustom-topic-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.vcustom-topic-pill {
+  padding: 0.35rem 0.65rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid #a3c97a;
+  background: #fbfff7;
+  color: #3b6d11;
+  cursor: pointer;
+}
+
+.vcustom-topic-pill:hover {
+  border-color: #3b6d11;
+  background: #eaf3de;
+}
+
+.vcustom-topic-pill.is-selected {
+  background: #3b6d11;
+  color: #fff;
+  border-color: #3b6d11;
+}
+
+.vcustom-topic-pill--my-vocab.is-selected {
+  background: #fff8e1;
+  color: #7b5800;
+  border: 0.5px solid #ffd700;
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.45);
+}
+
+.vcustom-level-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+@media (min-width: 400px) {
+  .vcustom-level-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.vcustom-level-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.5rem 0.45rem;
+  text-align: left;
+  font: inherit;
+  border-radius: 10px;
+  border: 2px solid #c5dfa5;
+  background: #fbfff7;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vcustom-level-card:hover {
+  border-color: #3b6d11;
+}
+
+.vcustom-level-card.is-selected {
+  border-color: #3b6d11;
+  box-shadow: 0 0 0 2px rgba(59, 109, 17, 0.15);
+  background: #fff;
+}
+
+.vcustom-level-card__name {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #1a3310;
+}
+
+.vcustom-level-card__desc {
+  font-size: 0.625rem;
+  color: #5a6b52;
+  line-height: 1.3;
+}
+
+.vcustom-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.vcustom-hidden-select {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.vcustom-file-hook {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.vcustom-file-hook .vcustom-file-input {
+  font-size: 1px;
+}
+
+.vcustom-preview-block {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f6faf0;
+  border: 1px solid #c5dfa5;
+  border-radius: 10px;
+}
+
+.vcustom-preview-block__label {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #3b6d11;
+}
+
+.vcustom-preview-block img {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.vcustom-aside-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  color: #6b8060;
+  line-height: 1.35;
+}

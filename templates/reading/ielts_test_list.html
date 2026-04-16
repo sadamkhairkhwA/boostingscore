@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}IELTS Practice Tests — Boosting Score{% endblock %}
+
+{% block extra_css %}
+<style>
+.bs-tests-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bs-test-card { display: block; text-decoration: none; color: inherit; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
+.bs-test-card:hover { border-color: #3b6d11; transform: translateY(-1px); box-shadow: 0 2px 12px rgba(59, 109, 17, 0.08); }
+.bs-test-badge { font-size: 0.62rem; font-weight: 700; color: #27500a; background: #eaf3de; display: inline-block; padding: 2px 8px; border-radius: 6px; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+.bs-test-title { font-size: 0.95rem; font-weight: 700; color: #111827; margin-bottom: 2px; font-family: Georgia, serif; }
+.bs-test-meta { font-size: 0.78rem; color: #6b7280; }
+.bs-empty-icon { width: 48px; height: 48px; margin: 0 auto 14px; color: #9ca3af; }
+@media (max-width: 740px) { .bs-tests-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="bs-hero">
+  <div class="bs-hero-orb-1"></div>
+  <div class="bs-hero-orb-2"></div>
+  <div class="bs-hero-inner">
+    <div class="bs-hero-label">IELTS</div>
+    <h1 class="bs-hero-title">Full reading tests</h1>
+    <p class="bs-hero-sub">Take published tests prepared by your instructor.</p>
+  </div>
+</section>
+
+<div class="bs-page-body">
+  {% if tests_data %}
+    <div class="bs-tests-grid">
+      {% for t in tests_data %}
+        <a class="bs-test-card bs-animate bs-delay-1" href="{% url 'reading:ielts_exam' t.id %}">
+          <div class="bs-test-badge">Test {{ t.test_number }}</div>
+          <div class="bs-test-title">{{ t.topic }}</div>
+          <div class="bs-test-meta">Band {{ t.band_range }} · {{ t.question_types }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bs-empty-state">
+      <div class="bs-empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 7v5l3 2"></path>
+        </svg>
+      </div>
+      <h3>Tests coming soon</h3>
+      <p>Practice tests are being prepared. Check back soon.</p>
+      <a href="{% url 'reading:strategies' %}" class="bs-btn-primary">Read strategies &amp; tips in the meantime →</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

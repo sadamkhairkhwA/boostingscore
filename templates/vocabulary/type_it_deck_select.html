@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Type it — choose a deck{% endblock %}
+
+{% block body_class %}ti-body{% endblock %}
+
+{% block content %}
+<div class="ti-page">
+  <div class="ti-topbar">
+    <a href="{% url 'vocabulary:home' %}" class="ti-back">← Change method</a>
+    <div class="ti-bc">
+      <span>Vocabulary</span>
+      <span class="ti-bc-sep" aria-hidden="true">›</span>
+      <span>Type it</span>
+      <span class="ti-bc-sep" aria-hidden="true">›</span>
+      <span class="ti-bc-active">Choose deck</span>
+    </div>
+    <div class="ti-topbar-spacer" aria-hidden="true"></div>
+  </div>
+
+  <h1 class="ti-title">Writing practice — choose a deck</h1>
+  <p class="ti-sub">
+    Pick a deck — write an example sentence or definition, then get instant AI feedback with IELTS band score.
+  </p>
+
+  <div class="ti-stats" aria-label="Vocabulary summary">
+    <div class="ti-stat">
+      <div class="ti-stat-val ti-stat-val--ink">{{ total_words }}</div>
+      <div class="ti-stat-lbl">Total words</div>
+    </div>
+    <div class="ti-stat">
+      <div class="ti-stat-val ti-stat-val--green">{{ total_mastered }}</div>
+      <div class="ti-stat-lbl">Mastered</div>
+    </div>
+    <div class="ti-stat">
+      <div class="ti-stat-val ti-stat-val--due">{{ total_due }}</div>
+      <div class="ti-stat-lbl">Due today</div>
+    </div>
+    <div class="ti-stat">
+      <div class="ti-stat-val ti-stat-val--amber">{% if user.is_authenticated %}🔥 {{ streak }}{% else %}—{% endif %}</div>
+      <div class="ti-stat-lbl">Day streak</div>
+    </div>
+  </div>
+
+  <div class="ti-deck-list">
+    {% for deck in topic_decks %}
+      <a
+        href="{{ type_it_session_url }}?topic={{ deck.slug|urlencode }}"
+        class="ti-deck-card ti-ivory"
+      >
+        <div class="ti-dc-icon" aria-hidden="true">{{ deck.emoji }}</div>
+        <div class="ti-dc-content">
+          <div class="ti-dc-top">
+            <div class="ti-dc-name">{{ deck.name }}</div>
+            {% if user.is_authenticated and deck.due_count > 0 %}
+              <div class="ti-dc-due">{{ deck.due_count }} due</div>
+            {% endif %}
+          </div>
+          <div class="ti-dc-meta">
+            {{ deck.word_count }} word{{ deck.word_count|pluralize }}
+            {% if deck.last_studied %}
+              · Last studied {{ deck.last_studied|date:"M j" }}
+            {% else %}
+              · Not started yet
+            {% endif %}
+          </div>
+          <div class="ti-dc-prog-track">
+            <div class="ti-dc-prog-fill ti-dc-prog-fill--ink" style="width: {{ deck.progress_pct }}%;"></div>
+          </div>
+          <div class="ti-dc-prog-row">
+            <div class="ti-dc-prog-lbl">{{ deck.progress_pct }}% mastered</div>
+            <div class="ti-dc-prog-lbl">{{ deck.mastered_count }} / {{ deck.word_count }}</div>
+          </div>
+        </div>
+        <span class="ti-dc-btn ti-btn-dark">Start →</span>
+      </a>
+    {% endfor %}
+
+    <a href="{{ type_it_session_url }}?topic=other" class="ti-deck-card ti-gold">
+      <div class="ti-dc-icon" aria-hidden="true">{{ my_vocab.emoji }}</div>
+      <div class="ti-dc-content">
+        <div class="ti-dc-top">
+          <div class="ti-dc-name">{{ my_vocab.name }}</div>
+          {% if user.is_authenticated and my_vocab.due_count > 0 %}
+            <div class="ti-dc-due">{{ my_vocab.due_count }} due</div>
+          {% endif %}
+        </div>
+        <div class="ti-dc-meta ti-dc-meta--gold">
+          {{ my_vocab.word_count }} word{{ my_vocab.word_count|pluralize }} · Your custom cards
+        </div>
+        <div class="ti-dc-prog-track ti-dc-prog-track--gold">
+          <div class="ti-dc-prog-fill ti-dc-prog-fill--gold" style="width: {{ my_vocab.progress_pct }}%;"></div>
+        </div>
+        <div class="ti-dc-prog-row">
+          <div class="ti-dc-prog-lbl ti-dc-prog-lbl--gold">{{ my_vocab.progress_pct }}% mastered</div>
+          <div class="ti-dc-prog-lbl">{{ my_vocab.mastered_count }} / {{ my_vocab.word_count }}</div>
+        </div>
+      </div>
+      <span class="ti-dc-btn ti-btn-gold">Start →</span>
+    </a>
+
+    {% for cdeck in custom_decks %}
+      <a
+        href="{{ type_it_session_url }}?custom_deck={{ cdeck.deck_pk }}"
+        class="ti-deck-card ti-slate"
+      >
+        <div class="ti-dc-icon" aria-hidden="true">{{ cdeck.emoji }}</div>
+        <div class="ti-dc-content">
+          <div class="ti-dc-top">
+            <div class="ti-dc-name">{{ cdeck.name }}</div>
+            <span class="ti-dc-custom">Custom</span>
+            {% if user.is_authenticated and cdeck.due_count > 0 %}
+              <div class="ti-dc-due">{{ cdeck.due_count }} due</div>
+            {% endif %}
+          </div>
+          <div class="ti-dc-meta">{{ cdeck.word_count }} word{{ cdeck.word_count|pluralize }} · Named deck</div>
+          <div class="ti-dc-prog-track">
+            <div class="ti-dc-prog-fill ti-dc-prog-fill--ink" style="width: {{ cdeck.progress_pct }}%;"></div>
+          </div>
+          <div class="ti-dc-prog-row">
+            <div class="ti-dc-prog-lbl">{{ cdeck.progress_pct }}% mastered</div>
+            <div class="ti-dc-prog-lbl">{{ cdeck.mastered_count }} / {{ cdeck.word_count }}</div>
+          </div>
+        </div>
+        <span class="ti-dc-btn ti-btn-slate">Start →</span>
+      </a>
+    {% endfor %}
+
+    {% if user.is_authenticated %}
+      <a href="{% url 'vocabulary:deck_create' %}" class="ti-new-deck">
+        <div class="ti-new-icon" aria-hidden="true">+</div>
+        <div>
+          <div class="ti-new-txt">Create a new deck</div>
+          <div class="ti-new-sub">Name your deck and add word + definition pairs</div>
+        </div>
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

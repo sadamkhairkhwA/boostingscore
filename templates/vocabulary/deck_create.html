@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create deck — Boosting Score{% endblock %}
+
+{% block body_class %}fc-create-page-body vocab-app{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/fc_create.css' %}?v=7" />
+{% endblock %}
+
+{% block content %}
+  <div class="fc-create-page">
+    <div class="fc-create-layout">
+      <section class="fc-create-deck" aria-labelledby="deck-create-heading">
+        <p class="fc-create-back">
+          <a href="{% url 'vocabulary:index' %}">← Back to vocabulary</a>
+        </p>
+        <header class="fc-create-page-head">
+          <h1 class="fc-create-heading" id="deck-create-heading">Create a deck</h1>
+          <div class="fc-create-deck-head-actions">
+            <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-save" data-practice="0">
+              Save
+            </button>
+            <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-deck-save" data-practice="1">
+              Save and practice
+            </button>
+          </div>
+        </header>
+
+        <div class="fc-create-field fc-create-field--set">
+          <label class="fc-create-label" for="deck-create-name">Deck name</label>
+          <input
+            type="text"
+            id="deck-create-name"
+            class="fc-create-input fc-create-input--set fc-create-input--deck-title"
+            maxlength="120"
+            autocomplete="off"
+            required
+            placeholder="e.g. IELTS collocations"
+          />
+        </div>
+        <div class="fc-create-field fc-create-field--set">
+          <label class="fc-create-label" for="deck-create-description">Description <span class="fc-create-optional">(optional)</span></label>
+          <textarea
+            id="deck-create-description"
+            class="fc-create-textarea fc-create-textarea--set"
+            rows="2"
+            maxlength="4000"
+            placeholder="What this deck is for…"
+          ></textarea>
+        </div>
+
+        <p class="fc-create-aside-hint" style="margin: 0 0 1rem; font-size: 0.875rem; color: #6b7280">
+          Cards are saved at your vocabulary level (<strong>{{ user_vocab_level }}</strong>). To change it, retake the placement test from <a href="{% url 'profile_settings' %}">your profile</a>.
+        </p>
+
+        <p class="fc-create-subtitle fc-create-subtitle--cards">
+          Cards — generate with AI on the right, edit here, or add rows manually.
+        </p>
+        <p class="fc-create-ready-count" id="deck-create-ready-count" aria-live="polite">0 cards ready</p>
+        <p class="fc-create-valid-line" id="deck-create-valid-line" hidden aria-live="polite"></p>
+
+        <div class="fc-create-cards-toolbar">
+          <button type="button" class="fc-create-btn fc-create-btn--outline" id="deck-add-row">+ Add card</button>
+        </div>
+
+        <div class="fc-create-loading" id="deck-create-loading" hidden>
+          <p class="fc-create-loading__title">AI is generating your cards…</p>
+          <p class="fc-create-loading__sub">This usually takes a few seconds.</p>
+          <div class="fc-create-skeleton" aria-hidden="true">
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
+          </div>
+        </div>
+
+        <div class="fc-create-list" id="deck-create-list"></div>
+        <p class="fc-create-empty-hint" id="deck-create-empty-hint">No cards yet — use the AI generator or add a row.</p>
+
+        <div class="fc-create-save-row fc-create-save-row--deck">
+          <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-btn--large fc-create-deck-save" data-practice="0">
+            Save deck
+          </button>
+          <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-btn--large fc-create-deck-save" data-practice="1">
+            Save and practice
+          </button>
+        </div>
+        <p class="fc-create-panel__status" id="deck-create-status" hidden role="status"></p>
+      </section>
+
+      <aside class="fc-create-sidebar" aria-label="AI tools">
+        <form id="deck-create-csrf" class="fc-create-csrf" aria-hidden="true">{% csrf_token %}</form>
+
+        <div class="fc-create-panel fc-create-panel--ai">
+          <h2 class="fc-create-panel__title">AI generator</h2>
+          <p class="fc-create-panel__subtitle">Describe what you need; cards appear in the grid.</p>
+
+          <div class="fc-create-field">
+            <label class="fc-create-label" for="deck-ai-prompt">Prompt</label>
+            <textarea
+              id="deck-ai-prompt"
+              class="fc-create-textarea fc-create-textarea--prompt"
+              rows="4"
+              maxlength="120000"
+              placeholder="e.g. IELTS environment vocabulary for Task 2&#10;e.g. Medical terms for healthcare essays"
+            ></textarea>
+          </div>
+
+          <div class="fc-create-field">
+            <span class="fc-create-label" id="deck-ai-count-label">How many cards?</span>
+            <div class="fc-create-pills" role="group" aria-labelledby="deck-ai-count-label">
+              <button type="button" class="fc-create-pill" data-count="5">5</button>
+              <button type="button" class="fc-create-pill is-selected" data-count="10">10</button>
+              <button type="button" class="fc-create-pill" data-count="15">15</button>
+              <button type="button" class="fc-create-pill" data-count="20">20</button>
+              <button type="button" class="fc-create-pill" data-count="25">25</button>
+            </div>
+          </div>
+
+          <div class="fc-create-field">
+            <span class="fc-create-label" id="deck-ai-topic-label">Topic</span>
+            <div class="fc-create-topic-pills" id="deck-ai-topic-pills" role="group" aria-labelledby="deck-ai-topic-label">
+              {% for value, label in topic_choices %}
+                <button
+                  type="button"
+                  class="fc-create-topic-pill{% if value == 'other' %} fc-create-topic-pill--my-vocab{% endif %}{% if value == initial_topic %} is-selected{% endif %}"
+                  data-topic="{{ value }}"
+                  data-topic-label="{% if value == 'other' %}Personal vocabulary{% else %}{{ label|escape }}{% endif %}"
+                >{% if value == 'other' %}Personal vocabulary{% else %}{{ label }}{% endif %}</button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="button" class="fc-create-generate" id="deck-ai-generate">
+            <span class="fc-create-generate__spinner" aria-hidden="true"></span>
+            <span class="fc-create-generate__text">Generate with AI</span>
+          </button>
+          <p class="fc-create-panel__foot">Uses your OpenAI API key</p>
+          <p class="fc-create-panel__status" id="deck-ai-panel-status" hidden role="status"></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const maxCards = {{ max_cards|default:30 }};
+      const saveUrl = "{% url 'vocabulary:deck_create_save' %}";
+      const generateUrl = "{% url 'vocabulary:flashcard_set_generate' %}";
+      const aiImageUrl = "{% url 'vocabulary:custom_ai_image_preview' %}";
+      const rowImageB64 = new WeakMap();
+
+      function csrf() {
+        const t = document.querySelector("#deck-create-csrf [name=csrfmiddlewaretoken]");
+        return t ? t.value : "";
+      }
+
+      const selectedLevel = {{ user_vocab_level }};
+      let selectedTopic = "{{ initial_topic|escapejs }}";
+      let topicLabel = "";
+      (function initTopicLabel() {
+        const sel = document.querySelector("#deck-ai-topic-pills .fc-create-topic-pill.is-selected");
+        topicLabel = sel && sel.getAttribute("data-topic-label") ? sel.getAttribute("data-topic-label") : selectedTopic;
+      })();
+      let selectedCount = 10;
+
+      const listEl = document.getElementById("deck-create-list");
+      const nameEl = document.getElementById("deck-create-name");
+      const descEl = document.getElementById("deck-create-description");
+      const readyEl = document.getElementById("deck-create-ready-count");
+      const validLine = document.getElementById("deck-create-valid-line");
+      const emptyHint = document.getElementById("deck-create-empty-hint");
+      const statusEl = document.getElementById("deck-create-status");
+      const loadingEl = document.getElementById("deck-create-loading");
+      const promptEl = document.getElementById("deck-ai-prompt");
+      const genBtn = document.getElementById("deck-ai-generate");
+      const aiPanelStatus = document.getElementById("deck-ai-panel-status");
+
+      function setStatus(msg, show) {
+        if (!statusEl) return;
+        statusEl.hidden = !show;
+        statusEl.textContent = msg || "";
+      }
+
+      function setAiPanelStatus(msg, show) {
+        if (!aiPanelStatus) return;
+        aiPanelStatus.hidden = !show;
+        aiPanelStatus.textContent = msg || "";
+      }
+
+      function setLoading(on) {
+        if (loadingEl) loadingEl.hidden = !on;
+        if (genBtn) {
+          genBtn.disabled = on;
+          genBtn.classList.toggle("is-loading", on);
+        }
+        if (listEl) listEl.classList.toggle("is-muted", on);
+      }
+
+      function cardCount() {
+        return listEl ? listEl.querySelectorAll(".fc-create-deck-row").length : 0;
+      }
+
+      function validCount() {
+        if (!listEl) return { valid: 0, total: 0 };
+        const rows = listEl.querySelectorAll(".fc-create-deck-row");
+        let v = 0;
+        rows.forEach(function (row) {
+          const inp = row.querySelector('[data-field="word"]');
+          if (inp && inp.value.trim()) v += 1;
+        });
+        return { valid: v, total: rows.length };
+      }
+
+      function updateCounts() {
+        const n = cardCount();
+        if (readyEl) readyEl.textContent = n + " card" + (n === 1 ? "" : "s") + " ready";
+        if (emptyHint) emptyHint.hidden = n > 0;
+        const { valid, total } = validCount();
+        if (validLine) {
+          if (total === 0) {
+            validLine.hidden = true;
+            validLine.textContent = "";
+          } else if (valid === total) {
+            validLine.hidden = false;
+            validLine.className = "fc-create-valid-line fc-create-valid-line--ok";
+            validLine.textContent = "All " + total + " card" + (total === 1 ? "" : "s") + " valid";
+          } else {
+            validLine.hidden = false;
+            validLine.className = "fc-create-valid-line fc-create-valid-line--warn";
+            validLine.textContent = valid + " of " + total + " valid — each row needs a term";
+          }
+        }
+      }
+
+      function escapeAttr(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
+      }
+      function escapeText(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      }
+
+      function createRowEl(word, definition) {
+        const wrap = document.createElement("div");
+        wrap.className = "fc-create-deck-row";
+        const w = word != null ? word : "";
+        const d = definition != null ? definition : "";
+        wrap.innerHTML =
+          '<div class="fc-create-deck-row__grid">' +
+          '<div class="fc-create-cell">' +
+          '<span class="fc-create-mini-label">Word</span>' +
+          '<input type="text" class="fc-create-input" data-field="word" value="' +
+          escapeAttr(w) +
+          '" />' +
+          "</div>" +
+          '<div class="fc-create-cell">' +
+          '<span class="fc-create-mini-label">Definition</span>' +
+          '<textarea class="fc-create-textarea fc-create-textarea--cell" rows="2" data-field="definition">' +
+          escapeText(d) +
+          "</textarea>" +
+          "</div>" +
+          '<div class="fc-create-cell fc-create-cell--illustration">' +
+          '<span class="fc-create-mini-label">Picture</span>' +
+          '<div class="fc-create-deck-ill">' +
+          '<div class="fc-create-deck-ill-preview" hidden>' +
+          '<img class="fc-create-deck-ill-img" alt="" width="120" height="120" loading="lazy" />' +
+          "</div>" +
+          '<div class="fc-create-deck-ill-actions">' +
+          '<button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-ai-img">AI illustration</button>' +
+          '<button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-clear-img" hidden>Remove image</button>' +
+          "</div>" +
+          '<p class="fc-create-deck-ill-hint">OpenAI Images (paid). Uses word + definition.</p>' +
+          "</div>" +
+          "</div>" +
+          '<button type="button" class="fc-create-del" title="Remove row" aria-label="Remove row">×</button>' +
+          "</div>";
+        return wrap;
+      }
+
+      function appendRow(w, d) {
+        if (!listEl) return null;
+        if (cardCount() >= maxCards) {
+          setStatus("Maximum " + maxCards + " cards.", true);
+          return null;
+        }
+        const el = createRowEl(w, d);
+        listEl.appendChild(el);
+        updateCounts();
+        setStatus("", false);
+        return el;
+      }
+
+      function renderDeckCardsStaggered(cards) {
+        if (!listEl) return;
+        listEl.innerHTML = "";
+        const slice = (cards || []).slice(0, maxCards);
+        slice.forEach(function (c, i) {
+          setTimeout(function () {
+            const def = c.definition != null ? c.definition : "";
+            const row = createRowEl(c.word, def);
+            row.classList.add("fc-create-deck-row--enter");
+            row.style.animationDelay = i * 50 + "ms";
+            listEl.appendChild(row);
+          }, i * 50);
+        });
+        setTimeout(updateCounts, Math.max(0, slice.length - 1) * 50 + 400);
+      }
+
+      document.getElementById("deck-add-row") &&
+        document.getElementById("deck-add-row").addEventListener("click", function () {
+          appendRow("", "");
+          setAiPanelStatus("", false);
+        });
+
+      function clearRowImage(row) {
+        if (!row) return;
+        rowImageB64.delete(row);
+        const prev = row.querySelector(".fc-create-deck-ill-preview");
+        const img = row.querySelector(".fc-create-deck-ill-img");
+        const clr = row.querySelector(".fc-create-deck-clear-img");
+        if (img) img.removeAttribute("src");
+        if (prev) prev.hidden = true;
+        if (clr) clr.hidden = true;
+      }
+
+      if (listEl) {
+        listEl.addEventListener("input", updateCounts);
+        listEl.addEventListener("click", function (ev) {
+          const t = ev.target;
+          if (t && t.closest && t.closest(".fc-create-del")) {
+            const row = t.closest(".fc-create-deck-row");
+            if (row) {
+              clearRowImage(row);
+              row.remove();
+              updateCounts();
+            }
+          }
+        });
+
+        listEl.addEventListener("click", function (ev) {
+          const clrBtn = ev.target.closest && ev.target.closest(".fc-create-deck-clear-img");
+          if (clrBtn) {
+            const row = clrBtn.closest(".fc-create-deck-row");
+            clearRowImage(row);
+            setStatus("", false);
+            return;
+          }
+        });
+
+        listEl.addEventListener("click", function (ev) {
+          const aiBtn = ev.target.closest && ev.target.closest(".fc-create-deck-ai-img");
+          if (!aiBtn) return;
+          const row = aiBtn.closest(".fc-create-deck-row");
+          if (!row) return;
+          const wEl = row.querySelector('[data-field="word"]');
+          const dEl = row.querySelector('[data-field="definition"]');
+          const word = wEl && wEl.value ? wEl.value.trim() : "";
+          if (!word) {
+            setStatus("Enter a word before generating an illustration.", true);
+            if (wEl && wEl.focus) wEl.focus();
+            return;
+          }
+          const definition = dEl && dEl.value ? dEl.value.trim() : "";
+          setStatus("Generating illustration (often 30–60s)…", true);
+          aiBtn.disabled = true;
+          fetch(aiImageUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrf(),
+            },
+            body: JSON.stringify({
+              word: word,
+              definition: definition,
+              topic: "other",
+              level: selectedLevel,
+            }),
+          })
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (data) {
+              if (!data.ok) {
+                setStatus(data.error || "Could not generate image.", true);
+                return;
+              }
+              if (!data.image_base64) {
+                setStatus("No image returned.", true);
+                return;
+              }
+              rowImageB64.set(row, data.image_base64);
+              const prev = row.querySelector(".fc-create-deck-ill-preview");
+              const img = row.querySelector(".fc-create-deck-ill-img");
+              const clr = row.querySelector(".fc-create-deck-clear-img");
+              if (img) img.src = "data:image/png;base64," + data.image_base64;
+              if (prev) prev.hidden = false;
+              if (clr) clr.hidden = false;
+              setStatus("Illustration attached — it will save with the deck.", true);
+            })
+            .catch(function () {
+              setStatus("Network error.", true);
+            })
+            .finally(function () {
+              aiBtn.disabled = false;
+            });
+        });
+      }
+
+      document.querySelectorAll(".fc-create-pill").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".fc-create-pill").forEach(function (b) {
+            b.classList.remove("is-selected");
+          });
+          btn.classList.add("is-selected");
+          selectedCount = parseInt(btn.getAttribute("data-count"), 10) || 10;
+        });
+      });
+
+      document.querySelectorAll("#deck-ai-topic-pills .fc-create-topic-pill").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll("#deck-ai-topic-pills .fc-create-topic-pill").forEach(function (b) {
+            b.classList.remove("is-selected");
+          });
+          btn.classList.add("is-selected");
+          selectedTopic = btn.getAttribute("data-topic") || selectedTopic;
+          topicLabel = btn.getAttribute("data-topic-label") || topicLabel;
+        });
+      });
+
+      if (genBtn) {
+        genBtn.addEventListener("click", async function () {
+          const prompt = promptEl && promptEl.value ? promptEl.value.trim() : "";
+          if (!prompt) {
+            setAiPanelStatus("Enter a prompt first.", true);
+            return;
+          }
+          let n = selectedCount;
+          if (n > maxCards) n = maxCards;
+
+          setAiPanelStatus("", false);
+          setStatus("", false);
+          setLoading(true);
+          if (listEl) listEl.innerHTML = "";
+          updateCounts();
+
+          try {
+            const r = await fetch(generateUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf(),
+              },
+              body: JSON.stringify({
+                prompt: prompt,
+                count: n,
+                level: selectedLevel,
+                topic: selectedTopic,
+              }),
+            });
+            const data = await r.json();
+            if (!data.ok) {
+              setAiPanelStatus(data.error || "Could not generate.", true);
+              setLoading(false);
+              updateCounts();
+              return;
+            }
+            renderDeckCardsStaggered(data.cards || []);
+            if (data.warn) setAiPanelStatus(data.warn, true);
+            else setAiPanelStatus("Review the grid, then save your deck.", true);
+          } catch (e) {
+            setAiPanelStatus("Network error.", true);
+          } finally {
+            setLoading(false);
+          }
+        });
+      }
+
+      async function saveDeck(practice) {
+        if (!listEl || !nameEl) return;
+        const title = nameEl.value.trim();
+        if (!title) {
+          setStatus("Enter a deck name.", true);
+          nameEl.focus();
+          return;
+        }
+        const rows = listEl.querySelectorAll(".fc-create-deck-row");
+        let firstBad = null;
+        rows.forEach(function (row) {
+          row.classList.remove("fc-create-deck-row--invalid");
+          const inp = row.querySelector('[data-field="word"]');
+          if (!inp || !inp.value.trim()) {
+            row.classList.add("fc-create-deck-row--invalid");
+            if (!firstBad) firstBad = row;
+          }
+        });
+        updateCounts();
+        const { valid, total } = validCount();
+        if (total === 0) {
+          setStatus("Add at least one card.", true);
+          return;
+        }
+        if (valid !== total) {
+          setStatus("Fill every word field or remove empty rows.", true);
+          if (firstBad && firstBad.scrollIntoView) firstBad.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          return;
+        }
+
+        const cards = [];
+        rows.forEach(function (row) {
+          const w = row.querySelector('[data-field="word"]');
+          const d = row.querySelector('[data-field="definition"]');
+          const b64 = rowImageB64.get(row);
+          const o = {
+            word: w ? w.value.trim() : "",
+            definition: d ? d.value.trim() : "",
+          };
+          if (b64) o.image_base64 = b64;
+          cards.push(o);
+        });
+
+        setStatus("Saving…", true);
+        document.querySelectorAll(".fc-create-deck-save").forEach(function (b) {
+          b.disabled = true;
+        });
+
+        try {
+          const r = await fetch(saveUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrf(),
+            },
+            body: JSON.stringify({
+              name: title,
+              description: descEl ? descEl.value.trim() : "",
+              level: selectedLevel,
+              cards: cards,
+              practice: practice,
+            }),
+          });
+          const data = await r.json();
+          if (!data.ok) {
+            setStatus(data.error || "Save failed.", true);
+            return;
+          }
+          if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+          }
+        } catch (e) {
+          setStatus("Network error.", true);
+        } finally {
+          document.querySelectorAll(".fc-create-deck-save").forEach(function (b) {
+            b.disabled = false;
+          });
+        }
+      }
+
+      document.querySelectorAll(".fc-create-deck-save").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          saveDeck(btn.getAttribute("data-practice") === "1");
+        });
+      });
+
+      appendRow("", "");
+      updateCounts();
+    })();
+  </script>
+{% endblock %}

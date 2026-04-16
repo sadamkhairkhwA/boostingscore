@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{{ passage.title }} — Reading{% endblock %}
+
+{% block content %}
+  <div class="reading-detail-studio shell">
+    <a class="reading-detail-back" href="{% url 'reading:index' %}?topic={{ passage.topic }}">&larr; Back to passages</a>
+
+    {% if results %}
+      <header class="reading-detail-header">
+        <div class="reading-detail-header__text">
+          <h1 class="reading-detail-title">{{ passage.title }}</h1>
+          <p class="reading-detail-meta">
+            Level {{ passage.level }} · {{ passage.get_topic_display }} · {{ word_count }} words
+          </p>
+        </div>
+      </header>
+
+      <div class="reading-panel reading-panel--passage">
+        <p class="reading-panel__eyebrow">Passage</p>
+        <div class="reading-panel__body reading-body">{{ passage.content|linebreaks }}</div>
+      </div>
+
+      <div class="reading-panel reading-panel--score">
+        <p class="reading-panel__score-line">
+          Score: <strong>{{ score }}</strong> out of {{ total_q }} correct
+        </p>
+      </div>
+
+      <section class="reading-panel reading-panel--questions" aria-labelledby="reading-results-q-heading">
+        <h2 id="reading-results-q-heading" class="reading-panel__heading">Comprehension questions</h2>
+        {% for row in results %}
+          {% with q=row.question %}
+            <div class="reading-q-card reading-q-card--in-panel">
+              <p>
+                <span class="reading-q-card__num">{{ forloop.counter }}.</span> {{ q.prompt }}
+              </p>
+              <p class="{% if row.ok %}reading-result-ok{% else %}reading-result-bad{% endif %}">
+                {% if row.ok %}✓ Correct{% else %}✗ Your answer: {{ row.chosen }} — correct: {{ q.correct_letter }}{% endif %}
+              </p>
+              {% if not row.ok %}
+                <p class="text-muted" style="margin: 0.5rem 0 0; font-size: 0.875rem">
+                  <strong>Explanation:</strong> {{ q.correct_letter }}. {{ q.correct_option_text }}
+                </p>
+              {% endif %}
+            </div>
+          {% endwith %}
+        {% endfor %}
+      </section>
+
+      {% if review_words %}
+        <div class="reading-panel reading-panel--review">
+          <h2 class="reading-panel__heading">Words to review</h2>
+          <p class="text-muted" style="font-size: 0.875rem; margin: 0">{{ review_words|join:", " }}</p>
+        </div>
+      {% endif %}
+
+      <p class="reading-detail-actions">
+        <a class="btn btn--primary" href="{% url 'reading:index' %}?topic={{ passage.topic }}">Next passage</a>
+      </p>
+    {% else %}
+      <header class="reading-detail-header">
+        <div class="reading-detail-header__text">
+          <h1 class="reading-detail-title">{{ passage.title }}</h1>
+          <p class="reading-detail-meta">
+            Level {{ passage.level }} · {{ passage.get_topic_display }} · {{ word_count }} words
+          </p>
+        </div>
+        <div class="reading-detail-timer" id="reading-timer" aria-live="polite">20:00</div>
+      </header>
+
+      <div class="reading-panel reading-panel--passage">
+        <p class="reading-panel__eyebrow">Read the passage</p>
+        <div class="reading-panel__body reading-body" id="reading-passage-body">
+          {% for part in passage_tokens %}
+            {% if part.is_word %}
+              <button type="button" class="reading-token-word" data-word="{{ part.text }}">{{ part.text }}</button>
+            {% else %}{{ part.text }}{% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if questions %}
+        <section class="reading-panel reading-panel--questions" aria-labelledby="reading-live-q-heading">
+          <h2 id="reading-live-q-heading" class="reading-panel__heading">Comprehension questions</h2>
+
+          <form method="post" action="{% url 'reading:detail' passage.pk %}">
+            {% csrf_token %}
+            {% for q in questions %}
+              <div class="reading-q-card reading-q-card--in-panel">
+                <p>
+                  <span class="reading-q-card__num">{{ forloop.counter }}.</span> {{ q.prompt }}
+                </p>
+                {% for letter, text in q.options_labeled %}
+                  <label class="reading-opt">
+                    <input type="radio" name="q_{{ q.pk }}" value="{{ letter }}" required />
+                    {{ letter }}. {{ text }}
+                  </label>
+                {% endfor %}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn--primary reading-panel__submit">Submit all answers</button>
+          </form>
+        </section>
+      {% endif %}
+
+      <script>
+        (function () {
+          var total = 20 * 60;
+          var left = total;
+          var el = document.getElementById("reading-timer");
+          if (el) {
+            function fmt(t) {
+              var m = Math.floor(t / 60);
+              var s = t % 60;
+              return m + ":" + (s < 10 ? "0" : "") + s;
+            }
+            setInterval(function () {
+              left = Math.max(0, left - 1);
+              el.textContent = fmt(left);
+            }, 1000);
+          }
+          var csrfInput = document.querySelector("#global-csrf input[name=csrfmiddlewaretoken]");
+          var token = csrfInput ? csrfInput.value : "";
+          var url = "{% url 'reading:add_word' %}";
+          document.querySelectorAll(".reading-token-word").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var w = btn.getAttribute("data-word");
+              if (!w || !token) return;
+              fetch(url, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": token,
+                },
+                body: JSON.stringify({ word: w }),
+                credentials: "same-origin",
+              })
+                .then(function (r) {
+                  return r.json();
+                })
+                .then(function (d) {
+                  if (d.ok) btn.style.color = "var(--success)";
+                })
+                .catch(function () {});
+            });
+          });
+        })();
+      </script>
+    {% endif %}
+  </div>
+{% endblock %}

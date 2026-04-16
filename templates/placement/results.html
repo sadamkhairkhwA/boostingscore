@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Placement results — Boosting Score{% endblock %}
+
+{% block content %}
+  <div style="max-width: 520px; margin: 0 auto; text-align: center">
+    <h1 class="page-title">Your results</h1>
+    <p class="lead lead--center" style="margin-bottom: 2rem">
+      You answered {{ correct }} out of {{ total }} questions correctly ({{ percent }}%).
+    </p>
+    <div class="card card--white" style="text-align: left; margin-bottom: 1.5rem">
+      <p class="stat-card__label">Your vocabulary level</p>
+      <p class="stat-card__value" style="font-size: 1.75rem">
+        Level {{ level }} — {{ level_name }}
+      </p>
+      <p class="text-muted" style="margin: 1rem 0 0">
+        Vocabulary topics and decks will show words at this level. You can retake the test from your profile if you want to change it.
+      </p>
+    </div>
+    <a class="btn btn--primary btn--lg" href="{% url 'vocabulary:home' %}">Start studying</a>
+  </div>
+{% endblock %}

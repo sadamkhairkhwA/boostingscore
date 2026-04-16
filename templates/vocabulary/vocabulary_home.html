@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Vocabulary — BoostingScore{% endblock %}
+
+{% block body_class %}vocab-dash{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/vocab_home.css' %}?v={{ static_css_version|default:'1' }}" />
+{% endblock %}
+
+{% block content %}
+
+<div class="vocab-hero">
+  <div class="vocab-hero__orb vocab-hero__orb--1" aria-hidden="true"></div>
+  <div class="vocab-hero__orb vocab-hero__orb--2" aria-hidden="true"></div>
+  <div class="vocab-hero__inner">
+    <p class="vocab-hero__label">Vocabulary</p>
+    <h1 class="vocab-hero__title">How do you want to study today?</h1>
+    <p class="vocab-hero__sub">
+      {{ level_label|default:"Standard" }} · Band {{ band_range|default:"5–6.5" }}
+    </p>
+    <div class="vocab-hero__stats">
+      <div class="vocab-hero__stat">
+        <span class="vocab-hero__stat-val">{{ words_tracked|default:0 }}</span>
+        <span class="vocab-hero__stat-lbl">Words tracked</span>
+      </div>
+      <div class="vocab-hero__stat">
+        <span class="vocab-hero__stat-val">{{ mastered|default:0 }}</span>
+        <span class="vocab-hero__stat-lbl">Mastered</span>
+      </div>
+      <div class="vocab-hero__stat">
+        <span class="vocab-hero__stat-val">{{ due_review|default:0 }}</span>
+        <span class="vocab-hero__stat-lbl">Due for review</span>
+      </div>
+      <div class="vocab-hero__stat">
+        <span class="vocab-hero__stat-val">{{ streak|default:0 }}</span>
+        <span class="vocab-hero__stat-lbl">Day streak</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vocab-body">
+
+  {% if last_session %}
+  <div class="vocab-continue">
+    <div class="vocab-continue__icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+    </div>
+    <div class="vocab-continue__main">
+      <span class="vocab-continue__label">Continue where you left off</span>
+      <div class="vocab-continue__title">{{ last_session.topic }} — {{ last_session.method }}</div>
+      <div class="vocab-progress">
+        <div class="vocab-progress__fill" style="width: {{ last_session.pct|default:0 }}%"></div>
+      </div>
+      <div class="vocab-continue__sub">
+        {{ last_session.done|default:0 }} of {{ last_session.total|default:0 }} words · {{ last_session.pct|default:0 }}% complete
+      </div>
+    </div>
+    <a href="{% if last_session.url %}{{ last_session.url }}{% else %}{% url 'vocabulary:index' %}{% endif %}" class="vocab-continue__btn">Continue →</a>
+  </div>
+  {% endif %}
+
+  <p class="vocab-sec-label">Study methods</p>
+
+  <div class="vocab-methods">
+
+    <a href="{% url 'vocabulary:index' %}" class="vocab-mcard vocab-a1">
+      <div class="vocab-mcard__badges">
+        <span class="vocab-badge vocab-badge--review">Review</span>
+      </div>
+      <div class="vocab-mcard__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="vocab-mcard__title">Flashcards</div>
+      <p class="vocab-mcard__desc">Flip through your deck with spaced repetition. Mark easy or hard to schedule your next review.</p>
+      <div class="vocab-mcard__foot">
+        <span class="vocab-mcard__stat">{{ due_today|default:0 }} due today</span>
+        <span class="vocab-mcard__go">Open →</span>
+      </div>
+    </a>
+
+    <a href="{% url 'vocabulary:type_it_deck_select' %}" class="vocab-mcard vocab-a1">
+      <div class="vocab-mcard__badges">
+        <span class="vocab-badge vocab-badge--mixed">Mixed</span>
+      </div>
+      <div class="vocab-mcard__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </div>
+      <div class="vocab-mcard__title">Type it</div>
+      <p class="vocab-mcard__desc">Write example sentences for any word and receive instant AI band-score feedback.</p>
+      <div class="vocab-mcard__foot">
+        <span class="vocab-mcard__stat">{% if type_it_count %}{{ type_it_count }} sessions{% else %}No sessions yet{% endif %}</span>
+        <span class="vocab-mcard__go">Open →</span>
+      </div>
+    </a>
+
+    <a href="{% url 'vocabulary:quiz_setup' %}" class="vocab-mcard vocab-a2">
+      <div class="vocab-mcard__badges">
+        <span class="vocab-badge vocab-badge--ai">AI</span>
+      </div>
+      <div class="vocab-mcard__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="vocab-mcard__title">Quiz</div>
+      <p class="vocab-mcard__desc">Build a quick quiz from any deck. Step-by-step setup in three easy steps.</p>
+      <div class="vocab-mcard__foot">
+        <span class="vocab-mcard__stat">Step-by-step</span>
+        <span class="vocab-mcard__go">Open →</span>
+      </div>
+    </a>
+
+    <a href="{% url 'vocabulary:word_list' %}" class="vocab-mcard vocab-a2">
+      <div class="vocab-mcard__badges"></div>
+      <div class="vocab-mcard__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      </div>
+      <div class="vocab-mcard__title">Word list</div>
+      <p class="vocab-mcard__desc">Browse every word with mastery level, definitions, examples, and favorites.</p>
+      <div class="vocab-mcard__foot">
+        <span class="vocab-mcard__stat">{{ favorites|default:0 }} favorites</span>
+        <span class="vocab-mcard__go">Open →</span>
+      </div>
+    </a>
+
+    <a href="{% url 'vocabulary:favored' %}" class="vocab-mcard vocab-a3">
+      <div class="vocab-mcard__badges">
+        <span class="vocab-badge vocab-badge--review">Review</span>
+      </div>
+      <div class="vocab-mcard__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+      <div class="vocab-mcard__title">Favored words</div>
+      <p class="vocab-mcard__desc">All your starred words in one focused list for targeted review sessions.</p>
+      <div class="vocab-mcard__foot">
+        <span class="vocab-mcard__stat">{{ favored_count|default:0 }} saved</span>
+        <span class="vocab-mcard__go">Open →</span>
+      </div>
+    </a>
+
+    <a href="{% url 'vocabulary:guide' %}" class="vocab-mcard vocab-mcard--guide vocab-a4">
+      <div class="vocab-mcard__badges"></div>
+      <div class="vocab-mcard__icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+      </div>
+      <div class="vocab-mcard__title">Guide</div>
+      <p class="vocab-mcard__desc">How each study method works, IELTS tips, band score guide, and suggested study plan.</p>
+      <div class="vocab-mcard__foot">
+        <span class="vocab-mcard__stat">4 sections</span>
+        <span class="vocab-mcard__go">Read →</span>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+{% endblock %}

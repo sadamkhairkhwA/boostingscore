@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load writing_tags %}
+
+{% block title %}Your results — IELTS Writing{% endblock %}
+
+{% block content %}
+  <div class="writing-result-page shell">
+    <p class="reading-back">
+      <a href="{% url 'writing:home' %}">&larr; Back to writing</a>
+    </p>
+
+    <header class="writing-result-hero">
+      <div class="writing-meta-badges writing-meta-badges--large" role="group" aria-label="Result summary">
+        {% if question_style_label %}
+          <span class="writing-meta-badges__item">{{ question_style_label }}</span>
+        {% endif %}
+        <span class="writing-meta-badges__item">Practice level {{ level }}</span>
+      </div>
+      <p class="writing-result-hero__hint">{{ level_feedback_hint }}</p>
+    </header>
+
+    <section class="fb-section fb-section--hero">
+      <div class="writing-band-wrap">
+        <div class="writing-band-circle">
+          {% if essay.band_score is not None %}
+            <span class="writing-band-circle__score">{{ essay.band_score }}</span>
+          {% else %}
+            <span class="writing-band-circle__score">—</span>
+          {% endif %}
+          <span class="writing-band-circle__label">Overall band score</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="fb-section">
+      <h2 class="fb-section__title">Scores by criterion</h2>
+      <p class="fb-section__lead">Each bar is out of 9.</p>
+      <div class="fb-criteria-card">
+        <div class="writing-criteria-row">
+          <span class="writing-criteria-row__name">Task achievement</span>
+          <div class="writing-criteria-row__bar">
+            <div
+              class="writing-criteria-row__fill"
+              style="width: {% if essay.task_achievement_score is not None %}{% widthratio essay.task_achievement_score 9 100 %}{% else %}0{% endif %}%"
+            ></div>
+          </div>
+          <span class="writing-criteria-row__num">{{ essay.task_achievement_score|default:"—" }}</span>
+        </div>
+        <div class="writing-criteria-row">
+          <span class="writing-criteria-row__name">Coherence and cohesion</span>
+          <div class="writing-criteria-row__bar">
+            <div
+              class="writing-criteria-row__fill"
+              style="width: {% if essay.coherence_score is not None %}{% widthratio essay.coherence_score 9 100 %}{% else %}0{% endif %}%"
+            ></div>
+          </div>
+          <span class="writing-criteria-row__num">{{ essay.coherence_score|default:"—" }}</span>
+        </div>
+        <div class="writing-criteria-row">
+          <span class="writing-criteria-row__name">Lexical resource</span>
+          <div class="writing-criteria-row__bar">
+            <div
+              class="writing-criteria-row__fill"
+              style="width: {% if essay.lexical_score is not None %}{% widthratio essay.lexical_score 9 100 %}{% else %}0{% endif %}%"
+            ></div>
+          </div>
+          <span class="writing-criteria-row__num">{{ essay.lexical_score|default:"—" }}</span>
+        </div>
+        <div class="writing-criteria-row">
+          <span class="writing-criteria-row__name">Grammar range and accuracy</span>
+          <div class="writing-criteria-row__bar">
+            <div
+              class="writing-criteria-row__fill"
+              style="width: {% if essay.grammar_score is not None %}{% widthratio essay.grammar_score 9 100 %}{% else %}0{% endif %}%"
+            ></div>
+          </div>
+          <span class="writing-criteria-row__num">{{ essay.grammar_score|default:"—" }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="fb-section">
+      <h2 class="fb-section__title">Examiner-style comments</h2>
+      <div class="fb-highlight">{{ essay.ai_feedback|default:"—"|linebreaks }}</div>
+    </section>
+
+    <section class="fb-section">
+      <h2 class="fb-section__title">Grammar — fix these patterns</h2>
+      {% if grammar_lines %}
+        <ul class="fb-list fb-list--issues">
+          {% for line in grammar_lines %}
+            <li class="fb-list__item">{{ line }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="fb-muted-block">{{ essay.grammar_mistakes|default:"—"|linebreaks }}</div>
+      {% endif %}
+    </section>
+
+    <section class="fb-section">
+      <h2 class="fb-section__title">Vocabulary — try these upgrades</h2>
+      {% if vocab_lines %}
+        <ul class="fb-list fb-list--tips">
+          {% for line in vocab_lines %}
+            <li class="fb-list__item">{{ line }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="fb-muted-block">{{ essay.vocabulary_suggestions|default:"—"|linebreaks }}</div>
+      {% endif %}
+    </section>
+
+    <p class="fb-wordbank-note">
+      Phrases were also saved to <a href="{% url 'writing:word_bank' %}">your word bank</a>.
+    </p>
+
+    {% if essay.draft_1 %}
+      <section class="fb-section">
+        <h2 class="fb-section__title">Your three drafts</h2>
+        <p class="fb-section__lead">
+          Earlier versions are kept here. The band score is from your <strong>third draft</strong> only.
+        </p>
+        <div class="fb-draft-stack">
+          <div class="fb-draft-card">
+            <span class="fb-draft-card__label">Draft 1</span>
+            <div class="fb-draft-card__body essay-highlight-body">{{ essay.draft_1|essay_highlights:essay.coaching_journey.round1 }}</div>
+          </div>
+          {% if essay.draft_2 %}
+            <div class="fb-draft-card">
+              <span class="fb-draft-card__label">Draft 2</span>
+              <div class="fb-draft-card__body essay-highlight-body">{{ essay.draft_2|essay_highlights:essay.coaching_journey.round2 }}</div>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if essay.coaching_journey %}
+      <section class="fb-section">
+        <h2 class="fb-section__title">Coach notes from each round</h2>
+        {% for round_key, round_data in essay.coaching_journey.items %}
+          <div class="fb-round-block">
+            <h3 class="fb-round-block__title">{{ round_key|feedback_round_title }}</h3>
+            <div class="fb-feedback-grid">
+              {% for k, v in round_data.items %}
+                {% if not k|is_span_key %}
+                <article class="fb-card fb-card--compact">
+                  <h4 class="fb-card__title">{{ k|feedback_label }}</h4>
+                  <div class="fb-card__body">{{ v|linebreaks }}</div>
+                </article>
+                {% endif %}
+              {% empty %}
+                <p class="text-muted">—</p>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    <section class="fb-section">
+      <h2 class="fb-section__title">Final draft (what we scored)</h2>
+      <p class="fb-section__lead">
+        {{ essay.word_count }} words · {{ essay.submitted_at|date:"M j, Y, g:i a" }}
+      </p>
+      <p class="essay-hl-legend text-muted" style="font-size: 0.9rem; margin-bottom: 0.75rem">
+        <mark class="hl-issue-major">Red</mark> serious · <mark class="hl-issue-minor">Yellow</mark> minor ·
+        <mark class="hl-good">Green ★</mark> strong
+      </p>
+      <div class="fb-final-essay essay-highlight-body">{{ essay.student_answer|essay_highlights:essay.feedback_highlights }}</div>
+    </section>
+
+    <div class="writing-actions">
+      <a class="btn btn--primary" href="{% url 'writing:pick' %}?qtype={{ essay.question_type }}">Practice again (choose type)</a>
+      <button type="button" class="btn btn--outline" onclick="window.print()">Print / save as PDF</button>
+    </div>
+  </div>
+{% endblock %}

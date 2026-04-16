@@ -1,0 +1,406 @@
+.guide-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+.guide-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.guide-back:hover {
+  border-color: #9ca3af;
+}
+
+.guide-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+  font-family: Georgia, serif;
+  margin-bottom: 6px;
+}
+
+.guide-sub {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.guide-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.g-tab {
+  font-size: 12px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 0.5px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  font-weight: 500;
+  transition: all 0.12s;
+}
+
+.g-tab:hover {
+  border-color: #9ca3af;
+}
+
+.g-tab.on {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.g-section {
+  display: none;
+}
+
+.g-section.on {
+  display: block;
+}
+
+.g-sec-lbl {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+
+.g-mcard {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.g-mcard-hd {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.g-mcard-hd:hover {
+  background: #fafafa;
+}
+
+.g-mcard-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eaf3de;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.g-mcard-info {
+  flex: 1;
+}
+
+.g-mcard-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.g-mcard-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.g-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.g-badge-ai {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.g-badge-review {
+  background: #e6f1fb;
+  color: #0c447c;
+}
+
+.g-badge-mixed {
+  background: #faeeda;
+  color: #633806;
+}
+
+.g-chevron {
+  flex-shrink: 0;
+  color: #9ca3af;
+  transition: transform 0.2s;
+}
+
+.g-mcard-body {
+  display: none;
+  padding: 4px 20px 18px 74px;
+}
+
+.g-mcard-body.open {
+  display: block;
+}
+
+.g-step {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+
+.g-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #eaf3de;
+  color: #27500a;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.g-step-txt {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.65;
+}
+
+.g-step-txt strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.g-tip-box {
+  background: #eaf3de;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+
+.g-tip-lbl {
+  font-size: 9px;
+  font-weight: 600;
+  color: #27500a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.g-tip-txt {
+  font-size: 12px;
+  color: #27500a;
+  line-height: 1.65;
+}
+
+.g-tip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.g-tcard {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.g-tcard-icon {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.g-tcard-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.g-tcard-txt {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.65;
+}
+
+.g-tcard-ex {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 2px solid #3b6d11;
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.g-band-table {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.g-band-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 0.5px solid #f3f4f6;
+}
+
+.g-band-row:last-child {
+  border-bottom: none;
+}
+
+.g-band-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.g-band-info {
+  flex: 1;
+}
+
+.g-band-lbl {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.g-band-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.g-band-tag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.g-plan-table {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.g-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border-bottom: 0.5px solid #f3f4f6;
+}
+
+.g-plan-row--last {
+  border-bottom: none;
+}
+
+.g-plan-day {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b6d11;
+  width: 76px;
+  flex-shrink: 0;
+}
+
+.g-plan-items {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.g-plan-pill {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: #eaf3de;
+  color: #27500a;
+}
+
+.g-plan-time {
+  font-size: 11px;
+  color: #9ca3af;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.g-plan-goal {
+  background: #eaf3de;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #27500a;
+  line-height: 1.65;
+}
+
+.g-plan-goal strong {
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .g-tip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .g-mcard-body {
+    padding-left: 20px;
+  }
+
+  .guide-tabs {
+    gap: 5px;
+  }
+
+  .g-tab {
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+}

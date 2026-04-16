@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Boosting Score{% endblock %}
+
+{% block content %}
+  <div class="bs-auth-wrap">
+    <h1 class="bs-auth-title">Profile</h1>
+    <div class="bs-auth-card bs-animate bs-delay-1">
+      <p class="bs-section-label">Vocabulary level</p>
+      <p class="bs-profile-val">Level {{ profile.level }} — {{ level_label }}</p>
+      <p class="bs-auth-sub bs-auth-sub--tight">
+        Words in vocabulary study are filtered to this level. You can retake the placement test anytime; you will be redirected to complete it before other study areas until you finish.
+      </p>
+    </div>
+    <div class="bs-form-actions">
+      <a class="bs-btn-outline bs-btn-block" href="{% url 'placement_retake' %}">Retake placement test</a>
+    </div>
+    <p class="bs-auth-footer"><a href="{% url 'home' %}">← Back to home</a></p>
+  </div>
+{% endblock %}

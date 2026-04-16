@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}My word bank — Boosting Score{% endblock %}
+
+{% block content %}
+  <div class="wb-page shell">
+    <header class="wb-page__head">
+      <div>
+        <h1 class="wb-page__title">My word bank</h1>
+        <p class="wb-page__sub">Words and phrases saved from vocabulary and writing feedback</p>
+      </div>
+      {% if user.is_authenticated %}
+        <a
+          class="wb-page__export"
+          href="?export=csv&amp;filter={{ current_filter }}&amp;q={{ search_q|urlencode }}"
+          >Export all</a
+        >
+      {% endif %}
+    </header>
+
+    <div class="wb-page__toolbar">
+      <form class="wb-page__search" method="get" action="">
+        <input type="hidden" name="filter" value="{{ current_filter }}" />
+        <input
+          type="search"
+          name="q"
+          class="wb-page__search-input"
+          placeholder="Search your word bank…"
+          value="{{ search_q }}"
+          aria-label="Search word bank"
+        />
+      </form>
+      <div class="wb-page__filters">
+        <a class="wb-filter-pill{% if current_filter == 'all' %} is-active{% endif %}" href="?filter=all{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}">All</a>
+        <a class="wb-filter-pill{% if current_filter == 'vocabulary' %} is-active{% endif %}" href="?filter=vocabulary{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}">Vocabulary</a>
+        <a class="wb-filter-pill{% if current_filter == 'writing' %} is-active{% endif %}" href="?filter=writing{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}">Writing tips</a>
+        <a class="wb-filter-pill{% if current_filter == 'mycards' %} is-active{% endif %}" href="?filter=mycards{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}">My cards</a>
+      </div>
+    </div>
+
+    {% if current_filter == 'mycards' %}
+      {% if my_cards %}
+        {% for c in my_cards %}
+          <div class="wb-card wb-card--mock">
+            <span class="wb-card__dot wb-card__dot--vocab" aria-hidden="true"></span>
+            <div class="wb-card__main">
+              <p class="wb-card__phrase">{{ c.word }}</p>
+              <p class="wb-card__def">{{ c.definition|truncatewords:40 }}</p>
+              <p class="wb-card__src">Vocabulary · {{ c.get_topic_display }} topic · {{ c.created_at|date:"M j, Y" }}</p>
+              <a class="wb-card__btn wb-card__btn--practice" href="{% url 'vocabulary:index' %}?topic={{ c.topic }}">Practice</a>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="wb-empty">
+          <p class="wb-empty__title">No custom cards yet</p>
+          <a class="btn btn--primary" href="{% url 'vocabulary:index' %}">Start learning vocabulary →</a>
+        </div>
+      {% endif %}
+    {% elif entries %}
+      {% for e in entries %}
+        <div class="wb-card wb-card--mock">
+          <span
+            class="wb-card__dot {% if e.essay %}wb-card__dot--writing{% else %}wb-card__dot--vocab{% endif %}"
+            aria-hidden="true"
+          ></span>
+          <div class="wb-card__main">
+            <p class="wb-card__phrase">{{ e.phrase|truncatechars:120 }}</p>
+            <p class="wb-card__src">
+              {% if e.essay %}
+                Writing tips · {{ e.created_at|date:"M j, Y" }}
+              {% else %}
+                Vocabulary · {{ e.created_at|date:"M j, Y" }}
+              {% endif %}
+            </p>
+            {% if not e.essay %}
+              <a class="wb-card__btn wb-card__btn--practice" href="{% url 'vocabulary:index' %}">Practice</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="wb-empty">
+        <p class="wb-empty__title">No words saved yet</p>
+        <a class="btn btn--primary" href="{% url 'vocabulary:index' %}">Start learning vocabulary →</a>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

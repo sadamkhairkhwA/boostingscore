@@ -1,0 +1,90 @@
+{# deck, wizard (bool). Context: user, study_mode, current_topic #}
+<div
+  class="vocab-topic-deck-card vocab-topic-deck-card--{{ deck.slug }}{% if not wizard %}{% if deck.is_custom_deck %}{% if active_deck and deck.deck_pk == active_deck.pk %} is-current{% endif %}{% elif deck.slug == current_topic %}{% if deck.slug != 'other' or not active_deck %} is-current{% endif %}{% endif %}{% endif %}"
+  {% if wizard %}data-topic-slug="{{ deck.slug }}"{% endif %}
+>
+  <div class="vocab-topic-deck-card__top">
+    <span class="vocab-topic-deck-card__emoji" aria-hidden="true">{{ deck.emoji }}</span>
+    {% if user.is_authenticated %}
+      {% if deck.last_studied is None and deck.word_count > 0 %}
+        <span class="vocab-topic-deck-card__badge vocab-topic-deck-card__badge--new">New</span>
+      {% elif deck.due_count > 0 %}
+        <span class="vocab-topic-deck-card__badge vocab-topic-deck-card__badge--due">{{ deck.due_count }} due</span>
+      {% endif %}
+    {% endif %}
+  </div>
+  <h3 class="vocab-topic-deck-card__name">{{ deck.label }}</h3>
+  <p class="vocab-topic-deck-card__meta">
+    {{ deck.word_count }} word{{ deck.word_count|pluralize }}
+    {% if deck.is_custom_deck %}
+      · Named deck
+    {% elif deck.is_personal %}
+      · Your custom cards
+    {% elif deck.last_studied %}
+      · Last studied {{ deck.last_studied|date:"M j" }}
+    {% else %}
+      · Not started yet
+    {% endif %}
+  </p>
+  <div
+    class="vocab-topic-deck-card__progress"
+    role="img"
+    aria-label="{{ deck.progress_pct }} percent toward mastering this topic deck"
+  >
+    <span class="vocab-topic-deck-card__progress-fill" style="width: {{ deck.progress_pct }}%;"></span>
+  </div>
+  <div class="vocab-topic-deck-card__progress-foot">
+    <span>{{ deck.progress_pct }}% mastered</span>
+    <span>{{ deck.mastered_count }} / {{ deck.word_count }}</span>
+  </div>
+  {% if wizard %}
+    {% if user.is_authenticated and deck.due_count > 0 %}
+      <div class="vocab-topic-deck-card__cta-row">
+        <button
+          type="button"
+          class="vocab-topic-deck-card__cta--wizard vocab-topic-deck-card__study-all vocab-topic-deck-card__study-all--{{ deck.slug }}"
+          data-topic="{% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}"
+          {% if deck.is_custom_deck %}data-deck-pk="{{ deck.deck_pk }}"{% endif %}
+        >
+          Study all
+        </button>
+        <button
+          type="button"
+          class="vocab-topic-deck-card__cta--wizard vocab-topic-deck-card__study vocab-topic-deck-card__study--{{ deck.slug }} vocab-topic-deck-card__study--wizard-review"
+          data-topic="{% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}"
+          {% if deck.is_custom_deck %}data-deck-pk="{{ deck.deck_pk }}"{% endif %}
+          data-review="1"
+        >
+          Review {{ deck.due_count }} →
+        </button>
+      </div>
+    {% else %}
+      <button
+        type="button"
+        class="vocab-topic-deck-card__study vocab-topic-deck-card__study--{{ deck.slug }} vocab-topic-deck-card__cta--wizard"
+        data-topic="{% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}"
+        {% if deck.is_custom_deck %}data-deck-pk="{{ deck.deck_pk }}"{% endif %}
+      >
+        Study flashcards →
+      </button>
+    {% endif %}
+  {% else %}
+    {% if user.is_authenticated and deck.due_count > 0 %}
+      <div class="vocab-topic-deck-card__cta-row">
+        <a
+          class="vocab-topic-deck-card__study-all vocab-topic-deck-card__study-all--{{ deck.slug }}"
+          href="{% url 'vocabulary:index' %}?topic={% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}{% if deck.is_custom_deck %}&deck={{ deck.deck_pk }}{% endif %}&panel=flashcards#flashcard"
+          >Study all</a>
+        <a
+          class="vocab-topic-deck-card__study vocab-topic-deck-card__study--{{ deck.slug }}"
+          href="{% url 'vocabulary:index' %}?topic={% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}{% if deck.is_custom_deck %}&deck={{ deck.deck_pk }}{% endif %}&panel=flashcards&review=1#flashcard"
+          >Review {{ deck.due_count }} →</a>
+      </div>
+    {% else %}
+      <a
+        class="vocab-topic-deck-card__study vocab-topic-deck-card__study--{{ deck.slug }}"
+        href="{% url 'vocabulary:index' %}?topic={% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}{% if deck.is_custom_deck %}&deck={{ deck.deck_pk }}{% endif %}&panel=flashcards#flashcard"
+        >Study flashcards →</a>
+    {% endif %}
+  {% endif %}
+</div>

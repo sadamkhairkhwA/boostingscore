@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Struggling words practice — Boosting Score{% endblock %}
+
+{% block body_class %}vocab-app{% endblock %}
+
+{% block content %}
+  <div class="vocab-struggling-page">
+    <p class="vocab-struggling-back">
+      <a href="{% url 'vocabulary:home' %}">← Back to vocabulary</a>
+    </p>
+
+    {% if struggling_count == 0 %}
+      <h1 class="page-title">Struggling words practice</h1>
+      <p class="lead">You do not have any struggling words right now. Mark cards as <strong>Hard</strong> in flashcards, then use <strong>End session</strong> (or switch study mode) after at least three sessions so we can spot repeat difficulties.</p>
+    {% else %}
+      <div class="vocab-struggling-warn" role="status">
+        Focused mode: Only your hardest words
+      </div>
+      <h1 class="vocab-struggling-title">Struggling words practice</h1>
+      <p class="vocab-struggling-sub">
+        These <strong>{{ struggling_count }}</strong> word{{ struggling_count|pluralize }} gave you difficulty. Let us fix that.
+      </p>
+
+      <div class="vocab-struggling-progress" aria-hidden="true">
+        <div class="vocab-struggling-progress__bar"><span id="struggling-bar-fill" style="width: 0%"></span></div>
+        <p class="vocab-struggling-progress__text" id="struggling-counter">Card 1 / {{ struggling_count }}</p>
+      </div>
+
+      <div class="vocab-struggling-stage">
+        <div
+          class="vocab-card vocab-struggling-card"
+          id="struggling-card"
+          role="button"
+          tabindex="0"
+          aria-label="Flashcard. Press Space to flip."
+        >
+          <div class="vocab-card-face vocab-card-face--front">
+            <div class="vocab-card-main">
+              <span class="vocab-card-pos" id="struggling-front-pos"></span>
+              <p class="vocab-card-word" id="struggling-front-word"></p>
+              <div class="vocab-card-mastery" id="struggling-front-level" aria-label="Mastery"></div>
+            </div>
+            <span class="vocab-card-hint">Click to flip</span>
+          </div>
+          <div class="vocab-card-face vocab-card-face--back">
+            <p class="vocab-card-definition" id="struggling-back-def"></p>
+            <p class="vocab-card-example" id="struggling-back-ex"></p>
+            <span class="vocab-card-hint">Click to flip</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vocab-struggling-nav">
+        <button type="button" class="btn btn--ghost btn--sm" id="struggling-prev">Previous</button>
+        <button type="button" class="btn btn--primary btn--sm" id="struggling-next">Next</button>
+      </div>
+
+      <div class="vocab-struggling-rate">
+        <button type="button" class="btn btn--sm vocab-flash-rate__btn vocab-flash-rate__btn--easy" id="struggling-easy">Easy</button>
+        <button type="button" class="btn btn--sm vocab-flash-rate__btn vocab-flash-rate__btn--hard" id="struggling-hard">Hard</button>
+      </div>
+
+      <div class="vocab-struggling-done-row">
+        <button type="button" class="btn btn--primary" id="struggling-finish">Finish practice session</button>
+      </div>
+
+      <div class="vocab-struggling-complete" id="struggling-complete" hidden role="status">
+        <p class="vocab-struggling-complete__title">Great work!</p>
+        <p class="vocab-struggling-complete__body" id="struggling-complete-msg"></p>
+        <p class="vocab-struggling-complete__hint">Keep going until you mark them all as Easy in your main flashcard deck.</p>
+        <a class="btn btn--outline" href="{% url 'vocabulary:home' %}">Back to vocabulary</a>
+      </div>
+
+      {{ deck|json_script:"struggling-deck-data" }}
+      <script type="application/json" id="struggling-api">
+        {
+          "ratingUrl": "{% url 'vocabulary:progress_flashcard_rating' %}",
+          "sessionEndUrl": "{% url 'vocabulary:progress_session_end' %}"
+        }
+      </script>
+
+      <script>
+        (function () {
+          const el = document.getElementById("struggling-deck-data");
+          let words = [];
+          if (el && el.textContent) {
+            try {
+              words = JSON.parse(el.textContent);
+              if (!Array.isArray(words)) words = [];
+            } catch (e) {}
+          }
+          const cfgEl = document.getElementById("struggling-api");
+          let cfg = { ratingUrl: "", sessionEndUrl: "" };
+          if (cfgEl && cfgEl.textContent) {
+            try {
+              cfg = Object.assign(cfg, JSON.parse(cfgEl.textContent));
+            } catch (e) {}
+          }
+
+          function csrf() {
+            const t = document.querySelector('#global-csrf input[name="csrfmiddlewaretoken"]');
+            return t ? t.value : "";
+          }
+
+          function keyFor(w) {
+            if (w.is_custom && w.custom_id != null) return "c:" + w.custom_id;
+            if (w.word_id != null) return "w:" + w.word_id;
+            return "";
+          }
+
+          const card = document.getElementById("struggling-card");
+          const frontW = document.getElementById("struggling-front-word");
+          const frontPos = document.getElementById("struggling-front-pos");
+          const frontL = document.getElementById("struggling-front-level");
+          const backD = document.getElementById("struggling-back-def");
+          const backE = document.getElementById("struggling-back-ex");
+          const counter = document.getElementById("struggling-counter");
+          const bar = document.getElementById("struggling-bar-fill");
+          const btnPrev = document.getElementById("struggling-prev");
+          const btnNext = document.getElementById("struggling-next");
+          const btnEasy = document.getElementById("struggling-easy");
+          const btnHard = document.getElementById("struggling-hard");
+          const btnFinish = document.getElementById("struggling-finish");
+          const complete = document.getElementById("struggling-complete");
+          const completeMsg = document.getElementById("struggling-complete-msg");
+
+          let index = 0;
+          const sessionKeys = new Set();
+          const ratedKeys = new Set();
+
+          function current() {
+            return words[index];
+          }
+
+          function syncVocabFlashcardHeight() {
+            if (!card) return;
+            var front = card.querySelector(".vocab-card-face--front");
+            var back = card.querySelector(".vocab-card-face--back");
+            if (!front || !back) return;
+            var h = Math.max(
+              320,
+              Math.ceil(front.scrollHeight),
+              Math.ceil(back.scrollHeight)
+            );
+            card.style.minHeight = h + "px";
+          }
+
+          function scheduleSyncVocabFlashcardHeight() {
+            requestAnimationFrame(function () {
+              requestAnimationFrame(syncVocabFlashcardHeight);
+            });
+          }
+
+          function setFlipped(on) {
+            if (card) card.classList.toggle("is-flipped", on);
+            scheduleSyncVocabFlashcardHeight();
+          }
+
+          function masteryFilledCount(w) {
+            if (typeof w.mastery_level === "number" && !isNaN(w.mastery_level)) {
+              return Math.max(0, Math.min(5, w.mastery_level));
+            }
+            const lv = parseInt(w.level, 10) || 1;
+            if (lv >= 3) return 5;
+            if (lv >= 2) return 3;
+            return 1;
+          }
+
+          function renderMasteryDots(w) {
+            const n = masteryFilledCount(w);
+            let html = "";
+            for (let i = 1; i <= 5; i++) {
+              html += '<span class="vocab-mastery-dot' + (i <= n ? " is-on" : "") + '" aria-hidden="true"></span>';
+            }
+            return html;
+          }
+
+          function displayPartOfSpeech(raw) {
+            const t = (raw || "").trim();
+            if (!t) return "Other";
+            const s = t.toLowerCase().replace(/\.+$/g, "");
+            const map = {
+              n: "Noun",
+              noun: "Noun",
+              v: "Verb",
+              verb: "Verb",
+              adj: "Adjective",
+              adjective: "Adjective",
+              adv: "Adverb",
+              adverb: "Adverb",
+              prep: "Preposition",
+              preposition: "Preposition",
+              conj: "Conjunction",
+              conjunction: "Conjunction",
+              pron: "Pronoun",
+              pronoun: "Pronoun",
+              det: "Determiner",
+              determiner: "Determiner",
+              interj: "Interjection",
+              interjection: "Interjection",
+              num: "Numeral",
+              numeral: "Numeral",
+            };
+            if (map[s]) return map[s];
+            return t.charAt(0).toUpperCase() + t.slice(1);
+          }
+
+          function render() {
+            const w = current();
+            if (!w || !frontW) return;
+            const posRaw = (w.part_of_speech || "").trim();
+            if (frontPos) {
+              frontPos.textContent = displayPartOfSpeech(posRaw);
+              frontPos.hidden = false;
+            }
+            frontW.textContent = w.word || "";
+            if (frontL) frontL.innerHTML = renderMasteryDots(w);
+            backD.textContent = w.definition || "—";
+            const ex = (w.example || "").trim();
+            backE.textContent = ex ? '"' + ex + '"' : "";
+            setFlipped(false);
+            if (counter) counter.textContent = "Card " + (index + 1) + " / " + words.length;
+            if (bar) bar.style.width = ((index + 1) / words.length) * 100 + "%";
+            if (btnPrev) btnPrev.disabled = index === 0;
+            if (btnNext) btnNext.disabled = index >= words.length - 1;
+          }
+
+          var resizeFlashTimer;
+          window.addEventListener("resize", function () {
+            clearTimeout(resizeFlashTimer);
+            resizeFlashTimer = setTimeout(scheduleSyncVocabFlashcardHeight, 120);
+          });
+
+          async function postRating(rating) {
+            const w = current();
+            const k = keyFor(w);
+            if (!k || !cfg.ratingUrl) return;
+            const kind = w.is_custom ? "custom" : "word";
+            const id = w.is_custom ? w.custom_id : w.word_id;
+            if (id == null) return;
+            sessionKeys.add(k);
+            ratedKeys.add(k);
+            try {
+              await fetch(cfg.ratingUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": csrf(),
+                },
+                body: JSON.stringify({ kind: kind, id: id, rating: rating }),
+              });
+            } catch (e) {}
+          }
+
+          async function endSession() {
+            if (!cfg.sessionEndUrl || !sessionKeys.size) return;
+            const keys = Array.from(sessionKeys);
+            sessionKeys.clear();
+            try {
+              await fetch(cfg.sessionEndUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": csrf(),
+                },
+                body: JSON.stringify({ keys: keys }),
+              });
+            } catch (e) {}
+          }
+
+          if (card) {
+            card.addEventListener("click", function () {
+              setFlipped(!card.classList.contains("is-flipped"));
+            });
+            card.addEventListener("keydown", function (ev) {
+              if (ev.key === " " || ev.key === "Enter") {
+                ev.preventDefault();
+                setFlipped(!card.classList.contains("is-flipped"));
+              }
+            });
+          }
+
+          if (btnPrev) {
+            btnPrev.addEventListener("click", function () {
+              if (index > 0) {
+                index--;
+                render();
+              }
+            });
+          }
+          if (btnNext) {
+            btnNext.addEventListener("click", function () {
+              if (index < words.length - 1) {
+                index++;
+                render();
+              }
+            });
+          }
+
+          if (btnEasy) {
+            btnEasy.addEventListener("click", function () {
+              postRating("easy");
+              if (index < words.length - 1) {
+                index++;
+                render();
+              }
+            });
+          }
+          if (btnHard) {
+            btnHard.addEventListener("click", function () {
+              postRating("hard");
+              if (index < words.length - 1) {
+                index++;
+                render();
+              }
+            });
+          }
+
+          if (btnFinish) {
+            btnFinish.addEventListener("click", async function () {
+              await endSession();
+              const n = ratedKeys.size;
+              if (completeMsg) {
+                completeMsg.textContent =
+                  "You practiced " +
+                  n +
+                  " struggling word" +
+                  (n === 1 ? "" : "s") +
+                  " in this session.";
+              }
+              if (complete) complete.hidden = false;
+              btnFinish.disabled = true;
+            });
+          }
+
+          render();
+        })();
+      </script>
+    {% endif %}
+  </div>
+{% endblock %}

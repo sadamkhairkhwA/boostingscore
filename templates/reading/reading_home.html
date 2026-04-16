@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Reading — BoostingScore{% endblock %}
+
+{% block content %}
+
+<div class="bs-hero">
+  <div class="bs-hero-orb-1"></div>
+  <div class="bs-hero-orb-2"></div>
+  <div class="bs-hero-inner">
+    <div class="bs-hero-label">Reading</div>
+    <h1 class="bs-hero-title">
+      Choose how you want to practise
+    </h1>
+    <p class="bs-hero-sub">
+      Build reading skills or prepare for IELTS with
+      timed practice tests that match the real exam format.
+    </p>
+    <div class="bs-hero-stats">
+      <div class="bs-hero-stat">
+        <span class="bs-hero-stat-val">
+          {{ sessions|default:0 }}
+        </span>
+        <span class="bs-hero-stat-lbl">Sessions done</span>
+      </div>
+      <div class="bs-hero-stat">
+        <span class="bs-hero-stat-val">
+          {{ avg_score|default:"—" }}
+        </span>
+        <span class="bs-hero-stat-lbl">Avg score</span>
+      </div>
+      <div class="bs-hero-stat">
+        <span class="bs-hero-stat-val">
+          {{ streak|default:0 }}
+        </span>
+        <span class="bs-hero-stat-lbl">Day streak</span>
+      </div>
+      <div class="bs-hero-stat">
+        <span class="bs-hero-stat-val">
+          {{ tests_done|default:0 }}
+        </span>
+        <span class="bs-hero-stat-lbl">Tests done</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bs-page-body">
+
+  <div class="bs-section-label">Choose Your Mode</div>
+
+  <a href="{% url 'reading:ielts_practice' %}"
+     class="bs-mode-card bs-animate bs-delay-1">
+    <div class="bs-mode-stripe"
+         style="background:#111827"></div>
+    <div class="bs-mode-icon"
+         style="background:#F3F4F6">
+      <svg width="20" height="20" viewBox="0 0 24 24"
+      fill="none" stroke="#111827" stroke-width="2">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <polyline points="9 11 12 14 22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5
+               a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <div class="bs-mode-body">
+      <span class="bs-mode-tag"
+            style="background:#F3F4F6;color:#374151">
+        Exam Preparation
+      </span>
+      <div class="bs-mode-title">IELTS practice test</div>
+      <div class="bs-mode-desc">
+        Real IELTS format. 60 minutes, 40 questions,
+        3 passages, full answer review.
+      </div>
+      <div class="bs-mode-features">
+        <span class="bs-mode-feat">✓ 60 min timer</span>
+        <span class="bs-mode-feat">✓ 40 questions</span>
+        <span class="bs-mode-feat">✓ 3 passages</span>
+        <span class="bs-mode-feat">✓ Score tracking</span>
+      </div>
+      <div class="bs-mode-stats">
+        <div>
+          <span class="bs-mode-stat-val">
+            {{ tests_done|default:0 }}
+          </span>
+          <span class="bs-mode-stat-lbl">Tests done</span>
+        </div>
+        <div>
+          <span class="bs-mode-stat-val">
+            {{ ielts_avg|default:"—" }}
+          </span>
+          <span class="bs-mode-stat-lbl">Avg score</span>
+        </div>
+        <div>
+          <span class="bs-mode-stat-val">—</span>
+          <span class="bs-mode-stat-lbl">Best band</span>
+        </div>
+      </div>
+    </div>
+    <span class="bs-mode-arrow">›</span>
+  </a>
+
+  <a href="{% url 'reading:general' %}"
+     class="bs-mode-card bs-animate bs-delay-2">
+    <div class="bs-mode-stripe"
+         style="background:#3B6D11"></div>
+    <div class="bs-mode-icon"
+         style="background:#EAF3DE">
+      <svg width="20" height="20" viewBox="0 0 24 24"
+      fill="none" stroke="#3B6D11" stroke-width="2">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14
+               a3 3 0 0 0-3-3H2z"/>
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14
+               a3 3 0 0 1 3-3h7z"/>
+      </svg>
+    </div>
+    <div class="bs-mode-body">
+      <span class="bs-mode-tag"
+            style="background:#EAF3DE;color:#27500A">
+        Everyday Improvement
+      </span>
+      <div class="bs-mode-title">Improve reading</div>
+      <div class="bs-mode-desc">
+        Real-world passages with comprehension questions.
+        No time pressure, go at your own pace.
+      </div>
+      <div class="bs-mode-features">
+        <span class="bs-mode-feat">
+          ✓ No time pressure
+        </span>
+        <span class="bs-mode-feat">✓ All topics</span>
+        <span class="bs-mode-feat">✓ Save words</span>
+        <span class="bs-mode-feat">✓ Highlight text</span>
+      </div>
+      <div class="bs-mode-stats">
+        <div>
+          <span class="bs-mode-stat-val">
+            {{ passages_read|default:0 }}
+          </span>
+          <span class="bs-mode-stat-lbl">
+            Passages read
+          </span>
+        </div>
+        <div>
+          <span class="bs-mode-stat-val">
+            {{ passage_avg|default:"—" }}
+          </span>
+          <span class="bs-mode-stat-lbl">Avg score</span>
+        </div>
+        <div>
+          <span class="bs-mode-stat-val">
+            {{ in_progress|default:0 }}
+          </span>
+          <span class="bs-mode-stat-lbl">In progress</span>
+        </div>
+      </div>
+    </div>
+    <span class="bs-mode-arrow">›</span>
+  </a>
+
+  <a href="{% url 'reading:strategies' %}"
+     class="bs-mode-card bs-animate bs-delay-3">
+    <div class="bs-mode-stripe"
+         style="background:#C0DD97"></div>
+    <div class="bs-mode-icon"
+         style="background:#F0F9E8">
+      <svg width="20" height="20" viewBox="0 0 24 24"
+      fill="none" stroke="#3B6D11" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div class="bs-mode-body">
+      <span class="bs-mode-tag"
+            style="background:#F0F9E8;color:#3B6D11">
+        Read Before Every Test
+      </span>
+      <div class="bs-mode-title">Strategies & tips</div>
+      <div class="bs-mode-desc">
+        9 expert strategies, all 6 question types
+        explained, 20-min exam plan, skill lessons.
+      </div>
+      <div class="bs-mode-features">
+        <span class="bs-mode-feat">✓ 9 strategies</span>
+        <span class="bs-mode-feat">
+          ✓ Question type tips
+        </span>
+        <span class="bs-mode-feat">
+          ✓ 6 skill lessons
+        </span>
+        <span class="bs-mode-feat">✓ Time plan</span>
+      </div>
+      <div class="bs-mode-stats">
+        <div>
+          <span class="bs-mode-stat-val">9</span>
+          <span class="bs-mode-stat-lbl">Strategies</span>
+        </div>
+        <div>
+          <span class="bs-mode-stat-val">6</span>
+          <span class="bs-mode-stat-lbl">
+            Question types
+          </span>
+        </div>
+        <div>
+          <span class="bs-mode-stat-val">5</span>
+          <span class="bs-mode-stat-lbl">
+            Mistakes covered
+          </span>
+        </div>
+      </div>
+    </div>
+    <span class="bs-mode-arrow">›</span>
+  </a>
+
+</div>
+
+{% endblock %}

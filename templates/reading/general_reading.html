@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}General Reading — Boosting Score{% endblock %}
+
+{% block extra_css %}
+<style>
+.bs-read-page { max-width: 900px; margin: 0 auto; padding: 32px 32px 60px; }
+.bs-read-title { font-size: 1.35rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
+.bs-read-lead { font-size: 0.85rem; color: #6b7280; margin-bottom: 22px; }
+.bs-soon { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 34px; text-align: center; }
+.bs-soon-ic { font-size: 1.6rem; margin-bottom: 10px; }
+.bs-soon-title { font-size: 0.95rem; font-weight: 700; color: #111827; margin-bottom: 6px; }
+.bs-soon-body { font-size: 0.82rem; color: #6b7280; line-height: 1.65; max-width: 420px; margin: 0 auto 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bs-read-page">
+  <h1 class="bs-read-title">General reading</h1>
+  <p class="bs-read-lead">Read interesting passages on real-world topics and answer comprehension questions at your own pace — no time pressure.</p>
+
+  <section class="bs-soon bs-animate bs-delay-1">
+    <div class="bs-soon-ic" aria-hidden="true">📖</div>
+    <div class="bs-soon-title">Passages coming soon</div>
+    <p class="bs-soon-body">We are adding passages across 8 topics — Environment, Health, Technology, Education, Society, Travel, Science, and Business.</p>
+    <a class="bs-btn-primary" href="{% url 'reading:ielts_practice' %}">Try IELTS practice instead →</a>
+  </section>
+</div>
+{% endblock %}

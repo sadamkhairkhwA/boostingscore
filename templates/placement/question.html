@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Placement test — Boosting Score{% endblock %}
+
+{% block content %}
+  <div style="max-width: 560px; margin: 0 auto">
+    <p class="place-progress">Question {{ index|add:1 }} of {{ total }}</p>
+    <div class="place-bar">
+      <div class="place-bar__fill" style="width: {% widthratio index|add:1 total 100 %}%"></div>
+    </div>
+
+    <div class="card card--white">
+      <h2 class="place-q-def" style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem">
+        Which word matches this definition?
+      </h2>
+      <p class="place-q-text">{{ q.definition }}</p>
+      <form method="post" action="{% url 'placement:question' index %}">
+        {% csrf_token %}
+        {% for opt in q.options %}
+          <button type="submit" class="place-opt" name="choice" value="{{ forloop.counter0 }}">{{ opt }}</button>
+        {% endfor %}
+      </form>
+    </div>
+  </div>
+{% endblock %}

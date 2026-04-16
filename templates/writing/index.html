@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Writing — Boosting Score{% endblock %}
+
+{% block extra_css %}
+<style>
+.bs-writing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+.bs-writing-task { padding: 24px; text-decoration: none; display: block; transition: all 0.15s ease; }
+.bs-writing-task:hover { border-color: #3B6D11; }
+.bs-writing-label { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+.bs-writing-title { font-size: 1.05rem; color: #111827; font-weight: 700; margin-bottom: 8px; }
+.bs-writing-desc { font-size: 0.8rem; color: #6B7280; line-height: 1.6; margin-bottom: 14px; }
+.bs-writing-meta { font-size: 0.75rem; font-weight: 600; margin-bottom: 16px; }
+.bs-writing-para { display: flex; gap: 16px; align-items: center; padding: 20px 24px; border: 1.5px dashed #C0DD97; margin-bottom: 28px; }
+.bs-writing-para-icon { width: 40px; height: 40px; border-radius: 8px; background: #EAF3DE; display: flex; align-items: center; justify-content: center; }
+.bs-writing-hist-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #E5E7EB; }
+.bs-writing-hist-row { display: flex; gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid #E5E7EB; text-decoration: none; color: inherit; }
+.bs-writing-band { width: 36px; height: 36px; border-radius: 50%; background: #EAF3DE; color: #3B6D11; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.bs-writing-hist-title { font-size: 0.85rem; font-weight: 600; color: #111827; }
+.bs-writing-hist-sub { font-size: 0.72rem; color: #9CA3AF; }
+.bs-writing-arrow { margin-left: auto; color: #9CA3AF; }
+.bs-writing-task--dark { background: #111827; border-color: #111827; }
+.bs-writing-label--muted { color: #9ca3af; }
+.bs-writing-title--light { color: #fff; }
+.bs-writing-desc--muted { color: #9ca3af; }
+.bs-writing-meta--muted { color: #9ca3af; }
+.bs-btn-outline--light { color: #fff; border-color: rgba(255, 255, 255, 0.2); }
+.bs-writing-label--green { color: #3b6d11; }
+.bs-writing-meta--green { color: #3b6d11; }
+.bs-writing-para-title { font-size: 0.9rem; margin-bottom: 0; }
+.bs-writing-para-desc { font-size: 0.78rem; margin-bottom: 0; }
+.bs-writing-para-link { margin-left: auto; }
+.bs-writing-card-overflow { overflow: hidden; }
+.bs-writing-guest-note { padding: 0 0 16px; margin: 0; color: #6b7280; font-size: 0.85rem; }
+@media (max-width: 768px) { .bs-writing-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="bs-hero">
+  <div class="bs-hero-orb-1"></div>
+  <div class="bs-hero-orb-2"></div>
+  <div class="bs-hero-inner">
+    <div class="bs-hero-label">Writing</div>
+    <h1 class="bs-hero-title">IELTS Writing Practice</h1>
+    <p class="bs-hero-sub">Real IELTS tasks · AI scores your writing · Pick question style and feedback level</p>
+    <div class="bs-hero-stats">
+      <div class="bs-hero-stat"><div class="bs-hs-val">{% if recent_essays.0.band_score %}{{ recent_essays.0.band_score }}{% else %}—{% endif %}</div><div class="bs-hs-lbl">Latest band</div></div>
+      <div class="bs-hero-stat"><div class="bs-hs-val">{{ recent_essays|length }}</div><div class="bs-hs-lbl">Essays written</div></div>
+      <div class="bs-hero-stat"><div class="bs-hs-val">{% if user.is_authenticated %}{% if user.profile %}{{ user.profile.streak|default:0 }}{% else %}0{% endif %}{% else %}0{% endif %}</div><div class="bs-hs-lbl">Day streak</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="bs-page-body">
+  {% if not user.is_authenticated %}
+    <p class="bs-writing-guest-note">Log in to save essays and unlock full band-score feedback.</p>
+  {% endif %}
+  <div class="bs-section-label">Choose your task</div>
+  <div class="bs-writing-grid">
+    <div class="bs-card bs-writing-task bs-animate bs-delay-1">
+      <div class="bs-writing-label bs-writing-label--green">Task 1 · Academic</div>
+      <div class="bs-writing-title">IELTS Writing Task 1</div>
+      <div class="bs-writing-desc">Summarise and describe visual information — graph, table, chart, diagram, map, or process — in your own words.</div>
+      <div class="bs-writing-meta bs-writing-meta--green">At least 150 words · ~20 minutes</div>
+      <a class="bs-btn-primary" href="{% if user.is_authenticated %}{% url 'writing:pick' %}?qtype=task1{% else %}{% url 'login' %}?next={% url 'writing:pick' %}%3Fqtype%3Dtask1{% endif %}">Start Task 1</a>
+    </div>
+    <div class="bs-card bs-writing-task bs-writing-task--dark bs-animate bs-delay-2">
+      <div class="bs-writing-label bs-writing-label--muted">Task 2 · Essay</div>
+      <div class="bs-writing-title bs-writing-title--light">IELTS Writing Task 2</div>
+      <div class="bs-writing-desc bs-writing-desc--muted">Write a formal essay in response to a point of view, argument, or problem. Scored on task response, coherence, vocabulary, and grammar.</div>
+      <div class="bs-writing-meta bs-writing-meta--muted">At least 250 words · ~40 minutes</div>
+      <a class="bs-btn-outline bs-btn-outline--light" href="{% if user.is_authenticated %}{% url 'writing:pick' %}?qtype=task2{% else %}{% url 'login' %}?next={% url 'writing:pick' %}%3Fqtype%3Dtask2{% endif %}">Start Task 2</a>
+    </div>
+  </div>
+
+  <a class="bs-card bs-writing-para bs-animate bs-delay-3" href="{% if user.is_authenticated %}{% url 'writing:paraphrase' %}{% else %}{% url 'login' %}?next={% url 'writing:paraphrase' %}{% endif %}">
+    <div class="bs-writing-para-icon">✎</div>
+    <div>
+      <div class="bs-writing-title bs-writing-para-title">Paraphrase practice</div>
+      <div class="bs-writing-desc bs-writing-para-desc">Shorter practice — rewrite an AI paragraph in your own words with level-matched feedback.</div>
+    </div>
+    <div class="bs-vocab-footer-link bs-writing-para-link">Open →</div>
+  </a>
+
+  <div class="bs-section-label">Writing history</div>
+  <section class="bs-card bs-animate bs-delay-4 bs-writing-card-overflow">
+    <div class="bs-writing-hist-head"><strong>Recent essays</strong><a href="{% url 'writing:home' %}" class="bs-vocab-footer-link">See all →</a></div>
+    {% if recent_essays %}
+      {% for essay in recent_essays %}
+        <a class="bs-writing-hist-row" href="{% url 'writing:result' essay.pk %}">
+          <div class="bs-writing-band">{{ essay.band_score|default:"—" }}</div>
+          <div>
+            <div class="bs-writing-hist-title">{{ essay.get_question_type_display|default:essay.question_type }}</div>
+            <div class="bs-writing-hist-sub">
+              Band {{ essay.band_score|default:"—" }} · {{ essay.submitted_at|date:"M j, Y" }}
+              ·
+              {% if essay.draft_2 %}3{% elif essay.draft_1 %}2{% else %}1{% endif %} drafts
+            </div>
+          </div>
+          <span class="bs-writing-arrow">›</span>
+        </a>
+      {% endfor %}
+    {% else %}
+      <div class="bs-empty-state">Write your first essay to see your history here.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

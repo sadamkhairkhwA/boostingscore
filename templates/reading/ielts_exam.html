@@ -1,0 +1,599 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}IELTS Practice Test — Boosting Score{% endblock %}
+
+{% block extra_css %}
+<style>
+/* EXAM INTERFACE — plain Arial, matches real IELTS */
+.ex-wrap{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;}
+
+/* LOADING */
+.ex-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:14px;}
+.ex-spinner{width:36px;height:36px;border:3px solid #E5E7EB;border-top-color:#3B6D11;border-radius:50%;animation:exSpin .7s linear infinite;}
+@keyframes exSpin{to{transform:rotate(360deg);}}
+.ex-loading-title{font-size:15px;font-weight:600;color:#111827;font-family:'Inter',sans-serif;}
+.ex-loading-sub{font-size:13px;color:#6B7280;font-family:'Inter',sans-serif;}
+
+/* HEADER */
+.ex-hdr{background:#fff;border-bottom:1px solid #ccc;padding:7px 20px;position:sticky;top:56px;z-index:50;}
+.ex-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;}
+.ex-meta{font-size:11px;color:#444;line-height:1.6;}
+.ex-meta strong{font-weight:700;color:#000;}
+.ex-timer{font-size:14px;color:#333;display:flex;align-items:center;gap:5px;font-weight:600;}
+.ex-hdr-btns{display:flex;gap:6px;}
+.ex-hbtn{font-size:11px;padding:4px 11px;border:1px solid #bbb;background:#fff;cursor:pointer;color:#333;font-family:Arial,sans-serif;}
+.ex-hbtn:hover{background:#f5f5f5;}
+.ex-inst{font-size:12px;color:#333;padding-top:5px;border-top:1px solid #eee;margin-top:4px;}
+.ex-inst strong{font-weight:700;}
+
+/* WARNING BANNER */
+.ex-warning{background:#FEF9C3;border:1px solid #FDE68A;padding:10px 20px;font-size:12px;color:#854F0B;font-family:'Inter',sans-serif;}
+
+/* BODY */
+.ex-body{max-width:900px;margin:0 auto;padding-bottom:60px;}
+
+/* PASSAGE */
+.ex-passage{background:#fff;padding:20px 24px;border-bottom:2px solid #ccc;}
+.ex-ptitle{font-size:13px;font-weight:700;text-transform:uppercase;color:#000;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px;letter-spacing:.02em;}
+.ex-ptext{font-size:13.5px;color:#000;line-height:1.9;text-align:justify;font-family:'Times New Roman',Georgia,serif;}
+.ex-ptext p{margin-bottom:10px;}
+
+/* QUESTIONS */
+.ex-qsec{background:#f5f5f5;}
+.ex-qhdr{background:#e0e0e0;padding:8px 20px;border-bottom:1px solid #ccc;}
+.ex-qhdr-range{font-size:12px;font-weight:700;color:#000;}
+.ex-qhdr-inst{font-size:11px;color:#333;margin-top:2px;line-height:1.45;}
+.ex-qhdr-inst strong{font-weight:700;}
+.ex-qbody{padding:14px 20px;}
+.ex-qitem{margin-bottom:16px;}
+
+/* MC */
+.ex-qstem{font-size:12px;font-weight:700;color:#000;margin-bottom:5px;line-height:1.5;}
+.ex-mc-row{display:flex;align-items:flex-start;gap:7px;padding:4px 6px;cursor:pointer;font-size:12px;color:#000;line-height:1.5;border-radius:2px;}
+.ex-mc-row:hover{background:#e8e8e8;}
+.ex-mc-row.sel{background:#dbeafe;}
+.ex-mc-radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #888;flex-shrink:0;margin-top:2px;background:#fff;display:flex;align-items:center;justify-content:center;}
+.ex-mc-row.sel .ex-mc-radio::after{content:'';width:7px;height:7px;border-radius:50%;background:#1d4ed8;display:block;}
+.ex-mc-ltr{font-weight:700;color:#000;flex-shrink:0;}
+
+/* TF / YN */
+.ex-tf-row{display:flex;align-items:center;gap:7px;padding:4px 6px;cursor:pointer;font-size:12px;color:#000;border-radius:2px;}
+.ex-tf-row:hover{background:#e8e8e8;}
+.ex-tf-row.sel{background:#dbeafe;}
+.ex-tf-radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ex-tf-row.sel .ex-tf-radio::after{content:'';width:7px;height:7px;border-radius:50%;background:#1d4ed8;display:block;}
+
+/* FILL / SENTENCE */
+.ex-fill-sent{font-size:12.5px;color:#000;line-height:2.2;font-family:'Times New Roman',serif;}
+.ex-fill-inp{border:1px solid #888;background:#fff;padding:2px 6px;min-width:130px;font-size:12px;font-family:Arial,sans-serif;outline:none;vertical-align:middle;}
+.ex-fill-inp:focus{border-color:#1d4ed8;background:#f0f7ff;}
+
+/* MATCH HEADING */
+.ex-mh-row{display:flex;align-items:center;gap:8px;padding:4px 6px;cursor:pointer;font-size:12px;color:#000;border-radius:2px;}
+.ex-mh-row:hover{background:#e8e8e8;}
+.ex-mh-row.sel{background:#dbeafe;}
+.ex-mh-radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ex-mh-row.sel .ex-mh-radio::after{content:'';width:7px;height:7px;border-radius:50%;background:#1d4ed8;display:block;}
+.ex-mh-num{font-weight:700;color:#333;flex-shrink:0;min-width:16px;}
+
+/* MATCH PARAGRAPH */
+.ex-mp-row{display:flex;align-items:center;gap:8px;padding:4px 6px;font-size:12px;color:#000;margin-bottom:3px;}
+.ex-mp-qnum{font-weight:700;color:#000;flex-shrink:0;min-width:20px;}
+.ex-mp-stem{flex:1;}
+.ex-mp-sel{font-size:12px;padding:4px 8px;border:1px solid #888;background:#fff;font-family:Arial,sans-serif;outline:none;cursor:pointer;}
+.ex-mp-sel:focus{border-color:#1d4ed8;}
+.ex-mp-sel.done{background:#dbeafe;border-color:#1d4ed8;}
+
+/* BOTTOM BAR */
+.ex-bot{position:fixed;bottom:0;left:0;right:0;background:#4a4a4a;padding:6px 16px;display:flex;align-items:center;gap:3px;z-index:100;flex-wrap:wrap;}
+.ex-blbl{font-size:10px;color:#ccc;font-weight:700;margin-right:3px;font-family:Arial,sans-serif;}
+.ex-bn{width:23px;height:23px;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#555;color:#ccc;border:1px solid #666;font-family:Arial,sans-serif;transition:all .1s;}
+.ex-bn.ans{background:#1d4ed8;color:#fff;border-color:#1d4ed8;}
+.ex-bsep{width:1px;height:20px;background:#666;margin:0 8px;flex-shrink:0;}
+.ex-bright{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.ex-brev{font-size:10px;color:#ccc;display:flex;align-items:center;gap:4px;cursor:pointer;font-family:Arial,sans-serif;}
+.ex-bnav{font-size:11px;font-weight:600;padding:5px 13px;border:1px solid #999;background:#666;cursor:pointer;color:#fff;font-family:Arial,sans-serif;}
+.ex-bnav:hover{background:#777;}
+.ex-bnav.primary{background:#5a8a5a;border-color:#3a6a3a;}
+.ex-bnav.primary:hover{background:#4a7a4a;}
+
+/* RESULTS */
+.ex-results{max-width:760px;margin:0 auto;padding:28px 22px 80px;font-family:'Inter',sans-serif;}
+.ex-res-hero{background:#fff;border:.5px solid #E5E7EB;border-radius:14px;padding:24px;margin-bottom:14px;display:flex;align-items:center;gap:20px;}
+.ex-res-circle{width:86px;height:86px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.ex-rc-num{font-size:26px;font-weight:700;color:#fff;line-height:1;}
+.ex-rc-lbl{font-size:9px;color:rgba(255,255,255,.75);margin-top:2px;text-transform:uppercase;}
+.ex-res-info{flex:1;}
+.ex-res-title{font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;font-family:Georgia,serif;}
+.ex-res-sub{font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:10px;}
+.ex-res-bar{height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden;}
+.ex-res-fill{height:100%;border-radius:3px;}
+.ex-res-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px;}
+.ex-rs{background:#fff;border:.5px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;}
+.ex-rsv{font-size:18px;font-weight:700;margin-bottom:2px;}
+.ex-rsl{font-size:9px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em;}
+.ex-rev-title{font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.ex-rev-card{background:#fff;border:.5px solid #E5E7EB;border-radius:10px;padding:13px 15px;margin-bottom:8px;}
+.ex-rev-qn{font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.ex-rev-q{font-size:12px;font-weight:600;color:#111827;margin-bottom:7px;line-height:1.5;}
+.ex-rev-row{display:flex;gap:8px;font-size:12px;margin-bottom:3px;}
+.ex-rev-lbl{font-weight:600;width:86px;flex-shrink:0;}
+.ex-rev-explain{margin-top:7px;padding:9px 11px;background:#EFF6FF;border-left:2px solid #3B82F6;font-size:11px;color:#1e40af;line-height:1.6;border-radius:0 6px 6px 0;}
+.ex-res-actions{display:flex;gap:9px;margin-top:18px;}
+.ex-ra{flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:600;text-align:center;cursor:pointer;border:none;transition:all .2s;text-decoration:none;display:block;}
+.ex-ra-p{background:#111827;color:#fff;}
+.ex-ra-p:hover{background:#1F2937;}
+.ex-ra-s{background:#fff;color:#374151;border:.5px solid #E5E7EB !important;}
+.ex-ra-s:hover{background:#F7F6F3;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ex-wrap" id="ex-wrap">
+
+  <!-- LOADING STATE -->
+  <div class="ex-loading" id="ex-loading">
+    <div class="ex-spinner"></div>
+    <div class="ex-loading-title">Generating your IELTS test...</div>
+    <div class="ex-loading-sub" id="ex-loading-msg">Writing reading passages</div>
+  </div>
+
+  <!-- EXAM STATE (hidden until loaded) -->
+  <div id="ex-exam" style="display:none;">
+
+    <div class="ex-hdr" id="ex-hdr">
+      <div class="ex-hdr-top">
+        <div class="ex-meta">
+          <strong id="ex-cname">{{ candidate_name }}</strong> · IELTS Academic<br>
+          <span id="ex-qcount">0 of 40 answered</span><br>
+          <span style="font-size:10px;color:#777;">Band {{ test.band_range }} · {{ test.topic }}</span>
+        </div>
+        <div class="ex-timer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="ex-timer">60:00</span> left
+        </div>
+        <div class="ex-hdr-btns">
+          <button class="ex-hbtn" onclick="confirmExit()">Exit test</button>
+          <button class="ex-hbtn">Help</button>
+        </div>
+      </div>
+      <div class="ex-inst" id="ex-inst">
+        <strong>Part 1</strong> — Read the passage and answer Questions 1–13.
+      </div>
+    </div>
+
+    <div id="ex-warning" style="display:none;" class="ex-warning"></div>
+
+    <div class="ex-body" id="ex-body"></div>
+
+    <div class="ex-bot" id="ex-bot"></div>
+
+  </div>
+
+  <!-- RESULTS STATE (hidden until submitted) -->
+  <div id="ex-results-wrap" style="display:none;"></div>
+
+</div>
+
+<script>
+var EXAM_DATA = null;
+var answers = {};
+var startTime = Date.now();
+var timerInterval = null;
+var TIMER_SECS = 3600;
+var TEST_ID = {{ test.id }};
+var TEST_LABEL = 'Test {{ test.test_number }} — {{ test.topic|escapejs }} · Band {{ test.band_range|escapejs }}';
+
+var loadingMsgs = [
+  'Writing reading passages...',
+  'Creating questions 1–13...',
+  'Creating questions 14–26...',
+  'Creating questions 27–40...',
+  'Adding answer explanations...',
+  'Almost ready...'
+];
+var msgIdx = 0;
+var msgInterval = setInterval(function(){
+  msgIdx = (msgIdx + 1) % loadingMsgs.length;
+  var el = document.getElementById('ex-loading-msg');
+  if(el) el.textContent = loadingMsgs[msgIdx];
+}, 2000);
+
+function getCookie(name){
+  var v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+  return v ? v[2] : null;
+}
+
+async function generateTest(){
+  try {
+    var resp = await fetch('{% url "reading:generate_ielts_test" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({ test_id: TEST_ID })
+    });
+    var data = await resp.json();
+    if(!resp.ok || !data.success){
+      throw new Error(data.error || 'Generation failed');
+    }
+    EXAM_DATA = data.test;
+    clearInterval(msgInterval);
+    renderExam();
+    startTimer();
+    document.getElementById('ex-loading').style.display = 'none';
+    document.getElementById('ex-exam').style.display = 'block';
+  } catch(e){
+    clearInterval(msgInterval);
+    document.getElementById('ex-loading').innerHTML =
+      '<div style="text-align:center;padding:40px;font-family:Inter,sans-serif;">' +
+      '<div style="font-size:15px;font-weight:600;color:#991B1B;margin-bottom:8px;">Could not generate test</div>' +
+      '<div style="font-size:13px;color:#6B7280;margin-bottom:16px;">' + e.message + '</div>' +
+      '<button onclick="location.reload()" style="background:#111827;color:#fff;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:13px;">Try again</button>' +
+      '</div>';
+  }
+}
+
+function renderExam(){
+  var body = document.getElementById('ex-body');
+  body.innerHTML = '';
+
+  var actualTotal = 0;
+  EXAM_DATA.parts.forEach(function(p){
+    p.questionGroups.forEach(function(g){
+      actualTotal += g.questions.length;
+    });
+  });
+
+  if(actualTotal < 40){
+    var w = document.getElementById('ex-warning');
+    w.style.display = 'block';
+    w.textContent = 'Note: This test was generated with ' + actualTotal + ' of 40 questions. Some questions may be missing.';
+  }
+
+  EXAM_DATA.parts.forEach(function(part){
+    var ps = document.createElement('div');
+    ps.className = 'ex-passage';
+    var ptext = part.passageText.replace(/\[([A-H])\]/g, function(m, letter){
+      return '<strong>[' + letter + ']</strong>';
+    });
+    ps.innerHTML =
+      '<div class="ex-ptitle">' + escH(part.passageTitle) + '</div>' +
+      '<div class="ex-ptext">' + ptext + '</div>';
+    body.appendChild(ps);
+
+    var qs = document.createElement('div');
+    qs.className = 'ex-qsec';
+    var allNums = [];
+    part.questionGroups.forEach(function(g){ g.questions.forEach(function(q){ allNums.push(q.number); }); });
+    var qrange = allNums.length ? allNums[0] + '–' + allNums[allNums.length-1] : '';
+
+    var hdr = document.createElement('div');
+    hdr.className = 'ex-qhdr';
+    hdr.innerHTML = '<div class="ex-qhdr-range">Part ' + part.partNumber + ' — Questions ' + qrange + '</div>' +
+      '<div class="ex-qhdr-inst">' + escH(part.instruction) + '</div>';
+    qs.appendChild(hdr);
+
+    part.questionGroups.forEach(function(group){
+      var gb = document.createElement('div');
+      gb.className = 'ex-qbody';
+
+      var gh = document.createElement('div');
+      gh.style.cssText = 'background:#d8d8d8;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#222;font-weight:700;border-left:3px solid #888;';
+      gh.textContent = group.groupInstruction;
+      gb.appendChild(gh);
+
+      if(group.groupType === 'match_heading' && group.headingList){
+        var hl = document.createElement('div');
+        hl.style.cssText = 'background:#f0f0f0;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#333;border:1px solid #ccc;';
+        hl.innerHTML = '<strong>List of Headings</strong><br>' +
+          group.headingList.map(function(h){ return escH(h); }).join('<br>');
+        gb.appendChild(hl);
+      }
+
+      group.questions.forEach(function(q){
+        gb.appendChild(renderQuestion(q, group));
+      });
+
+      qs.appendChild(gb);
+    });
+
+    body.appendChild(qs);
+  });
+
+  buildBottomBar();
+}
+
+function renderQuestion(q, group){
+  var el = document.createElement('div');
+  el.className = 'ex-qitem';
+  el.id = 'q-' + q.number;
+
+  if(q.type === 'mc'){
+    var letters = ['A','B','C','D'];
+    var html = '<div class="ex-qstem">' + q.number + '. ' + escH(q.stem) + '</div>';
+    (q.options || []).forEach(function(opt, i){
+      html += '<div class="ex-mc-row" id="mc-' + q.number + '-' + i + '" onclick="selMC(' + q.number + ',' + i + ',\'' + escQ(letters[i]) + '\')">' +
+        '<div class="ex-mc-radio"></div>' +
+        '<span class="ex-mc-ltr">' + letters[i] + '</span> ' + escH(opt.replace(/^[A-D]\s*/,'')) + '</div>';
+    });
+    el.innerHTML = html;
+
+  } else if(q.type === 'tfng' || q.type === 'ynng'){
+    var html = '<div class="ex-qstem">' + q.number + '. ' + escH(q.stem) + '</div>';
+    (q.options || []).forEach(function(opt, i){
+      html += '<div class="ex-tf-row" id="tf-' + q.number + '-' + i + '" onclick="selTF(' + q.number + ',' + i + ',\'' + escQ(opt) + '\')">' +
+        '<div class="ex-tf-radio"></div>' + escH(opt) + '</div>';
+    });
+    el.innerHTML = html;
+
+  } else if(q.type === 'gap' || q.type === 'sentence'){
+    var sentence = escH(q.stem).replace('[GAP]',
+      '<input class="ex-fill-inp" id="fill-' + q.number + '" type="text" placeholder="..." oninput="setFill(' + q.number + ',this.value)">');
+    el.innerHTML = '<div class="ex-qstem">' + q.number + '.</div>' +
+      '<div class="ex-fill-sent">' + sentence + '</div>';
+
+  } else if(q.type === 'match_heading'){
+    var html = '<div class="ex-qstem">' + q.number + '. ' + escH(q.stem) + '</div>';
+    (q.options || []).forEach(function(opt, i){
+      html += '<div class="ex-mh-row" id="mh-' + q.number + '-' + i + '" onclick="selMH(' + q.number + ',' + i + ',\'' + escQ(opt) + '\')">' +
+        '<div class="ex-mh-radio"></div>' +
+        '<span class="ex-mh-num">' + opt + '</span> ' +
+        (group.headingList ? escH(group.headingList.find(function(h){ return h.startsWith(opt + ' '); }) || '') : '') +
+        '</div>';
+    });
+    el.innerHTML = html;
+
+  } else if(q.type === 'match_paragraph'){
+    el.innerHTML =
+      '<div class="ex-mp-row">' +
+      '<span class="ex-mp-qnum">' + q.number + '.</span>' +
+      '<span class="ex-mp-stem">' + escH(q.stem) + '</span>' +
+      '<select class="ex-mp-sel" id="mp-' + q.number + '" onchange="selMP(' + q.number + ',this.value,this)">' +
+      '<option value="">--</option>' +
+      (q.options || []).map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }).join('') +
+      '</select></div>';
+  }
+
+  return el;
+}
+
+function selMC(n, idx, val){
+  document.querySelectorAll('[id^="mc-' + n + '-"]').forEach(function(r){ r.classList.remove('sel'); });
+  var el = document.getElementById('mc-' + n + '-' + idx);
+  if(el) el.classList.add('sel');
+  answers[n] = val;
+  refreshBot(); updateCount();
+}
+function selTF(n, idx, val){
+  document.querySelectorAll('[id^="tf-' + n + '-"]').forEach(function(r){ r.classList.remove('sel'); });
+  var el = document.getElementById('tf-' + n + '-' + idx);
+  if(el) el.classList.add('sel');
+  answers[n] = val;
+  refreshBot(); updateCount();
+}
+function selMH(n, idx, val){
+  document.querySelectorAll('[id^="mh-' + n + '-"]').forEach(function(r){ r.classList.remove('sel'); });
+  var el = document.getElementById('mh-' + n + '-' + idx);
+  if(el) el.classList.add('sel');
+  answers[n] = val;
+  refreshBot(); updateCount();
+}
+function selMP(n, val, sel){
+  answers[n] = val;
+  sel.className = 'ex-mp-sel' + (val ? ' done' : '');
+  refreshBot(); updateCount();
+}
+function setFill(n, val){
+  if(val.trim()){ answers[n] = val.trim(); }
+  else { delete answers[n]; }
+  refreshBot(); updateCount();
+}
+
+function buildBottomBar(){
+  var bot = document.getElementById('ex-bot');
+  bot.innerHTML = '';
+  EXAM_DATA.parts.forEach(function(p, pi){
+    var span = document.createElement('span');
+    span.className = 'ex-blbl';
+    span.textContent = 'PART ' + p.partNumber;
+    bot.appendChild(span);
+    var sec = document.createElement('div');
+    sec.style.display = 'flex';sec.style.gap = '2px';
+    p.questionGroups.forEach(function(g){
+      g.questions.forEach(function(q){
+        var d = document.createElement('div');
+        d.className = 'ex-bn';
+        d.id = 'bn-' + q.number;
+        d.textContent = q.number;
+        d.onclick = (function(num){ return function(){ scrollToQ(num); }; })(q.number);
+        sec.appendChild(d);
+      });
+    });
+    bot.appendChild(sec);
+    if(pi < EXAM_DATA.parts.length - 1){
+      var sep = document.createElement('div');
+      sep.className = 'ex-bsep';
+      bot.appendChild(sep);
+    }
+  });
+
+  var right = document.createElement('div');
+  right.className = 'ex-bright';
+  right.innerHTML =
+    '<label class="ex-brev"><input type="checkbox"> Review</label>' +
+    '<button class="ex-bnav" onclick="scrollPrev()">← Previous</button>' +
+    '<button class="ex-bnav primary" id="ex-next-btn" onclick="handleNext()">Next →</button>';
+  bot.appendChild(right);
+}
+
+function refreshBot(){
+  if(!EXAM_DATA) return;
+  var allNums = [];
+  EXAM_DATA.parts.forEach(function(p){
+    p.questionGroups.forEach(function(g){
+      g.questions.forEach(function(q){ allNums.push(q.number); });
+    });
+  });
+  allNums.forEach(function(n){
+    var el = document.getElementById('bn-' + n);
+    if(el) el.className = 'ex-bn' + (answers[n] ? ' ans' : '');
+  });
+  var total = allNums.length;
+  var done = Object.keys(answers).length;
+  if(done >= total){
+    var btn = document.getElementById('ex-next-btn');
+    if(btn){ btn.textContent = 'Submit →'; btn.onclick = submitExam; }
+  }
+}
+
+function updateCount(){
+  var done = Object.keys(answers).length;
+  document.getElementById('ex-qcount').textContent = done + ' of 40 answered';
+}
+
+function scrollToQ(n){
+  var el = document.getElementById('q-' + n);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+var currentPart = 0;
+function scrollPrev(){
+  currentPart = Math.max(0, currentPart - 1);
+  var parts = document.querySelectorAll('.ex-passage');
+  if(parts[currentPart]) parts[currentPart].scrollIntoView({behavior:'smooth'});
+}
+function handleNext(){
+  currentPart = Math.min(2, currentPart + 1);
+  var parts = document.querySelectorAll('.ex-passage');
+  if(parts[currentPart]) parts[currentPart].scrollIntoView({behavior:'smooth'});
+}
+
+function startTimer(){
+  timerInterval = setInterval(function(){
+    TIMER_SECS--;
+    if(TIMER_SECS <= 0){ clearInterval(timerInterval); TIMER_SECS = 0; submitExam(); }
+    var m = Math.floor(TIMER_SECS / 60);
+    var s = TIMER_SECS % 60;
+    var el = document.getElementById('ex-timer');
+    if(el) {
+      el.textContent = (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+      if(TIMER_SECS <= 300){
+        el.style.color = '#991B1B';
+      }
+    }
+  }, 1000);
+}
+
+function confirmExit(){
+  if(confirm('Are you sure you want to exit the test? Your progress will be lost.')){
+    window.location.href = '{% url "reading:home" %}';
+  }
+}
+
+async function submitExam(){
+  clearInterval(timerInterval);
+
+  var allQs = [];
+  EXAM_DATA.parts.forEach(function(p){
+    p.questionGroups.forEach(function(g){
+      g.questions.forEach(function(q){ allQs.push(q); });
+    });
+  });
+
+  var correct = 0;
+  allQs.forEach(function(q){
+    var ua = (answers[q.number] || '').toString().toLowerCase().trim();
+    var ca = (q.correct_answer || '').toString().toLowerCase().trim();
+    if(ua === ca) correct++;
+  });
+
+  var elapsed = Math.round((Date.now() - startTime) / 1000);
+
+  try {
+    await fetch('{% url "reading:submit_ielts_test" %}', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({
+        test_id: TEST_ID,
+        score: correct,
+        total: allQs.length,
+        time_secs: elapsed,
+        answers: answers
+      })
+    });
+  } catch(e){}
+
+  renderResults(allQs, correct, elapsed);
+}
+
+function renderResults(allQs, correct, elapsed){
+  document.getElementById('ex-exam').style.display = 'none';
+  var total = allQs.length;
+  var pct = total ? Math.round(correct / total * 100) : 0;
+  var color = correct >= 30 ? '#166534' : correct >= 20 ? '#854F0B' : '#991B1B';
+  var em = Math.floor(elapsed/60), es = elapsed%60;
+  var timeStr = (em<10?'0':'')+em+':'+(es<10?'0':'')+es;
+  var msg = correct >= 30 ? 'Excellent result!' : correct >= 20 ? 'Good effort — keep practising' : 'Keep going — review the explanations below';
+
+  var html =
+    '<div class="ex-res-hero">' +
+    '<div class="ex-res-circle" style="background:' + color + ';">' +
+    '<div class="ex-rc-num">' + correct + '/' + total + '</div>' +
+    '<div class="ex-rc-lbl">correct</div>' +
+    '</div>' +
+    '<div class="ex-res-info">' +
+    '<div class="ex-res-title">' + msg + '</div>' +
+    '<div class="ex-res-sub">' + TEST_LABEL + '<br>You answered ' + correct + ' out of ' + total + ' questions correctly.</div>' +
+    '<div class="ex-res-bar"><div class="ex-res-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+    '</div></div>' +
+
+    '<div class="ex-res-stats">' +
+    '<div class="ex-rs"><div class="ex-rsv" style="color:#166534;">' + correct + '</div><div class="ex-rsl">Correct</div></div>' +
+    '<div class="ex-rs"><div class="ex-rsv" style="color:#991B1B;">' + (total-correct) + '</div><div class="ex-rsl">Wrong</div></div>' +
+    '<div class="ex-rs"><div class="ex-rsv">' + timeStr + '</div><div class="ex-rsl">Time</div></div>' +
+    '<div class="ex-rs"><div class="ex-rsv" style="color:' + color + ';">' + pct + '%</div><div class="ex-rsl">Score</div></div>' +
+    '</div>';
+
+  html += '<div class="ex-rev-title">Question by question review</div>';
+
+  allQs.forEach(function(q){
+    var ua = answers[q.number] || '(no answer)';
+    var ca = q.correct_answer || '';
+    var ok = ua.toLowerCase().trim() === ca.toLowerCase().trim();
+    html += '<div class="ex-rev-card">' +
+      '<div class="ex-rev-qn">Question ' + q.number + ' · ' + typeLabel(q.type) + '</div>' +
+      '<div class="ex-rev-q">' + escH(q.stem.replace('[GAP]','___')) + '</div>' +
+      '<div class="ex-rev-row"><div class="ex-rev-lbl" style="color:' + (ok?'#166534':'#991B1B') + ';">Your answer</div>' +
+      '<div style="color:' + (ok?'#166534':'#991B1B') + ';">' + escH(String(ua)) + ' ' + (ok?'✓':'✗') + '</div></div>' +
+      (!ok ? '<div class="ex-rev-row"><div class="ex-rev-lbl" style="color:#166534;">Correct</div><div style="color:#166534;">' + escH(String(ca)) + ' ✓</div></div>' : '') +
+      '<div class="ex-rev-explain">' + escH(q.explanation || '') + '</div>' +
+      '</div>';
+  });
+
+  html += '<div class="ex-res-actions">' +
+    '<a href="{% url "reading:home" %}" class="ex-ra ex-ra-s">← Back to reading</a>' +
+    '<button class="ex-ra ex-ra-p" onclick="location.reload()">Try again</button>' +
+    '</div>';
+
+  var wrap = document.getElementById('ex-results-wrap');
+  wrap.innerHTML = '<div class="ex-results">' + html + '</div>';
+  wrap.style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function typeLabel(t){
+  return {mc:'Multiple choice',tfng:'True/False/Not Given',ynng:'Yes/No/Not Given',gap:'Gap fill',sentence:'Sentence completion',match_heading:'Match heading',match_paragraph:'Match paragraph'}[t] || t;
+}
+
+function escH(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escQ(s){
+  return String(s).replace(/'/g,"\\'").replace(/\\/g,'\\\\');
+}
+
+generateTest();
+</script>
+{% endblock %}

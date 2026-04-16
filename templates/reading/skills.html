@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Reading Skills — Boosting Score{% endblock %}
+
+{% block extra_css %}
+<style>
+.bs-read-page { max-width: 900px; margin: 0 auto; padding: 32px 32px 60px; }
+.bs-read-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+.bs-read-back:hover { border-color: #3b6d11; color: #111827; }
+.bs-read-title { font-size: 1.35rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
+.bs-read-lead { font-size: 0.85rem; color: #6b7280; margin-bottom: 18px; }
+.bs-pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.bs-mini-pill { font-size: 0.68rem; font-weight: 600; padding: 6px 12px; border-radius: 7px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.bs-mini-pill--on { background: #111827; color: #fff; border-color: #111827; }
+.bs-lesson { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+.bs-lesson-kicker { font-size: 0.56rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: #eff6ff; color: #185fa5; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
+.bs-lesson-title { font-size: 1.05rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
+.bs-lesson-lead { font-size: 0.75rem; color: #6b7280; line-height: 1.65; margin-bottom: 12px; }
+.bs-callout { background: #eff6ff; border: 1px solid #b5d4f4; border-radius: 10px; padding: 12px 14px; display: flex; gap: 10px; margin-bottom: 10px; }
+.bs-callout-ic { font-size: 1.1rem; flex-shrink: 0; }
+.bs-callout-k { font-size: 0.56rem; font-weight: 700; color: #185fa5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+.bs-callout-t { font-size: 0.75rem; color: #0c447c; line-height: 1.6; }
+.bs-lesson-box { font-size: 0.75rem; color: #374151; line-height: 1.7; background: #fff; border: 1px solid #e5e7eb; border-radius: 9px; padding: 12px 14px; }
+.bs-cta { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; text-align: center; }
+.bs-cta p { margin: 0 0 10px; font-size: 0.82rem; color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bs-read-page">
+  <a class="bs-read-back" href="{% url 'reading:strategies' %}">← Strategies &amp; tips</a>
+  <h1 class="bs-read-title">Reading skills — practical lessons</h1>
+  <p class="bs-read-lead">Each lesson teaches you a skill through explanation, examples, and practice.</p>
+
+  <div class="bs-pill-row" aria-label="Lessons">
+    <span class="bs-mini-pill bs-mini-pill--on">Scanning</span>
+    <span class="bs-mini-pill">Skimming</span>
+    <span class="bs-mini-pill">Paraphrase</span>
+    <span class="bs-mini-pill">True/False/NG</span>
+    <span class="bs-mini-pill">Yes/No/NG</span>
+    <span class="bs-mini-pill">Reading speed</span>
+  </div>
+
+  <section class="bs-lesson bs-animate bs-delay-1">
+    <div class="bs-lesson-kicker">Lesson 1 of 6</div>
+    <div class="bs-lesson-title">Scanning — find information fast</div>
+    <p class="bs-lesson-lead">Scanning means moving your eyes quickly to find one specific thing. You do not read every word — you search, like Ctrl+F on a computer.</p>
+
+    <div class="bs-callout">
+      <div class="bs-callout-ic" aria-hidden="true">🔍</div>
+      <div>
+        <div class="bs-callout-k">Think of it like this</div>
+        <div class="bs-callout-t">
+          You are in a library looking for “The Great Gatsby”. You do not read every title. Your eyes move fast looking for G, then Ga, then Gatsby. You <strong>ignore everything else</strong>. That is scanning.
+        </div>
+      </div>
+    </div>
+
+    <div class="bs-lesson-box">
+      In IELTS, the question gives you a keyword. Your job is to find that keyword — or its synonym — in the passage.
+      <strong>You do not need to understand the passage.</strong> You need to locate one piece of information.
+    </div>
+  </section>
+
+  <section class="bs-cta bs-animate bs-delay-2">
+    <p>More skill lessons — full interactive versions coming soon</p>
+    <a class="bs-btn-primary" href="{% url 'reading:ielts_practice' %}">Start practising now →</a>
+  </section>
+</div>
+{% endblock %}

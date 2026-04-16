@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% load writing_tags %}
+
+{% block title %}Writing — {{ task_label }} · Level {{ level }}{% endblock %}
+
+{% block content %}
+  <p class="reading-back">
+    <a href="{% url 'writing:home' %}">&larr; Back to writing</a>
+  </p>
+
+  {% if not question or not form %}
+    <h1 class="page-title">No question available</h1>
+    <p class="lead">
+      {% if qtype == "task1" %}
+        There are no Task 1 prompts for level {{ level }} yet. Ask an admin to run
+        <code>python manage.py seed_task1_questions</code>.
+      {% else %}
+        There are no Task 2 questions for level {{ level }} yet. Ask an admin to run
+        <code>python manage.py populate_questions</code>, or try another level.
+      {% endif %}
+    </p>
+    <a class="btn btn--outline" href="{% url 'writing:home' %}">Writing home</a>
+  {% else %}
+    <h1 class="page-title">{{ task_label }} · Level {{ level }}</h1>
+    <div class="writing-meta-badges" role="group" aria-label="Practice setup">
+      {% if question_style_label %}
+        <span class="writing-meta-badges__item">{{ question_style_label }}</span>
+      {% endif %}
+      <span class="writing-meta-badges__item writing-meta-badges__item--accent">{{ practice_level_label }}</span>
+    </div>
+    <p class="text-muted" style="font-size: 0.9rem; max-width: 42rem; line-height: 1.55">
+      You will write <strong>three drafts</strong> for the same question. After each draft, AI explains what to improve
+      (grammar, vocabulary, task focus) before you rewrite. Your earlier drafts stay on the page — nothing is deleted.
+      The final band score uses your <strong>third draft</strong>.
+    </p>
+
+    <div class="writing-coach-steps" aria-label="Progress">
+      <span class="writing-coach-steps__item{% if coach_stage == 1 %} is-active{% endif %}{% if coach_stage > 1 %} is-done{% endif %}">1 · First draft</span>
+      <span class="writing-coach-steps__item{% if coach_stage == 2 %} is-active{% endif %}{% if coach_stage > 2 %} is-done{% endif %}">2 · Rewrite</span>
+      <span class="writing-coach-steps__item{% if coach_stage == 3 %} is-active{% endif %}">3 · Final draft</span>
+    </div>
+
+    <div class="writing-timer-track" id="ielts-timer-track">
+      <span>Time left (this draft · IELTS standard)</span>
+      <span class="writing-timer-track__val" id="ielts-timer">—:—</span>
+    </div>
+    <p class="writing-timer-hint text-muted" style="font-size: 0.85rem; max-width: 42rem; margin: -0.25rem 0 1rem">
+      The clock resets to the full allowance each time you start a new draft (rewrite). Task 1 = 20 minutes; Task 2 uses the usual band-level timing for this practice level.
+    </p>
+
+    <div class="writing-q-box writing-q-box--studio">
+      <p class="writing-q-box__label">Question</p>
+      <div class="writing-q-box__text">{{ question.question_text|linebreaks }}</div>
+    </div>
+
+    {% if coaching_session and coach_stage >= 2 %}
+      <p class="essay-hl-legend text-muted" style="font-size: 0.85rem; max-width: 42rem; margin: 0 0 0.75rem">
+        In your saved drafts below:
+        <mark class="hl-issue-major">red underline</mark> = fix first ·
+        <mark class="hl-issue-minor">yellow</mark> = small tweak ·
+        <mark class="hl-good">green ★</mark> = keep doing this
+      </p>
+      <div class="writing-coach-panel">
+        <p class="writing-coach-panel__eyebrow">Draft 1 · preserved</p>
+        <div class="writing-coach-panel__readonly essay-highlight-body">{{ coaching_session.draft_1|essay_highlights:coaching_session.round_1_feedback }}</div>
+      </div>
+      <div class="writing-coach-panel writing-coach-panel--feedback">
+        <p class="writing-coach-panel__eyebrow">After draft 1 — coach notes</p>
+        <div class="fb-feedback-grid fb-feedback-grid--compact">
+          {% for k, v in coaching_session.round_1_feedback.items %}
+            {% if not k|is_span_key %}
+            <article class="fb-card fb-card--compact">
+              <h3 class="fb-card__title">{{ k|feedback_label }}</h3>
+              <div class="fb-card__body">{{ v|linebreaks }}</div>
+            </article>
+            {% endif %}
+          {% empty %}
+            <p class="text-muted">No structured feedback stored.</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if coaching_session and coach_stage >= 3 %}
+      <div class="writing-coach-panel">
+        <p class="writing-coach-panel__eyebrow">Draft 2 · preserved</p>
+        <div class="writing-coach-panel__readonly essay-highlight-body">{{ coaching_session.draft_2|essay_highlights:coaching_session.round_2_feedback }}</div>
+      </div>
+      <div class="writing-coach-panel writing-coach-panel--feedback">
+        <p class="writing-coach-panel__eyebrow">After draft 2 — coach notes &amp; roadmap</p>
+        <div class="fb-feedback-grid fb-feedback-grid--compact">
+          {% for k, v in coaching_session.round_2_feedback.items %}
+            {% if not k|is_span_key %}
+            <article class="fb-card fb-card--compact">
+              <h3 class="fb-card__title">{{ k|feedback_label }}</h3>
+              <div class="fb-card__body">{{ v|linebreaks }}</div>
+            </article>
+            {% endif %}
+          {% empty %}
+            <p class="text-muted">No structured feedback stored.</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'writing:question' %}" id="ielts-essay-form">
+      {% csrf_token %}
+      {{ form.coach_step }}
+      {{ form.session_id }}
+      {{ form.question_id }}
+      {{ form.level }}
+      {{ form.question_type }}
+      <div class="form-row">
+        {% if coach_stage == 1 %}
+          <label class="writing-coach-draft-label" for="essay-answer">Draft 1 — your first attempt</label>
+        {% elif coach_stage == 2 %}
+          <label class="writing-coach-draft-label" for="essay-answer">Draft 2 — rewrite using the coach notes above</label>
+        {% else %}
+          <label class="writing-coach-draft-label" for="essay-answer">Draft 3 — final polish (this version is scored)</label>
+        {% endif %}
+        {{ form.answer }}
+        {{ form.answer.errors }}
+      </div>
+      <div id="ielts-under-min-box" class="writing-warn-box" hidden></div>
+      <div class="writing-essay-footer">
+        <span class="writing-wc"><span id="ielts-word-count-num">0</span> words · target ~{{ target_words }}</span>
+        <button type="submit" class="btn btn--primary">
+          {% if coach_stage == 3 %}Submit final draft &amp; get score{% else %}Submit draft &amp; get coach feedback{% endif %}
+        </button>
+      </div>
+    </form>
+
+    <script>
+      (function () {
+        var TOTAL_SEC = {{ timer_seconds }};
+        var MIN_WARN = {{ min_words_warn }};
+        var left = TOTAL_SEC;
+        var el = document.getElementById("ielts-timer");
+        var track = document.getElementById("ielts-timer-track");
+        var ta = document.getElementById("essay-answer");
+        var wcEl = document.getElementById("ielts-word-count-num");
+        var warnBox = document.getElementById("ielts-under-min-box");
+
+        function fmt(t) {
+          var m = Math.floor(t / 60);
+          var s = t % 60;
+          return m + ":" + (s < 10 ? "0" : "") + s;
+        }
+
+        if (el) el.textContent = fmt(left);
+
+        function countWords(s) {
+          var m = s.match(/[A-Za-z0-9']+/g);
+          return m ? m.length : 0;
+        }
+
+        setInterval(function () {
+          left = Math.max(0, left - 1);
+          if (el) el.textContent = fmt(left);
+          if (track && left < 5 * 60) track.classList.add("is-warning");
+        }, 1000);
+
+        function updWords() {
+          var n = countWords(ta ? ta.value : "");
+          wcEl.textContent = String(n);
+          if (warnBox) {
+            if (n >= MIN_WARN) {
+              warnBox.hidden = true;
+            } else {
+              warnBox.hidden = false;
+              warnBox.textContent =
+                "This draft is under about " +
+                MIN_WARN +
+                " words for this task — add more if you can before moving on.";
+            }
+          }
+        }
+        if (ta) {
+          ta.addEventListener("input", updWords);
+          updWords();
+        }
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

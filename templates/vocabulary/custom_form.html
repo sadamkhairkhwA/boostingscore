@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} — Boosting Score{% endblock %}
+
+{% block body_class %}vcustom-form-page-body vocab-app{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/vocab_custom_card.css' %}?v=3" />
+{% endblock %}
+
+{% block content %}
+  <div class="vcustom-page">
+    <div class="vcustom-layout">
+      <section class="vcustom-main" aria-labelledby="vcustom-title">
+        <h1 class="vcustom-heading" id="vcustom-title">{{ title }}</h1>
+        <p class="vcustom-back">
+          <a href="{% url 'vocabulary:index' %}?topic={{ back_topic }}">← Back to vocabulary</a>
+        </p>
+
+        <div class="vcustom-card">
+          <form method="post" class="vcustom-form" id="custom-card-form" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+              <ul class="vcustom-errors" style="margin: 0 0 1rem; list-style: disc">
+                {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if card and card.definition_image %}
+              <div class="vcustom-preview-block">
+                <p class="vcustom-preview-block__label">Current picture</p>
+                <img src="{{ card.definition_image.url }}" alt="" />
+              </div>
+            {% endif %}
+            <div id="vocab-ai-image-preview" class="vcustom-preview-block" hidden>
+              <p class="vcustom-preview-block__label">AI preview (save the card to upload)</p>
+              <img src="" alt="" id="vocab-ai-image-preview-img" />
+            </div>
+
+            <div class="vcustom-field">
+              <label class="vcustom-label" for="{{ form.word.id_for_label }}">{{ form.word.label }}</label>
+              {{ form.word }}
+              {% if form.word.errors %}<ul class="vcustom-errors">{% for e in form.word.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+            <div class="vcustom-field">
+              <label class="vcustom-label" for="{{ form.definition.id_for_label }}">{{ form.definition.label }}</label>
+              {{ form.definition }}
+              {% if form.definition.errors %}<ul class="vcustom-errors">{% for e in form.definition.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+            <div class="vcustom-field">
+              <label class="vcustom-label" for="{{ form.example_sentence.id_for_label }}">{{ form.example_sentence.label }}</label>
+              {{ form.example_sentence }}
+              {% if form.example_sentence.errors %}<ul class="vcustom-errors">{% for e in form.example_sentence.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+
+            <div class="vcustom-visually-hidden" aria-hidden="true">
+              {{ form.topic }}
+            </div>
+            {% if card %}
+              <div class="vcustom-field">
+                <span class="vcustom-label">{{ form.definition_image.label }}</span>
+                {{ form.definition_image }}
+                {% if form.definition_image.errors %}<ul class="vcustom-errors">{% for e in form.definition_image.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+              </div>
+            {% else %}
+              <div class="vcustom-file-hook">{{ form.definition_image }}</div>
+            {% endif %}
+
+            <div class="vcustom-form-actions">
+              <button type="submit" class="vcustom-btn vcustom-btn--primary">{{ submit_label }}</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <aside class="vcustom-aside" aria-label="Topic and AI tools">
+        <div class="vcustom-panel">
+          <h2 class="vcustom-panel__title">Topic</h2>
+          <div class="vcustom-topic-pills" role="group" aria-label="Deck topic">
+            {% for value, label in topic_choices %}
+              <button
+                type="button"
+                class="vcustom-topic-pill{% if value == 'other' %} vcustom-topic-pill--my-vocab{% endif %}{% if form.topic.value == value %} is-selected{% endif %}"
+                data-topic="{{ value }}"
+              >{% if value == 'other' %}Personal vocabulary{% else %}{{ label }}{% endif %}</button>
+            {% endfor %}
+          </div>
+            {% if form.topic.errors %}<ul class="vcustom-errors">{% for e in form.topic.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+
+            <div class="vcustom-deck-wrap" id="vcustom-deck-wrap" hidden>
+              <h2 class="vcustom-panel__title" style="margin-top: 1rem">Named deck</h2>
+              <p class="vcustom-aside-hint" style="margin: 0 0 0.5rem">
+                Optional — save under one of your custom decks, or leave blank for general personal vocabulary.
+              </p>
+              <div class="vcustom-field" style="margin: 0">
+                <label class="vcustom-label" for="{{ form.deck.id_for_label }}">{{ form.deck.label }}</label>
+                {{ form.deck }}
+                {% if form.deck.errors %}<ul class="vcustom-errors">{% for e in form.deck.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+              </div>
+              <p class="vcustom-aside-hint" style="margin-top: 0.5rem">
+                <a href="{% url 'vocabulary:deck_create' %}">+ Create a deck with multiple cards</a>
+              </p>
+            </div>
+
+          <p class="vcustom-aside-hint" style="margin-top: 1rem">
+            Cards are saved at your vocabulary level ({{ user_vocab_level }}). To change it, retake the placement test from <a href="{% url 'profile_settings' %}">your profile</a>.
+          </p>
+        </div>
+
+        <div class="vcustom-panel">
+          <h2 class="vcustom-panel__title">AI</h2>
+          <button type="button" class="vcustom-btn vcustom-btn--outline" id="vocab-ai-fill">Generate with AI</button>
+          <button type="button" class="vcustom-btn vcustom-btn--outline" id="vocab-ai-image" title="OpenAI Images API (paid per image)">
+            AI illustration
+          </button>
+          {% if not card and form.definition_image.errors %}<ul class="vcustom-errors">{% for e in form.definition_image.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          <p class="vcustom-ai-status" id="vocab-ai-status" hidden aria-live="polite"></p>
+          <p class="vcustom-aside-hint">
+            {% if card %}Replace or clear the picture from the field above, or use AI illustration.{% else %}AI illustration attaches the file for you — then save. No manual upload on create.{% endif %}
+          </p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById("custom-card-form");
+      if (!form) return;
+
+      const topicSel = document.getElementById("id_topic");
+      const userVocabLevel = {{ user_vocab_level }};
+      const deckSel = document.getElementById("id_deck");
+      const deckWrap = document.getElementById("vcustom-deck-wrap");
+
+      function syncDeckRowVisibility() {
+        if (!deckWrap || !topicSel) return;
+        deckWrap.hidden = topicSel.value !== "other";
+      }
+
+      function syncTopicPills() {
+        if (!topicSel) return;
+        const v = topicSel.value;
+        document.querySelectorAll(".vcustom-topic-pill").forEach(function (b) {
+          b.classList.toggle("is-selected", b.getAttribute("data-topic") === v);
+        });
+      }
+
+      document.querySelectorAll(".vcustom-topic-pill").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (!topicSel) return;
+          var nextTopic = btn.getAttribute("data-topic") || topicSel.value;
+          topicSel.value = nextTopic;
+          if (nextTopic !== "other" && deckSel) deckSel.value = "";
+          syncTopicPills();
+          syncDeckRowVisibility();
+        });
+      });
+
+      syncTopicPills();
+      syncDeckRowVisibility();
+
+      const btn = document.getElementById("vocab-ai-fill");
+      const status = document.getElementById("vocab-ai-status");
+
+      function csrf() {
+        const t = form.querySelector("[name=csrfmiddlewaretoken]");
+        return t ? t.value : "";
+      }
+
+      if (btn) {
+        btn.addEventListener("click", async function () {
+          const wordEl = document.getElementById("id_word");
+          const def = document.getElementById("id_definition");
+          const ex = document.getElementById("id_example_sentence");
+          if (!wordEl || !topicSel || !def || !ex) return;
+
+          const word = wordEl.value.trim();
+          if (!word) {
+            status.hidden = false;
+            status.textContent = "Enter a word first.";
+            return;
+          }
+
+          status.hidden = false;
+          status.textContent = "Generating…";
+          btn.disabled = true;
+
+          try {
+            const r = await fetch("{% url 'vocabulary:custom_ai_fill' %}", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf(),
+              },
+              body: JSON.stringify({
+                word: word,
+                topic: topicSel.value,
+                level: userVocabLevel,
+              }),
+            });
+            const data = await r.json();
+            if (data.ok) {
+              def.value = data.definition || "";
+              ex.value = data.example_sentence || "";
+              status.textContent = "Filled definition and example.";
+            } else {
+              status.textContent = data.error || "Could not generate.";
+            }
+          } catch (e) {
+            status.textContent = "Network error.";
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+
+      const btnImg = document.getElementById("vocab-ai-image");
+      if (btnImg) {
+        btnImg.addEventListener("click", async function () {
+          const wordEl = document.getElementById("id_word");
+          const def = document.getElementById("id_definition");
+          const fileInput = document.getElementById("id_definition_image");
+          if (!wordEl || !topicSel || !def || !fileInput) return;
+
+          const word = wordEl.value.trim();
+          if (!word) {
+            status.hidden = false;
+            status.textContent = "Enter a word first.";
+            return;
+          }
+
+          status.hidden = false;
+          status.textContent = "Generating illustration (often 30–60s)…";
+          btnImg.disabled = true;
+
+          try {
+            const r = await fetch("{% url 'vocabulary:custom_ai_image_preview' %}", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf(),
+              },
+              body: JSON.stringify({
+                word: word,
+                definition: (def.value || "").trim(),
+                topic: topicSel.value,
+                level: userVocabLevel,
+              }),
+            });
+            const data = await r.json();
+            if (!data.ok) {
+              status.textContent = data.error || "Could not generate image.";
+              return;
+            }
+            if (!data.image_base64) {
+              status.textContent = "No image returned.";
+              return;
+            }
+            const bin = atob(data.image_base64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            const blob = new Blob([arr], { type: "image/png" });
+            const file = new File([blob], "ai-vocabulary.png", { type: "image/png" });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+            const prev = document.getElementById("vocab-ai-image-preview");
+            const prevImg = document.getElementById("vocab-ai-image-preview-img");
+            if (prev && prevImg) {
+              prev.hidden = false;
+              prevImg.src = "data:image/png;base64," + data.image_base64;
+            }
+            status.textContent = "Illustration attached — click Save to upload.";
+          } catch (e) {
+            status.textContent = "Network error.";
+          } finally {
+            btnImg.disabled = false;
+          }
+        });
+      }
+    })();
+  </script>
+{% endblock %}

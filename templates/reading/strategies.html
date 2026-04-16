@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Strategies & Tips — Boosting Score{% endblock %}
+
+{% block extra_css %}
+<style>
+.bs-read-page { max-width: 900px; margin: 0 auto; padding: 32px 32px 60px; }
+.bs-read-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+.bs-read-back:hover { border-color: #3b6d11; color: #111827; }
+.bs-read-title { font-size: 1.35rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
+.bs-read-lead { font-size: 0.85rem; color: #6b7280; margin-bottom: 20px; }
+.bs-golden { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; background: #eaf3de; border: 1px solid #c0dd97; margin-bottom: 18px; }
+.bs-golden-ic { width: 32px; height: 32px; border-radius: 8px; background: #3b6d11; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
+.bs-golden-title { font-size: 0.78rem; font-weight: 700; color: #1a3a0c; margin-bottom: 2px; }
+.bs-golden-body { font-size: 0.78rem; color: #27500a; line-height: 1.6; }
+.bs-strat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.bs-strat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 13px 14px; }
+.bs-strat-kicker { font-size: 0.56rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+.bs-strat-name { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 4px; }
+.bs-strat-card ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.bs-strat-card li { font-size: 0.72rem; color: #6b7280; padding-left: 10px; position: relative; }
+.bs-strat-card li::before { content: "·"; position: absolute; left: 2px; color: #9ca3af; }
+.bs-strat-tag { font-size: 0.56rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; display: inline-block; margin-top: 6px; }
+.bs-strat-tag--green { background: #eaf3de; color: #27500a; }
+.bs-strat-tag--blue { background: #eff6ff; color: #185fa5; }
+.bs-strat-tag--amber { background: #fff7ed; color: #92400e; }
+.bs-strat-tag--rose { background: #fef2f2; color: #991b1b; }
+.bs-strat-next { display: block; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; text-decoration: none; color: inherit; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.bs-strat-next:hover { border-color: #3b6d11; box-shadow: 0 2px 12px rgba(59, 109, 17, 0.08); }
+.bs-strat-next-title { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 3px; }
+.bs-strat-next-sub { font-size: 0.75rem; color: #9ca3af; }
+@media (max-width: 768px) { .bs-strat-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bs-read-page">
+  <a class="bs-read-back" href="{% url 'reading:home' %}">← Reading home</a>
+  <h1 class="bs-read-title">Strategies &amp; tips</h1>
+  <p class="bs-read-lead">Master these before every IELTS reading test.</p>
+
+  <section class="bs-golden bs-animate bs-delay-1">
+    <div class="bs-golden-ic" aria-hidden="true">★</div>
+    <div>
+      <div class="bs-golden-title">The golden rule</div>
+      <div class="bs-golden-body">
+        You are not reading to understand everything. You are reading to <strong>find specific answers quickly</strong>. This mindset shift improves your score more than anything else.
+      </div>
+    </div>
+  </section>
+
+  <div class="bs-strat-grid">
+    {% for s in strategies %}
+      <article class="bs-strat-card bs-animate bs-delay-2">
+        <div class="bs-strat-kicker">Strategy {{ forloop.counter }}</div>
+        <div class="bs-strat-name">{{ s.title }}</div>
+        <ul>
+          {% for pt in s.points %}<li>{{ pt }}</li>{% endfor %}
+        </ul>
+        <span class="bs-strat-tag bs-strat-tag--{{ s.tag_tone }}">{{ s.tag }}</span>
+      </article>
+    {% endfor %}
+  </div>
+
+  <a class="bs-strat-next bs-animate bs-delay-3" href="{% url 'reading:skills' %}">
+    <div class="bs-strat-next-title">Practical skill lessons →</div>
+    <div class="bs-strat-next-sub">Scanning · Skimming · Paraphrase · True/False/NG · Yes/No/NG · Reading speed — 6 interactive lessons</div>
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found — Boosting Score{% endblock %}
+
+{% block content %}
+  <div class="bs-404">
+    <p class="bs-404-code">404</p>
+    <h1 class="bs-auth-title">Page not found</h1>
+    <p class="bs-auth-sub">The page you requested does not exist or has been moved.</p>
+    <a class="bs-btn-primary" href="{% url 'home' %}">Back to home</a>
+  </div>
+{% endblock %}

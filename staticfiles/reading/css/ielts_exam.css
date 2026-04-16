@@ -1,0 +1,146 @@
+.ielts-exam-page .main-nav,
+.ielts-exam-page .site-footer {
+  display: none;
+}
+
+.ielts-exam-page .site-main {
+  max-width: 100%;
+  padding: 0;
+}
+
+.ielts-wrap {
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.ielts-top {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  background: #111827;
+  color: #fff;
+}
+
+.ielts-top h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.ielts-top p {
+  margin: 0;
+  color: #d1d5db;
+}
+
+.ielts-top a {
+  color: #fff;
+}
+
+.ielts-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  height: calc(100vh - 58px);
+}
+
+.ielts-left,
+.ielts-right {
+  overflow: auto;
+  padding: 16px;
+  background: #fff;
+}
+
+.ielts-left {
+  border-right: 1px solid #e5e7eb;
+}
+
+.ielts-warning {
+  padding: 10px 12px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  margin-bottom: 12px;
+}
+
+.ielts-q {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px 0;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+}
+
+.ielts-q label {
+  display: block;
+  margin: 6px 0;
+}
+
+.ielts-nav {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ielts-nav button {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px 8px;
+}
+
+.ielts-chooser {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.ielts-chooser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.ielts-chooser-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  padding: 14px;
+}
+
+.rw-ielts-callout {
+  margin: 8px 0 18px;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rw-ielts-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.rw-ielts-sub {
+  margin: 0;
+  color: #4b5563;
+}
+
+.rw-ielts-btn {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  text-decoration: none;
+}

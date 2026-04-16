@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Home — Boosting Score{% endblock %}
+
+{% block content %}
+<div class="bs-page">
+
+  <div class="bs-hero animate-fade">
+    <div class="bs-hero-glow bs-hero-glow-1"></div>
+    <div class="bs-hero-glow bs-hero-glow-2"></div>
+    <div class="bs-hero-inner">
+      <div class="bs-hero-tag">{{ greeting }}, {{ request.user.first_name|default:request.user.username }}</div>
+      <div class="bs-hero-title">Ready to boost your <span>IELTS score</span> today?</div>
+      <div class="bs-hero-sub">
+        {% if due_count > 0 %}
+          You have {{ due_count }} vocabulary words due for review. Every session gets you closer to your target band.
+        {% else %}
+          No words due today — great job! Keep the streak going and start a new session.
+        {% endif %}
+      </div>
+      <div class="bs-hero-btns">
+        <a href="{% url 'vocabulary:index' %}" class="bs-btn-primary">Continue studying →</a>
+        <a href="{% url 'writing:home' %}" class="bs-btn-ghost">Write an essay</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="bs-stats">
+    <div class="bs-stat animate-up delay-1">
+      <div class="bs-stat-val bs-green">{{ words_learned|default:0 }}</div>
+      <div class="bs-stat-lbl">Words learned</div>
+      <div class="bs-stat-sub">+{{ words_this_week|default:0 }} this week</div>
+    </div>
+    <div class="bs-stat animate-up delay-2">
+      <div class="bs-stat-val">🔥 {{ streak|default:0 }}</div>
+      <div class="bs-stat-lbl">Day streak</div>
+      <div class="bs-stat-sub">{% if streak == 0 %}Start today!{% elif streak == 1 %}Good start{% else %}Keep going!{% endif %}</div>
+    </div>
+    <div class="bs-stat animate-up delay-3">
+      <div class="bs-stat-val">{{ mastered_pct|default:0 }}%</div>
+      <div class="bs-stat-lbl">Mastered</div>
+      <div class="bs-stat-sub">{{ mastered_count|default:0 }} / {{ words_learned|default:0 }} words</div>
+    </div>
+    <div class="bs-stat animate-up delay-4">
+      <div class="bs-stat-val {% if due_count > 0 %}bs-amber{% endif %}">{{ due_count|default:0 }}</div>
+      <div class="bs-stat-lbl">Due for review</div>
+      <div class="bs-stat-sub">Spaced repetition</div>
+    </div>
+  </div>
+
+  {% if due_count > 0 %}
+  <a href="{% url 'vocabulary:index' %}" class="bs-due animate-up delay-2">
+    <div class="bs-due-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <rect x="2" y="2" width="9" height="9" rx="1"/>
+        <rect x="13" y="2" width="9" height="9" rx="1"/>
+        <rect x="2" y="13" width="9" height="9" rx="1"/>
+        <rect x="13" y="13" width="9" height="9" rx="1"/>
+      </svg>
+    </div>
+    <div class="bs-due-body">
+      <div class="bs-due-title">{{ due_count }} words due for review today</div>
+      <div class="bs-due-sub">Spaced repetition — review today to lock these words into memory</div>
+    </div>
+    <div class="bs-due-btn">Review now →</div>
+  </a>
+  {% endif %}
+
+  <p class="bs-sec-lbl">Quick actions</p>
+  <div class="bs-quick">
+    <a href="{% url 'vocabulary:type_it_deck_select' %}" class="bs-qcard animate-up delay-1">
+      <div class="bs-qcard-icon" style="background:#EAF3DE;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2">
+          <polyline points="4 7 4 4 20 4 20 7"/>
+          <line x1="9" y1="20" x2="15" y2="20"/>
+          <line x1="12" y1="4" x2="12" y2="20"/>
+        </svg>
+      </div>
+      <div class="bs-qcard-title">Type it</div>
+      <div class="bs-qcard-sub">Write sentences · AI band score</div>
+    </a>
+    <a href="{% url 'writing:home' %}" class="bs-qcard animate-up delay-2">
+      <div class="bs-qcard-icon" style="background:#F3F4F6;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </div>
+      <div class="bs-qcard-title">Write an essay</div>
+      <div class="bs-qcard-sub">Task 1 or Task 2 · AI feedback</div>
+    </a>
+    <a href="{% url 'reading:home' %}" class="bs-qcard animate-up delay-3">
+      <div class="bs-qcard-icon" style="background:#EAF3DE;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <div class="bs-qcard-title">Reading practice</div>
+      <div class="bs-qcard-sub">IELTS passages · AI generated</div>
+    </a>
+  </div>
+
+  <div class="bs-sec-hd">
+    <div class="bs-sec-title">Your study classes</div>
+    <a href="{% url 'vocabulary:home' %}" class="bs-sec-link">See all →</a>
+  </div>
+  <div class="bs-classes">
+    <a href="{% url 'vocabulary:home' %}" class="bs-ccard animate-up delay-1">
+      <div class="bs-ccard-icon" style="background:#EAF3DE;">📚</div>
+      <div class="bs-ccard-body">
+        <div class="bs-ccard-name">Vocabulary</div>
+        <div class="bs-ccard-sub">{{ words_learned|default:0 }} cards · {% if due_count > 0 %}{{ due_count }} due today{% else %}All caught up{% endif %}</div>
+        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:{{ mastered_pct|default:0 }}%;"></div></div>
+      </div>
+      <div class="bs-ccard-right">
+        <div class="bs-ccard-stat">{{ mastered_count|default:0 }} learned</div>
+        <span class="bs-ccard-btn" style="background:#3B6D11;color:#fff;">Study →</span>
+      </div>
+    </a>
+    <a href="{% url 'reading:home' %}" class="bs-ccard animate-up delay-2">
+      <div class="bs-ccard-icon" style="background:#F3F4F6;">📖</div>
+      <div class="bs-ccard-body">
+        <div class="bs-ccard-name">Reading</div>
+        <div class="bs-ccard-sub">IELTS practice · AI generated tests</div>
+        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:{{ reading_pct|default:0 }}%;"></div></div>
+      </div>
+      <div class="bs-ccard-right">
+        <div class="bs-ccard-stat" style="{% if not reading_done %}color:#9CA3AF{% endif %}">{% if reading_done %}{{ reading_done }} completed{% else %}Not started{% endif %}</div>
+        <span class="bs-ccard-btn" style="background:#111827;color:#fff;">{% if reading_done %}Continue{% else %}Start{% endif %} →</span>
+      </div>
+    </a>
+    <a href="{% url 'writing:home' %}" class="bs-ccard animate-up delay-3">
+      <div class="bs-ccard-icon" style="background:#F3F4F6;">✍️</div>
+      <div class="bs-ccard-body">
+        <div class="bs-ccard-name">Writing</div>
+        <div class="bs-ccard-sub">Task 1 & Task 2 · AI band scoring</div>
+        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:0%;"></div></div>
+      </div>
+      <div class="bs-ccard-right">
+        <div class="bs-ccard-stat" style="color:#9CA3AF;">{% if essays_done %}{{ essays_done }} essays{% else %}Not started{% endif %}</div>
+        <span class="bs-ccard-btn" style="background:#111827;color:#fff;">{% if essays_done %}Continue{% else %}Start{% endif %} →</span>
+      </div>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

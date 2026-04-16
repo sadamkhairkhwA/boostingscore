@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Choose question type — {{ task_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.bs-read-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+.bs-read-back:hover { border-color: #3b6d11; color: #111827; }
+.bs-form-section { margin-bottom: 18px; }
+.bs-form-section h2 { margin: 0 0 4px; font-size: 0.95rem; color: #111827; }
+.bs-form-section p { margin: 0 0 10px; font-size: 0.8rem; color: #6b7280; }
+.bs-radio-grid { display: flex; flex-direction: column; gap: 8px; }
+.bs-radio {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+.bs-radio input { margin-top: 3px; }
+.bs-radio span { font-size: 0.82rem; color: #374151; line-height: 1.45; }
+.bs-w-title { margin-bottom: 6px; }
+.bs-w-lead { margin-bottom: 18px; }
+.bs-form-card { padding: 18px 18px 8px; margin-bottom: 12px; }
+.bs-w-switch { margin-top: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bs-page-body">
+  <a class="bs-read-back" href="{% url 'writing:home' %}">← Back to writing</a>
+
+  <section class="bs-animate bs-delay-1">
+    <div class="bs-section-label">{{ task_label }}</div>
+    <h1 class="bs-auth-title bs-w-title">Choose your prompt</h1>
+    <p class="bs-auth-sub bs-w-lead">
+      {% if qtype == "task1" %}
+        Task 1: at least 150 words, about 20 minutes — describe the visual information clearly.
+      {% else %}
+        Task 2: at least 250 words, about 40 minutes — answer with a structured essay.
+      {% endif %}
+      Choose the prompt type and how detailed you want the AI feedback.
+    </p>
+  </section>
+
+  <form method="post" action="{% url 'writing:pick' %}" class="bs-animate bs-delay-2">
+    {% csrf_token %}
+    <input type="hidden" name="qtype" value="{{ qtype }}" />
+
+    <div class="bs-card bs-form-card">
+      <div class="bs-form-section">
+        <h2>Question type</h2>
+        <p>Choose the kind of prompt you want to practise.</p>
+        <div class="bs-radio-grid">
+          {% for value, label in kinds %}
+            <label class="bs-radio">
+              <input type="radio" name="prompt_kind" value="{{ value }}" {% if forloop.first %}required{% endif %} />
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="bs-card bs-form-card">
+      <div class="bs-form-section">
+        <h2>Level</h2>
+        <p>Feedback language matches the level (1 = simplest English, 3 = full IELTS terms).</p>
+        <div class="bs-radio-grid">
+          <label class="bs-radio">
+            <input type="radio" name="level" value="1" />
+            <span>Level 1 — simple feedback (~A2–B1)</span>
+          </label>
+          <label class="bs-radio">
+            <input type="radio" name="level" value="2" checked />
+            <span>Level 2 — clear feedback (~B1–B2)</span>
+          </label>
+          <label class="bs-radio">
+            <input type="radio" name="level" value="3" />
+            <span>Level 3 — detailed (B2+)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="bs-btn-primary bs-btn-block">Start practice</button>
+  </form>
+
+  <p class="bs-auth-note bs-w-switch">
+    Want the other task?
+    {% if qtype == "task1" %}
+      <a href="{% url 'writing:pick' %}?qtype=task2">Switch to Task 2</a>
+    {% else %}
+      <a href="{% url 'writing:pick' %}?qtype=task1">Switch to Task 1</a>
+    {% endif %}
+  </p>
+</div>
+{% endblock %}

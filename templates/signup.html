@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Create your account — Boosting Score{% endblock %}
+
+{% block content %}
+  <div class="bs-auth-wrap">
+    <div class="bs-auth-card bs-animate bs-delay-1">
+      <p class="bs-auth-logo">Boosting Score</p>
+      <h1 class="bs-auth-title">Create your account</h1>
+      <p class="bs-auth-sub">Start improving your IELTS today</p>
+
+      <form method="post" action="{% url 'signup' %}">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="bs-form-error bs-form-error-block">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="bs-form-row">
+          {{ form.full_name.label_tag }}
+          {{ form.full_name }}
+          {% if form.full_name.errors %}<div class="bs-form-error">{{ form.full_name.errors }}</div>{% endif %}
+        </div>
+        <div class="bs-form-row">
+          {{ form.email.label_tag }}
+          {{ form.email }}
+          {% if form.email.errors %}<div class="bs-form-error">{{ form.email.errors }}</div>{% endif %}
+        </div>
+        <div class="bs-form-row">
+          {{ form.password1.label_tag }}
+          {{ form.password1 }}
+          {% if form.password1.errors %}<div class="bs-form-error">{{ form.password1.errors }}</div>{% endif %}
+        </div>
+        <div class="bs-form-row">
+          {{ form.password2.label_tag }}
+          {{ form.password2 }}
+          {% if form.password2.errors %}<div class="bs-form-error">{{ form.password2.errors }}</div>{% endif %}
+        </div>
+        <div class="bs-form-actions">
+          <button type="submit" class="bs-btn-primary bs-btn-block">Create account</button>
+        </div>
+      </form>
+
+      <div class="bs-auth-divider">or</div>
+      <p class="bs-auth-footer bs-auth-footer--tight">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+      <p class="bs-auth-note">By signing up you agree to our Terms of Service.</p>
+    </div>
+  </div>
+{% endblock %}
