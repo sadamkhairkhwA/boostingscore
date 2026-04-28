@@ -1,39 +1,24 @@
 {% extends 'base.html' %}
-{% load static %}
 {% block title %}Log in — Boosting Score{% endblock %}
-
 {% block content %}
 <div class="bs-auth-page">
   <div class="bs-auth-card animate-fade">
-
     <div class="bs-auth-logo">Boosting<span>Score</span></div>
     <div class="bs-auth-title">Welcome back</div>
     <div class="bs-auth-sub">Log in to continue learning</div>
-
     {% if form.errors %}
-    <div class="bs-auth-error">
-      Incorrect email or password. Please try again.
-    </div>
+    <div class="bs-auth-error">Incorrect email or password. Please try again.</div>
     {% endif %}
-
-    <form method="post" action="{% url 'login' %}">
+    <form method="post">
       {% csrf_token %}
-      {% if next %}
-        <input type="hidden" name="next" value="{{ next }}">
-      {% endif %}
-      <label class="bs-auth-label" for="{{ form.username.id_for_label }}">Email</label>
-      {{ form.username }}
-      {% if form.username.errors %}<div class="bs-form-error">{{ form.username.errors }}</div>{% endif %}
-      <label class="bs-auth-label" for="{{ form.password.id_for_label }}">Password</label>
-      {{ form.password }}
-      {% if form.password.errors %}<div class="bs-form-error">{{ form.password.errors }}</div>{% endif %}
+      <label class="bs-auth-label">Username</label>
+      <input class="bs-auth-input" type="text" name="username" placeholder="your username" autocomplete="username" autofocus>
+      <label class="bs-auth-label">Password</label>
+      <input class="bs-auth-input" type="password" name="password" placeholder="••••••••••" autocomplete="current-password">
+      <input type="hidden" name="next" value="{{ next }}">
       <button type="submit" class="bs-auth-btn">Log in</button>
     </form>
-
-    <div class="bs-auth-footer">
-      No account? <a href="{% url 'signup' %}">Sign up free</a>
-    </div>
-
+    <div class="bs-auth-footer">No account? <a href="{% url 'signup' %}">Sign up free</a></div>
   </div>
 </div>
 {% endblock %}

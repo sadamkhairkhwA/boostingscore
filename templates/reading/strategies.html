@@ -1,81 +1,394 @@
-{% extends "base.html" %}
-{% block title %}Strategies & Tips — Boosting Score{% endblock %}
-
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Reading strategies — Boosting Score{% endblock %}
+{% block body_class %}reading-strategies-page{% endblock %}
 {% block extra_css %}
-<style>
-.bs-read-page { max-width: 900px; margin: 0 auto; padding: 32px 32px 60px; }
-.bs-read-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: #6b7280;
-  padding: 4px 12px;
-  border-radius: 20px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  text-decoration: none;
-  margin-bottom: 14px;
-}
-.bs-read-back:hover { border-color: #3b6d11; color: #111827; }
-.bs-read-title { font-size: 1.35rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
-.bs-read-lead { font-size: 0.85rem; color: #6b7280; margin-bottom: 20px; }
-.bs-golden { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; background: #eaf3de; border: 1px solid #c0dd97; margin-bottom: 18px; }
-.bs-golden-ic { width: 32px; height: 32px; border-radius: 8px; background: #3b6d11; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
-.bs-golden-title { font-size: 0.78rem; font-weight: 700; color: #1a3a0c; margin-bottom: 2px; }
-.bs-golden-body { font-size: 0.78rem; color: #27500a; line-height: 1.6; }
-.bs-strat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-.bs-strat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 13px 14px; }
-.bs-strat-kicker { font-size: 0.56rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
-.bs-strat-name { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 4px; }
-.bs-strat-card ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
-.bs-strat-card li { font-size: 0.72rem; color: #6b7280; padding-left: 10px; position: relative; }
-.bs-strat-card li::before { content: "·"; position: absolute; left: 2px; color: #9ca3af; }
-.bs-strat-tag { font-size: 0.56rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; display: inline-block; margin-top: 6px; }
-.bs-strat-tag--green { background: #eaf3de; color: #27500a; }
-.bs-strat-tag--blue { background: #eff6ff; color: #185fa5; }
-.bs-strat-tag--amber { background: #fff7ed; color: #92400e; }
-.bs-strat-tag--rose { background: #fef2f2; color: #991b1b; }
-.bs-strat-next { display: block; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; text-decoration: none; color: inherit; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-.bs-strat-next:hover { border-color: #3b6d11; box-shadow: 0 2px 12px rgba(59, 109, 17, 0.08); }
-.bs-strat-next-title { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 3px; }
-.bs-strat-next-sub { font-size: 0.75rem; color: #9ca3af; }
-@media (max-width: 768px) { .bs-strat-grid { grid-template-columns: 1fr; } }
-</style>
+  <link rel="stylesheet" href="{% static 'reading/css/strategies.css' %}?v=2" />
 {% endblock %}
-
 {% block content %}
-<div class="bs-read-page">
-  <a class="bs-read-back" href="{% url 'reading:home' %}">← Reading home</a>
-  <h1 class="bs-read-title">Strategies &amp; tips</h1>
-  <p class="bs-read-lead">Master these before every IELTS reading test.</p>
-
-  <section class="bs-golden bs-animate bs-delay-1">
-    <div class="bs-golden-ic" aria-hidden="true">★</div>
-    <div>
-      <div class="bs-golden-title">The golden rule</div>
-      <div class="bs-golden-body">
-        You are not reading to understand everything. You are reading to <strong>find specific answers quickly</strong>. This mindset shift improves your score more than anything else.
-      </div>
+<div class="bs-page rs-page">
+  <header class="rs-head">
+    <div class="rs-head-text">
+      <h1 class="bs-page-title">Reading strategies</h1>
+      <p class="bs-page-sub">Complete toolkit for IELTS Academic Reading — every strategy, question type, and skill with interactive examples.</p>
     </div>
-  </section>
+    <details class="rs-menu">
+      <summary aria-label="More options">⋯</summary>
+      <div class="rs-menu-panel">
+        <a href="{% url 'reading:home' %}">Reading hub</a>
+        <a href="{% url 'reading:skills' %}">Skills lab (full page)</a>
+      </div>
+    </details>
+  </header>
 
-  <div class="bs-strat-grid">
-    {% for s in strategies %}
-      <article class="bs-strat-card bs-animate bs-delay-2">
-        <div class="bs-strat-kicker">Strategy {{ forloop.counter }}</div>
-        <div class="bs-strat-name">{{ s.title }}</div>
-        <ul>
-          {% for pt in s.points %}<li>{{ pt }}</li>{% endfor %}
-        </ul>
-        <span class="bs-strat-tag bs-strat-tag--{{ s.tag_tone }}">{{ s.tag }}</span>
-      </article>
-    {% endfor %}
+  <div class="rs-main-tabs" role="tablist" aria-label="Reading strategies sections">
+    <button type="button" class="rs-main-tab active" data-rs-tab="c" role="tab" aria-selected="true">Core strategies</button>
+    <button type="button" class="rs-main-tab" data-rs-tab="qt" role="tab" aria-selected="false">Question types</button>
+    <button type="button" class="rs-main-tab" data-rs-tab="q" role="tab" aria-selected="false">Question guides</button>
+    <button type="button" class="rs-main-tab" data-rs-tab="s" role="tab" aria-selected="false">Skills lab</button>
+    <button type="button" class="rs-main-tab" data-rs-tab="t" role="tab" aria-selected="false">Time plan</button>
   </div>
 
-  <a class="bs-strat-next bs-animate bs-delay-3" href="{% url 'reading:skills' %}">
-    <div class="bs-strat-next-title">Practical skill lessons →</div>
-    <div class="bs-strat-next-sub">Scanning · Skimming · Paraphrase · True/False/NG · Yes/No/NG · Reading speed — 6 interactive lessons</div>
-  </a>
+  {# ——— Tab 1: Core ——— #}
+  <div class="rs-main-panel active rs-panel-card" data-rs-panel="c">
+    <div class="rs-golden">
+      <div class="rs-golden-lbl">Golden rule</div>
+      <p class="rs-golden-txt">Answer from the passage, not background knowledge. If it is not written (or clearly implied), do not invent it — especially for Not Given.</p>
+    </div>
+    <div class="rs-core-grid">
+      <article class="rs-strat-card">
+        <h2 class="rs-strat-title">Skim first</h2>
+        <p class="rs-strat-desc">Read headings and the first line of each paragraph before you touch the questions — build a map of the text in under two minutes.</p>
+        <div class="rs-exbox">
+          <div class="rs-exbox-lbl">Read these only when skimming</div>
+          <p class="rs-passage"><span class="rs-hl-yellow">Solar energy has transformed how cities manage power.</span> <span class="rs-hl-yellow">Critics point to storage limitations as the key unresolved obstacle.</span> Battery research now focuses on density and cycle life rather than headline cost per panel.</p>
+          <p class="rs-ex-foot">Highlighted = what you read. You know the topic without reading every word.</p>
+        </div>
+      </article>
+      <article class="rs-strat-card">
+        <h2 class="rs-strat-title">Keywords</h2>
+        <p class="rs-strat-desc">Underline key terms in the question, then scan the passage for synonyms — IELTS rarely repeats the same wording.</p>
+        <div class="rs-exbox">
+          <div class="rs-exbox-lbl">Question</div>
+          <p class="rs-passage" style="margin-bottom:10px;">What did <span class="rs-hl-blue">scientists</span> <span class="rs-hl-blue">discover</span> about <span class="rs-hl-blue">ocean temperatures</span>?</p>
+          <div class="rs-exbox-lbl">Passage (synonyms)</div>
+          <p class="rs-passage"><span class="rs-hl-green">Researchers</span> <span class="rs-hl-green">found</span> that <span class="rs-hl-green">sea surface heat</span> had risen significantly.</p>
+          <p class="rs-ex-foot">scientists → Researchers · discover → found · ocean temperatures → sea surface heat</p>
+        </div>
+      </article>
+      <article class="rs-strat-card">
+        <h2 class="rs-strat-title">Paragraph mapping</h2>
+        <p class="rs-strat-desc">Label each paragraph with a three-word gist before matching headings or information — you answer from the map, not from memory.</p>
+        <div class="rs-exbox">
+          <div class="rs-exbox-lbl">Example map</div>
+          <div class="rs-map-row"><span class="rs-map-para">Para A: History of fossil fuels from the industrial era…</span><span class="rs-map-label">History of energy</span></div>
+          <div class="rs-map-row"><span class="rs-map-para">Para B: Renewable infrastructure barriers in grid design…</span><span class="rs-map-label">Current challenges</span></div>
+          <div class="rs-map-row"><span class="rs-map-para">Para C: Battery technology projections through 2040…</span><span class="rs-map-label">Future solutions</span></div>
+        </div>
+      </article>
+      <article class="rs-strat-card">
+        <h2 class="rs-strat-title">TFNG discipline</h2>
+        <p class="rs-strat-desc">If the passage does not mention the claim, choose Not Given — not False. False needs a direct contradiction.</p>
+        <div class="rs-exbox">
+          <div class="rs-exbox-lbl">Statement</div>
+          <p class="rs-tfng-statement">Scientists have proven that coffee improves long-term memory.</p>
+          <div class="rs-exbox-lbl">Passage</div>
+          <p class="rs-passage">Some studies <span class="rs-hl-yellow">suggest a possible link</span> between caffeine and short-term alertness.</p>
+          <div><span class="rs-tfng-answer">NOT GIVEN</span></div>
+          <p class="rs-ex-foot">The passage hedges (“suggest”, “possible”) and never “proves” memory — but it also never denies it outright, so it is not False.</p>
+        </div>
+      </article>
+      <article class="rs-strat-card">
+        <h2 class="rs-strat-title">Time boxing</h2>
+        <p class="rs-strat-desc">Aim for roughly twenty minutes per passage so Part 3 still gets full attention.</p>
+        <div class="rs-exbox">
+          <div class="rs-exbox-lbl">60-minute visual split</div>
+          <div class="rs-timebar">
+            <div class="rs-timebar-seg rs-timebar-seg--1">Part 1 · 20 min</div>
+            <div class="rs-timebar-seg rs-timebar-seg--2">Part 2 · 20 min</div>
+            <div class="rs-timebar-seg rs-timebar-seg--3">Part 3 · 20 min</div>
+          </div>
+          <p class="rs-ex-foot">≈13–14 questions per part · ~90 seconds per question on average · move on if stuck.</p>
+        </div>
+      </article>
+      <article class="rs-strat-card">
+        <h2 class="rs-strat-title">Gap-fill grammar</h2>
+        <p class="rs-strat-desc">The gap must be grammatically correct in the sentence <em>and</em> match the passage meaning — check word class before you copy.</p>
+        <div class="rs-exbox">
+          <p class="rs-gap-sentence">The scheme led to a measurable drop in <span class="rs-gap-blank"></span> during morning peaks.</p>
+          <div class="rs-gap-opts">
+            <span class="rs-gap-opt rs-gap-opt--bad">produce ✗ noun/verb clash</span>
+            <span class="rs-gap-opt rs-gap-opt--ok">congestion ✓ fits + matches passage</span>
+            <span class="rs-gap-opt rs-gap-opt--bad">vehicles ✗ plausible but wrong meaning</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  {# ——— Tab 2: Question types ——— #}
+  <div class="rs-main-panel rs-panel-card--flush" data-rs-panel="qt">
+    <div class="rs-qtypes-wrap">
+      <h2 class="rs-qtypes-title">Question types — full breakdown</h2>
+      {% for qt in question_types %}
+      <details class="rs-qtype-acc"{% if forloop.first %} open{% endif %}>
+        <summary class="rs-qtype-sum">
+          <span class="rs-qtype-num">{{ forloop.counter }}</span>
+          <span class="rs-qtype-name">{{ qt.title }}</span>
+          <span class="rs-qtype-badges">
+            {% for badge in qt.badges %}
+            <span class="rs-badge rs-badge--{{ badge.1 }}">{{ badge.0 }}</span>
+            {% endfor %}
+          </span>
+          <span class="rs-qtype-chev" aria-hidden="true">▼</span>
+        </summary>
+        <div class="rs-qtype-body">
+          <div class="rs-qtype-sec">
+            <div class="rs-qtype-lbl">How it works</div>
+            <p>{{ qt.how }}</p>
+          </div>
+          <div class="rs-qtype-sec">
+            <div class="rs-qtype-lbl">Main focus</div>
+            <p>{{ qt.focus }}</p>
+          </div>
+          <div class="rs-qtype-sec rs-qtype-mistakes">
+            <div class="rs-qtype-lbl">Common mistakes</div>
+            <ul>
+              {% for line in qt.mistakes %}
+              <li>{{ line }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="rs-qtype-sec rs-qtype-confuse">
+            <div class="rs-qtype-lbl">Most confusing</div>
+            <p>{{ qt.confusing }}</p>
+          </div>
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ——— Tab 3: Question guides ——— #}
+  <div class="rs-main-panel rs-panel-card--flush" data-rs-panel="q">
+    <h2 class="rs-sec-title">Question guides — worked examples</h2>
+    <article class="rs-guide-card">
+      <h3 class="rs-guide-h">True / False / Not Given</h3>
+      <p class="rs-guide-sub">Is the statement supported, contradicted, or absent from the passage?</p>
+      <div class="rs-exbox" style="margin-bottom:12px;">
+        <div class="rs-exbox-lbl">Passage</div>
+        <p class="rs-passage">The Amazon produces 20% of the world’s oxygen. Deforestation has accelerated since 2015. No international agreement limits logging.</p>
+      </div>
+      <div class="rs-guide-rows">
+        <div class="rs-guide-row"><span class="rs-pill-t rs-pill-t--true">True</span> “Amazon produces 20% of oxygen” — directly stated.</div>
+        <div class="rs-guide-row"><span class="rs-pill-t rs-pill-t--false">False</span> “Deforestation has slowed” — passage says <em>accelerated</em> (opposite).</div>
+        <div class="rs-guide-row"><span class="rs-pill-t rs-pill-t--ng">Not Given</span> “Brazil supports an agreement” — not mentioned at all.</div>
+      </div>
+    </article>
+    <article class="rs-guide-card">
+      <h3 class="rs-guide-h">Yes / No / Not Given</h3>
+      <p class="rs-guide-sub">About the writer’s opinion — look for argues, believes, suggests, insists.</p>
+      <div class="rs-exbox" style="margin-bottom:12px;">
+        <div class="rs-exbox-lbl">Passage</div>
+        <p class="rs-passage">The author <span class="rs-hl-yellow">suggests</span> regulations <span class="rs-hl-yellow">could help</span> reduce emissions.</p>
+      </div>
+      <p class="rs-guide-sub" style="margin-bottom:8px;"><strong>Statement:</strong> The author believes stricter laws are necessary.</p>
+      <div class="rs-guide-rows">
+        <div class="rs-guide-row"><span class="rs-pill-t rs-pill-t--ng">Not Given</span> <em>suggests / could</em> ≠ <em>believes / necessary</em> — opinion is hedged, not stated as belief.</div>
+      </div>
+    </article>
+    <article class="rs-guide-card">
+      <h3 class="rs-guide-h">Matching headings</h3>
+      <p class="rs-guide-sub">Match the main idea of the whole paragraph — not one detail.</p>
+      <div class="rs-exbox" style="margin-bottom:12px;">
+        <div class="rs-exbox-lbl">Paragraph</div>
+        <p class="rs-passage"><span class="rs-para-badge">Para 1</span> Installation costs for household solar have fallen faster than policy analysts predicted, yet uptake remains uneven across regions because financing rules still favour large commercial buyers.</p>
+      </div>
+      <ul class="rs-hdr-list">
+        <li class="rs-hdr-wrong"><s>ii. The history of solar panel invention</s><span class="rs-hdr-reason">Too narrow — invention isn’t the focus.</span></li>
+        <li class="rs-hdr-wrong"><s>iv. Commercial buyers and tax credits</s><span class="rs-hdr-reason">True detail inside the paragraph, but not the whole main idea.</span></li>
+        <li class="rs-hdr-right">✓ vii. Falling costs versus uneven household uptake — matches cost drop + regional uptake gap.</li>
+      </ul>
+    </article>
+    <article class="rs-guide-card">
+      <h3 class="rs-guide-h">Gap-fill</h3>
+      <p class="rs-guide-sub">Copy exactly from the passage when instructions require passage words.</p>
+      <p class="rs-gap-sentence" style="margin-bottom:10px;">The report attributes the delay chiefly to <span class="rs-gap-blank"></span> in supply chains.</p>
+      <div class="rs-exbox">
+        <div class="rs-exbox-lbl">Passage excerpt</div>
+        <p class="rs-passage">…the delay chiefly to <span class="rs-hl-green">disruption</span> in supply chains…</p>
+        <p class="rs-ex-foot" style="margin-top:10px;margin-bottom:0;"><strong>Copy exactly — do not paraphrase.</strong> Answer: <span class="rs-hl-green">disruption</span> (same spelling as the passage).</p>
+      </div>
+    </article>
+  </div>
+
+  {# ——— Tab 4: Skills lab ——— #}
+  <div class="rs-main-panel rs-panel-card" data-rs-panel="s">
+    <h2 class="rs-sec-title">Skills lab — interactive exercises</h2>
+    <div class="rs-skill-tabs" role="tablist" aria-label="Skills lab exercises">
+      <button type="button" class="rs-skill-tab active" data-rs-skill="scan" aria-selected="true">Scanning</button>
+      <button type="button" class="rs-skill-tab" data-rs-skill="skim" aria-selected="false">Skimming</button>
+      <button type="button" class="rs-skill-tab" data-rs-skill="para" aria-selected="false">Paraphrase</button>
+      <button type="button" class="rs-skill-tab" data-rs-skill="tfng" aria-selected="false">T/F/NG</button>
+      <button type="button" class="rs-skill-tab" data-rs-skill="ynng" aria-selected="false">Y/N/NG</button>
+      <button type="button" class="rs-skill-tab" data-rs-skill="speed" aria-selected="false">Speed</button>
+    </div>
+
+    <div class="rs-skill-panel active" data-rs-skill-panel="scan">
+      <p class="rs-lab-hint">Scanning = moving your eyes quickly to find one specific detail. Don’t read every word.</p>
+      <div class="rs-lab-passage" id="rs-scan-passage">
+        The council introduced new <span class="rs-scan-word" data-correct="0">parking</span> rules near the <span class="rs-scan-word" data-correct="0">station</span> to reduce <span class="rs-scan-word" data-correct="0">congestion</span> during peak hours. Changes took effect in <span class="rs-scan-word" data-correct="1">March 2022</span>, following months of consultation. Officials said the scheme had cut traffic by 18%.
+      </div>
+      <p class="rs-lab-prompt">When did the new rules take effect? Tap the answer in the passage.</p>
+      <div id="rs-scan-feedback" class="rs-lab-feedback" hidden></div>
+    </div>
+
+    <div class="rs-skill-panel" data-rs-skill-panel="skim">
+      <p class="rs-lab-hint">Skim the paragraph while the bar runs down (~8 seconds), then answer from memory of the main idea only.</p>
+      <button type="button" class="bs-btn-primary" id="rs-skim-start">Show passage for 8 seconds</button>
+      <div class="rs-skim-bar-wrap" style="margin-top:10px;"><div class="rs-skim-bar" id="rs-skim-countdown-bar"></div></div>
+      <div id="rs-skim-passage" hidden>
+        <div class="rs-lab-passage">Urban forests cool neighbourhoods, absorb stormwater, and improve mental health. Cities from Singapore to Medellín now treat green corridors as core infrastructure rather than optional parks.</div>
+      </div>
+      <div id="rs-skim-quiz" hidden>
+        <p class="rs-lab-hint">What is the paragraph mainly about?</p>
+        <button type="button" class="rs-skim-opt" data-correct="0">A history of Singapore’s parks</button>
+        <button type="button" class="rs-skim-opt" data-correct="1">Why cities invest in urban forests as infrastructure</button>
+        <button type="button" class="rs-skim-opt" data-correct="0">How stormwater is measured in millimetres</button>
+        <div id="rs-skim-feedback" class="rs-lab-feedback" hidden></div>
+      </div>
+    </div>
+
+    <div class="rs-skill-panel" data-rs-skill-panel="para">
+      <p class="rs-lab-hint">Pick the option that keeps the same meaning as the original sentence.</p>
+      <p class="rs-lab-passage" style="margin-bottom:12px;"><strong>Original:</strong> The university decided to reduce expenditure across departments.</p>
+      <button type="button" class="rs-para-opt" data-correct="0">The university increased funding slightly for every department.</button>
+      <button type="button" class="rs-para-opt" data-correct="1">The university chose to cut spending in all departments.</button>
+      <button type="button" class="rs-para-opt" data-correct="0">The university reduced the number of departments altogether.</button>
+      <div id="rs-para-feedback" class="rs-lab-feedback" hidden></div>
+    </div>
+
+    <div class="rs-skill-panel" data-rs-skill-panel="tfng">
+      <p class="rs-lab-hint">Short passage — choose True, False, or Not Given for each statement, then submit.</p>
+      <div class="rs-lab-passage" style="margin-bottom:14px;">Remote teams often report stable productivity after the first year. Managers rarely cite video fatigue as the main obstacle; instead, unclear priorities dominate exit surveys.</div>
+      <div id="rs-tfng-block">
+        <div class="rs-tfng-row" data-stmt="1" data-correct="F">
+          <p><strong>1.</strong> Video fatigue is the primary reason managers struggle with remote teams.</p>
+          <div class="rs-tfng-btns">
+            <button type="button" class="rs-tfng-choice" data-val="T">True</button>
+            <button type="button" class="rs-tfng-choice" data-val="F">False</button>
+            <button type="button" class="rs-tfng-choice" data-val="NG">Not Given</button>
+          </div>
+        </div>
+        <div class="rs-tfng-row" data-stmt="2" data-correct="F">
+          <p><strong>2.</strong> Productivity among remote teams usually collapses after the first year.</p>
+          <div class="rs-tfng-btns">
+            <button type="button" class="rs-tfng-choice" data-val="T">True</button>
+            <button type="button" class="rs-tfng-choice" data-val="F">False</button>
+            <button type="button" class="rs-tfng-choice" data-val="NG">Not Given</button>
+          </div>
+        </div>
+        <div class="rs-tfng-row" data-stmt="3" data-correct="T">
+          <p><strong>3.</strong> Unclear priorities feature prominently in exit surveys.</p>
+          <div class="rs-tfng-btns">
+            <button type="button" class="rs-tfng-choice" data-val="T">True</button>
+            <button type="button" class="rs-tfng-choice" data-val="F">False</button>
+            <button type="button" class="rs-tfng-choice" data-val="NG">Not Given</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="bs-btn-dark" id="rs-tfng-submit">Check answers</button>
+      <div id="rs-tfng-feedback" class="rs-lab-feedback" hidden></div>
+    </div>
+
+    <div class="rs-skill-panel" data-rs-skill-panel="ynng">
+      <p class="rs-lab-hint">Opinion items — Yes / No / Not Given. Hedged language often means Not Given.</p>
+      <div class="rs-lab-passage" style="margin-bottom:14px;">The author <span class="rs-hl-yellow">acknowledges</span> that stricter rent controls <span class="rs-hl-yellow">might</span> calm prices temporarily, but <span class="rs-hl-yellow">questions whether</span> they discourage new building.</div>
+      <div id="rs-ynng-block">
+        <div class="rs-tfng-row" data-stmt="1" data-correct="N">
+          <p><strong>1.</strong> The author supports rent controls without reservation.</p>
+          <div class="rs-tfng-btns">
+            <button type="button" class="rs-tfng-choice" data-val="Y">Yes</button>
+            <button type="button" class="rs-tfng-choice" data-val="N">No</button>
+            <button type="button" class="rs-tfng-choice" data-val="NG">Not Given</button>
+          </div>
+        </div>
+        <div class="rs-tfng-row" data-stmt="2" data-correct="NG">
+          <p><strong>2.</strong> The author has personally invested in rental property.</p>
+          <div class="rs-tfng-btns">
+            <button type="button" class="rs-tfng-choice" data-val="Y">Yes</button>
+            <button type="button" class="rs-tfng-choice" data-val="N">No</button>
+            <button type="button" class="rs-tfng-choice" data-val="NG">Not Given</button>
+          </div>
+        </div>
+        <div class="rs-tfng-row" data-stmt="3" data-correct="Y">
+          <p><strong>3.</strong> The author suggests rent controls could have a short-term price effect.</p>
+          <div class="rs-tfng-btns">
+            <button type="button" class="rs-tfng-choice" data-val="Y">Yes</button>
+            <button type="button" class="rs-tfng-choice" data-val="N">No</button>
+            <button type="button" class="rs-tfng-choice" data-val="NG">Not Given</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="bs-btn-dark" id="rs-ynng-submit">Check answers</button>
+      <div id="rs-ynng-feedback" class="rs-lab-feedback" hidden></div>
+    </div>
+
+    <div class="rs-skill-panel" data-rs-skill-panel="speed">
+      <p class="rs-lab-hint">Read at a natural exam pace, tap Done when finished, then answer from memory. Your rough speed is estimated from word count ÷ time.</p>
+      <button type="button" class="bs-btn-primary" id="rs-speed-start">Start reading</button>
+      <div id="rs-speed-reading-wrap" hidden>
+        <div class="rs-speed-bar-wrap"><div class="rs-speed-bar" id="rs-speed-bar"></div></div>
+        <div class="rs-lab-passage" id="rs-speed-passage" data-word-count="86">
+          The regional rail authority announced a phased upgrade of signalling equipment across three lines over the next eighteen months. Peak-hour delays are expected during weekends while contractors replace outdated cables. Passengers are advised to allow an extra fifteen minutes for connections until work completes in December. Officials claim modern signalling could cut average wait times by almost a quarter once systems stabilise. Critics argue communications around disruptions remain vague, and that smaller stations still lack real-time boards.
+        </div>
+        <button type="button" class="bs-btn-dark" id="rs-speed-done" style="margin-top:10px;">Done — hide passage</button>
+      </div>
+      <div id="rs-speed-quiz" hidden>
+        <p class="rs-lab-hint"><strong>1.</strong> What is mainly being upgraded?</p>
+        <button type="button" class="rs-skim-opt rs-speed-q1" data-correct="1">Signalling equipment</button>
+        <button type="button" class="rs-skim-opt rs-speed-q1" data-correct="0">Ticket prices</button>
+        <button type="button" class="rs-skim-opt rs-speed-q1" data-correct="0">Station seating only</button>
+        <p class="rs-lab-hint" style="margin-top:14px;"><strong>2.</strong> When is the work expected to complete?</p>
+        <button type="button" class="rs-skim-opt rs-speed-q2" data-correct="1">December</button>
+        <button type="button" class="rs-skim-opt rs-speed-q2" data-correct="0">March</button>
+        <button type="button" class="rs-skim-opt rs-speed-q2" data-correct="0">Next weekend only</button>
+        <p id="rs-speed-wpm" class="rs-lab-hint" style="margin-top:12px;"></p>
+        <div id="rs-speed-q-feedback" class="rs-lab-feedback" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  {# ——— Tab 5: Time plan ——— #}
+  <div class="rs-main-panel rs-panel-card" data-rs-panel="t">
+    <h2 class="rs-sec-title">60-minute time plan</h2>
+    <div class="rs-exbox" style="margin-bottom:14px;">
+      <div class="rs-exbox-lbl">Visual split</div>
+      <div class="rs-timebar">
+        <div class="rs-timebar-seg rs-timebar-seg--1">Part 1<br>0–20 min</div>
+        <div class="rs-timebar-seg rs-timebar-seg--2">Part 2<br>20–40 min</div>
+        <div class="rs-timebar-seg rs-timebar-seg--3">Part 3<br>40–60 min</div>
+      </div>
+      <p class="rs-time-visual-foot">13–14 questions per part · ~90 seconds per question on average · move on if stuck.</p>
+    </div>
+    <article class="rs-part-card">
+      <h3 class="rs-part-h">Part 1 — 0 to 20 min</h3>
+      <p class="rs-part-desc">Easiest passage. Focus on accuracy, not speed.</p>
+      <div class="rs-key-tactic-lbl">Key tactic</div>
+      <div class="rs-key-tactic">Skim the paragraph openings, then tackle questions in order — answers usually follow the passage.</div>
+    </article>
+    <article class="rs-part-card">
+      <h3 class="rs-part-h">Part 2 — 20 to 40 min</h3>
+      <p class="rs-part-desc">Medium difficulty. Often contains matching headings or Y/N/NG.</p>
+      <div class="rs-key-tactic-lbl">Key tactic</div>
+      <div class="rs-key-tactic">Map each paragraph’s main idea before matching — don’t reread the whole passage for every question.</div>
+    </article>
+    <article class="rs-part-card">
+      <h3 class="rs-part-h">Part 3 — 40 to 60 min</h3>
+      <p class="rs-part-desc">Hardest passage — stamina and inference load are highest.</p>
+      <div class="rs-key-tactic-lbl">Key tactic</div>
+      <div class="rs-key-tactic">Flag a letter for any item over 90 seconds, move on, and return only if time remains after Part 3 is complete.</div>
+    </article>
+    <h3 class="rs-traps-title">Common time traps</h3>
+    <div class="rs-trap-card">
+      <p class="rs-trap-name">Spending 8+ minutes on one question</p>
+      <p class="rs-trap-fix"><strong>Fix:</strong> mark and move on — you can miss two hard items and still band well if the rest are solid.</p>
+    </div>
+    <div class="rs-trap-card">
+      <p class="rs-trap-name">Re-reading the full passage for every question</p>
+      <p class="rs-trap-fix"><strong>Fix:</strong> use your paragraph map and keywords; return to the passage only for proof.</p>
+    </div>
+    <div class="rs-trap-card">
+      <p class="rs-trap-name">Leaving Part 3 with only 10 minutes</p>
+      <p class="rs-trap-fix"><strong>Fix:</strong> set a mental alarm at 20 minutes into Part 2 to enter Part 3 on time.</p>
+    </div>
+    <div class="rs-trap-card">
+      <p class="rs-trap-name">Forgetting to transfer answers</p>
+      <p class="rs-trap-fix"><strong>Fix:</strong> keep the last 2 minutes on the clock strictly for transfer and spelling checks.</p>
+    </div>
+  </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+  <script src="{% static 'reading/js/strategies_lab.js' %}?v=1"></script>
 {% endblock %}

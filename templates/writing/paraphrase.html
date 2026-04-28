@@ -1,111 +1,37 @@
-{% extends "base.html" %}
-{% load writing_tags %}
-
-{% block title %}Paraphrase practice{% endblock %}
-
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Paraphrase — Boosting Score{% endblock %}
 {% block content %}
-  <div class="writing-studio shell" style="margin-top: 0">
-    <p class="reading-detail-back">
-      <a href="{% url 'writing:home' %}">&larr; Back to writing</a>
-      {% if paraphrase_ctx %}
-        ·
-        <a href="{% url 'writing:paraphrase' %}?reset=1">New topic</a>
-      {% endif %}
-    </p>
-
-    <header class="rw-studio-header">
-      <h1 class="rw-page-title">Paraphrase practice</h1>
-      <p class="rw-page-sub">
-        {% if paraphrase_ctx %}
-          Rewrite the <strong>AI text</strong> in your own words. Feedback style:
-          <strong>{{ level_caption }}</strong>.
-        {% else %}
-          Choose a <strong>topic</strong> and <strong>level</strong>. We generate a short text; you then paraphrase it.
-        {% endif %}
-      </p>
-    </header>
-
-    {% if not paraphrase_ctx %}
-      <form method="post" action="{% url 'writing:paraphrase' %}" class="fb-form-card">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="generate" />
-        <div class="fb-section">
-          <h2 class="fb-section__title">1 · Topic</h2>
-          <label class="fb-field-label" for="id_topic">What should the text be about?</label>
-          <select name="topic" id="id_topic" class="input" required>
-            <option value="" disabled selected>Choose topic…</option>
-            {% for value, label in topic_choices %}
-              <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="fb-section">
-          <h2 class="fb-section__title">2 · Level</h2>
-          <p class="fb-section__lead">
-            Length of the AI text and how simple the feedback English is (1 = easiest).
-          </p>
-          <div class="rw-filter-pills">
-            <label class="task-chooser-kind">
-              <input type="radio" name="level" value="1" {% if gen_level_default == 1 %}checked{% endif %} />
-              <span>Level 1 · simple feedback</span>
-            </label>
-            <label class="task-chooser-kind">
-              <input type="radio" name="level" value="2" {% if gen_level_default == 2 %}checked{% endif %} />
-              <span>Level 2 · clear feedback</span>
-            </label>
-            <label class="task-chooser-kind">
-              <input type="radio" name="level" value="3" {% if gen_level_default == 3 %}checked{% endif %} />
-              <span>Level 3 · full detail</span>
-            </label>
-          </div>
-        </div>
-        <button type="submit" class="btn btn--primary">Generate practice text</button>
-      </form>
-    {% else %}
-      <div class="fb-source-panel">
-        <span class="fb-source-panel__badge">Your topic text · Level {{ level }}</span>
-        <p class="fb-source-panel__hint">Read this, then write your version below. Do not copy — use new words and structures.</p>
-        <div class="fb-source-panel__body">{{ paraphrase_ctx.source_text|linebreaks }}</div>
-      </div>
-
-      <form method="post" action="{% url 'writing:paraphrase' %}" class="fb-form-card">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="check" />
-        <div class="fb-section">
-          <h2 class="fb-section__title">Your paraphrase</h2>
-          <p class="fb-section__lead">Target: <strong>{{ level_hint }}</strong></p>
-          {{ form.text.label_tag }}
-          {{ form.text }}
-          {{ form.text.errors }}
-        </div>
-        <button type="submit" class="btn btn--primary">Get feedback</button>
-      </form>
-
-      {% if feedback %}
-        {% if paraphrase_highlight_text %}
-          <div class="fb-section fb-section--tight" style="margin-top: 1.5rem">
-            <h2 class="fb-section__title">Your text — highlights</h2>
-            <p class="fb-section__lead" style="margin-bottom: 0.75rem">
-              <span class="essay-hl-legend"><mark class="hl-issue-major">Red</mark> serious issue ·
-              <mark class="hl-issue-minor">Yellow</mark> minor · <mark class="hl-good">Green</mark> strong</span>
-            </p>
-            <div class="fb-highlight essay-highlight-body">{{ paraphrase_highlight_text|essay_highlights:feedback }}</div>
-          </div>
-        {% endif %}
-        <div class="fb-feedback-board">
-          <h2 class="fb-feedback-board__title">Feedback</h2>
-          <div class="fb-feedback-grid">
-            {% for k, v in feedback.items %}
-              {% if not k|is_span_key %}
-              <article class="fb-card">
-                <h3 class="fb-card__title">{{ k|feedback_label }}</h3>
-                <div class="fb-card__body">{{ v|linebreaks }}</div>
-              </article>
-              {% endif %}
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-    {% endif %}
+<div class="bs-page">
+  <div class="bs-sec-hd">
+    <div>
+      <h1 class="bs-page-title">Paraphrase practice</h1>
+      <p class="bs-page-sub">Rewrite the meaning using different vocabulary and grammar. Avoid copying phrases.</p>
+    </div>
+    <a class="bs-btn-dark" href="{% url 'writing:home' %}">Back</a>
   </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <label class="bs-auth-label" for="source_text">Source sentence</label>
+    <textarea id="source_text" name="source_text" class="bs-auth-input" style="min-height:90px;resize:vertical;">{{ source_text }}</textarea>
+
+    <label class="bs-auth-label" for="paraphrase_text">Your paraphrase</label>
+    <textarea id="paraphrase_text" name="paraphrase_text" class="bs-auth-input" style="min-height:120px;resize:vertical;">{{ paraphrase_text }}</textarea>
+
+    <button type="submit" class="bs-btn-green">Get feedback</button>
+  </form>
+
+  {% if tip %}
+  <div style="margin-top:16px;background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px;">
+      <div>
+        <div class="bs-muted" style="font-size:11px;">Score</div>
+        <div style="font-size:26px;font-weight:900;color:#3B6D11;line-height:1;">{{ tip.score|default:"—" }}</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:#374151;line-height:1.65;">{{ tip.feedback|default:"" }}</div>
+  </div>
+  {% endif %}
+</div>
 {% endblock %}

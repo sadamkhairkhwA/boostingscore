@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Sign up — Boosting Score{% endblock %}
+{% block content %}
+<div class="bs-auth-page">
+  <div class="bs-auth-card animate-fade">
+    <div class="bs-auth-logo">Boosting<span>Score</span></div>
+    <div class="bs-auth-title">Create your account</div>
+    <div class="bs-auth-sub">Start improving your IELTS score today</div>
+    {% if form.errors %}
+    <div class="bs-auth-error">
+      {% for field in form %}{% for error in field.errors %}{{ error }} {% endfor %}{% endfor %}
+      {% for error in form.non_field_errors %}{{ error }} {% endfor %}
+    </div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <label class="bs-auth-label">Username</label>
+      <input class="bs-auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" autofocus>
+      <label class="bs-auth-label">Password</label>
+      <input class="bs-auth-input" type="password" name="password1" placeholder="Choose a password">
+      <label class="bs-auth-label">Confirm password</label>
+      <input class="bs-auth-input" type="password" name="password2" placeholder="Repeat your password">
+      <button type="submit" class="bs-auth-btn">Create account</button>
+    </form>
+    <div class="bs-auth-footer">Already have an account? <a href="{% url 'login' %}">Log in</a></div>
+  </div>
+</div>
+{% endblock %}

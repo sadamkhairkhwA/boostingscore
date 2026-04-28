@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ question.title }} — Task 2{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  {% include "writing/_task1_topbar.html" %}
+  <section class="wt1-wrap">
+    <div class="wt1-question-head">
+      <div>
+        <p class="wt1-label wt1-label--tight">{{ type_meta.name }}</p>
+        <h1 class="wt1-title wt1-title--small">{{ question.title }}</h1>
+        <p class="wt1-sub">250 words minimum · 40 minutes</p>
+      </div>
+      <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task2_question_list' essay_type %}">← Questions</a>
+    </div>
+    {% if prev_attempt %}
+    <details class="wt1-card"><summary>📝 Your previous attempt</summary><p>Band {{ prev_attempt.band_score|default:"—" }} · {{ prev_attempt.word_count|default:0 }} words</p></details>
+    {% endif %}
+    <form id="wt1-response-form" data-min-words="250" data-duration-minutes="40" action="{% url 'writing:task2_feedback_page' essay_type question.id %}" method="post" class="wt1-card">
+      {% csrf_token %}
+      <input type="hidden" name="time_taken_seconds" id="wt1-time-used" value="0" />
+      <p class="wt1-label wt1-label--tight">Task prompt</p>
+      <p class="wt1-prompt">{{ question.prompt }}</p>
+      <div class="wt1-response-head"><h2>Your response</h2><div><span id="wt1-live-count">0</span> / 250 words minimum</div></div>
+      <textarea name="response_text" id="wt1-response" class="wt1-textarea" placeholder="Write your essay here..."></textarea>
+      <div class="wt1-progress"><div class="wt1-progress__bar"><span id="wt1-progress-fill"></span></div><div class="wt1-progress__txt"><span id="wt1-progress-count">0</span> / 250</div></div>
+      <p class="wt1-tip">💡 Present a clear position, develop both body paragraphs, and support points with examples.</p>
+      <button class="wt1-btn wt1-btn--green wt1-btn--full" type="submit">Get AI feedback →</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+{% endblock %}

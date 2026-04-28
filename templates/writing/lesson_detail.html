@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  <section class="wt1-wrap">
+    <a class="wt1-back" href="{% url 'writing:lessons_hub' %}">← All lessons</a>
+    <div class="wt1-card">
+      <h1 class="wt1-title wt1-title--list">{{ lesson.icon }} {{ lesson.title }}</h1>
+      <p class="wt1-sub">{{ lesson.subtitle }} · {{ lesson.level }}</p>
+      <div class="wr-steps">
+        <div class="step">1. Understand the task and identify key requirements.</div>
+        <div class="step">2. Plan your response using clear paragraph roles.</div>
+        <div class="step">3. Use precise language and comparisons where needed.</div>
+      </div>
+      <div class="wr-examples">
+        <div class="good">✅ Strong example: precise, concise, and accurate.</div>
+        <div class="bad">❌ Weak example: vague claims without evidence.</div>
+      </div>
+      <div class="wt1-score-card"><p class="wt1-label wt1-label--tight">Band 7 focus</p><p>{{ lesson.content }}</p></div>
+      <form method="post">{% csrf_token %}<input type="hidden" name="mark_done" value="1"><button class="wt1-btn wt1-btn--green" type="submit">Mark as done</button></form>
+      <div class="wt1-actions"><a class="wt1-btn wt1-btn--outline" href="{% url 'writing:lessons_hub' %}">← All lessons</a><a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">Practise in Task →</a></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

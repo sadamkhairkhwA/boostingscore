@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}IELTS Academic Reading tests — Boosting Score{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=7">
+{% endblock %}
+{% block content %}
+<div class="art-list-page bs-page">
+  <h1 class="bs-page-title">IELTS Academic Reading</h1>
+  <p class="bs-page-sub">Timed computer-delivered practice. Each attempt is saved to your history.</p>
+
+  <section class="art-history-card" aria-labelledby="art-history-heading">
+    <div class="art-history-card__head">
+      <h2 class="art-history-card__title" id="art-history-heading">Your practice history · Test 1</h2>
+      {% if academic_attempt_count %}
+      <span class="art-history-card__count-badge">{{ academic_attempt_count }} attempt{{ academic_attempt_count|pluralize }}</span>
+      {% else %}
+      <span class="art-history-card__count-badge art-history-card__count-badge--muted">0 attempts</span>
+      {% endif %}
+    </div>
+
+    {% if academic_attempt_count %}
+    <div class="art-history-card__pills" role="group" aria-label="Summary">
+      <div class="art-stat-pill">
+        <span class="art-stat-pill__lbl">Best score</span>
+        <span class="art-stat-pill__val">{{ academic_best_score }}<span class="art-stat-pill__unit">/40</span></span>
+      </div>
+      <div class="art-stat-pill">
+        <span class="art-stat-pill__lbl">Latest</span>
+        <span class="art-stat-pill__val">{{ academic_last_score }}<span class="art-stat-pill__unit">/40</span></span>
+      </div>
+      <div class="art-stat-pill">
+        <span class="art-stat-pill__lbl">Band</span>
+        <span class="art-stat-pill__val art-stat-pill__val--sm">{{ academic_last_band }}</span>
+      </div>
+    </div>
+
+    <div class="art-history-card__table-wrap">
+      <table class="art-history-table">
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Score</th>
+            <th scope="col">Band</th>
+            <th scope="col">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in academic_recent_attempts %}
+          <tr class="{% cycle 'art-history-table__tr--a' 'art-history-table__tr--b' %}{% if r.id == academic_best_result_id %} art-history-table__tr--best{% endif %}">
+            <td class="art-history-table__when">
+              {% if r.id == academic_best_result_id %}<span class="art-history-table__best-tag">Best</span>{% endif %}
+              {{ r.completed_at|date:"j M Y, H:i" }}
+            </td>
+            <td class="art-history-table__score"><strong>{{ r.score }}</strong><span class="art-history-table__slash">/40</span></td>
+            <td><span class="art-band-pill art-band-pill--{{ r.band_pill_modifier }}">{{ r.band }}</span></td>
+            <td class="art-history-table__time">
+              {% with dp=r.duration_display_parts %}
+              <span class="art-history-table__time-main">{{ dp.0 }}</span><span class="art-history-table__time-unit"> {{ dp.1 }}</span>
+              {% endwith %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="art-history-card__hint">Also shown on <a href="{% url 'profile_settings' %}">your profile</a> under Reading history.</p>
+    {% else %}
+    <p class="art-history-card__empty">No completed attempts yet. Finish a run and submit — it will appear here. You can retake anytime.</p>
+    {% endif %}
+
+    <a class="art-history-card__cta" href="{% url 'reading:academic_test_session' test_number=1 %}">{% if academic_attempt_count %}Take test again →{% else %}Start test →{% endif %}</a>
+  </section>
+
+  <div class="art-hub-grid">
+    {% for t in tests %}
+      {% if t.number == 1 %}
+      <article class="art-hub-card art-hub-card--live">
+        <div class="art-hub-card__top">
+          <span class="art-hub-card__num" aria-hidden="true">1</span>
+          <div class="art-hub-card__badges">
+            <span class="art-diff art-diff--intermediate">Intermediate</span>
+            <span class="art-hub-card__pill art-hub-card__pill--live">Live</span>
+          </div>
+        </div>
+        <h2 class="art-hub-card__title">{{ t.title }}</h2>
+        <p class="art-hub-card__desc">{{ t.description }}</p>
+        <p class="art-hub-card__diff-note">Intermediate — suitable for Band 5.0–6.5 learners. Expect matching, T/F/NG, gap-fill, and multiple choice.</p>
+
+        <div class="art-hub-card__chips" aria-label="Passage topics">
+          <span class="art-topic-chip">🏛️ Library &amp; sports notices</span>
+          <span class="art-topic-chip">💼 Flexible working (article)</span>
+          <span class="art-topic-chip">🧠 Cognitive bilingualism (academic)</span>
+        </div>
+
+        <div class="art-hub-card__stats" role="list">
+          <div class="art-hub-stat" role="listitem"><span class="art-hub-stat__ic" aria-hidden="true">📋</span><span><strong>40</strong> questions</span></div>
+          <div class="art-hub-stat" role="listitem"><span class="art-hub-stat__ic" aria-hidden="true">⏱</span><span><strong>60</strong> minutes</span></div>
+          <div class="art-hub-stat" role="listitem"><span class="art-hub-stat__ic" aria-hidden="true">📄</span><span><strong>3</strong> parts</span></div>
+          <div class="art-hub-stat" role="listitem"><span class="art-hub-stat__ic" aria-hidden="true">🎯</span><span>Band <strong>5.0–7.5</strong></span></div>
+        </div>
+
+        <details class="art-hub-details">
+          <summary class="art-hub-details__sum">What this test covers</summary>
+          <div class="art-hub-details__body">
+            Part 1: Matching, T/F/NG, sentence completion from short notices. Part 2: Y/N/NG, sentence completion, MC from a work-related article. Part 3: Paragraph matching, MC, summary completion from an academic article.
+          </div>
+        </details>
+
+        {% if academic_attempt_count %}
+        <div class="art-hub-card__best">
+          <span class="art-hub-card__best-txt">Your best: <strong>{{ academic_best_score }}</strong>/40 · Band {{ academic_best_band }}</span>
+          <a class="art-hub-card__improve" href="{% url 'reading:academic_test_session' test_number=1 %}">Improve →</a>
+        </div>
+        {% endif %}
+
+        <div class="art-hub-card__actions">
+          {% if academic_attempt_count %}
+          <a class="art-hub-btn art-hub-btn--primary" href="{% url 'reading:academic_test_session' test_number=1 %}">Take again →</a>
+          <a class="art-hub-btn art-hub-btn--outline" href="{% url 'reading:academic_tests_index' %}#art-history-heading">Review last attempt →</a>
+          {% else %}
+          <a class="art-hub-btn art-hub-btn--primary art-hub-btn--block" href="{% url 'reading:academic_test_session' test_number=1 %}">Start test →</a>
+          {% endif %}
+        </div>
+      </article>
+      {% endif %}
+    {% endfor %}
+
+    <article class="art-hub-card art-hub-card--soon" aria-disabled="true">
+      <div class="art-hub-card__top">
+        <span class="art-hub-card__num" aria-hidden="true">2</span>
+        <div class="art-hub-card__badges">
+          <span class="art-diff art-diff--upper">Upper-Intermediate</span>
+          <span class="art-hub-card__pill art-hub-card__pill--soon">Coming soon</span>
+        </div>
+      </div>
+      <h2 class="art-hub-card__title">Test 2 · Coming soon</h2>
+      <p class="art-hub-card__desc">More full academic tests are on the way.</p>
+      <div class="art-hub-card__chips art-hub-card__chips--muted">
+        <span class="art-topic-chip">Topics TBC</span>
+      </div>
+    </article>
+  </div>
+
+  <nav class="art-scale" aria-label="Test difficulty guide">
+    <p class="art-scale__label">Test difficulty guide</p>
+    <div class="art-scale__row">
+      <span class="art-scale__item"><span class="art-scale__dot art-scale__dot--beginner" aria-hidden="true"></span> Beginner <span class="art-scale__band">— Band 4.0–5.0</span></span>
+      <span class="art-scale__item art-scale__item--current"><span class="art-scale__dot art-scale__dot--intermediate" aria-hidden="true"></span> Intermediate <span class="art-scale__band">— Band 5.0–6.5</span> <span class="art-scale__here">Test 1</span></span>
+      <span class="art-scale__item"><span class="art-scale__dot art-scale__dot--upper" aria-hidden="true"></span> Upper-Inter. <span class="art-scale__band">— Band 5.5–7.0</span></span>
+      <span class="art-scale__item"><span class="art-scale__dot art-scale__dot--advanced" aria-hidden="true"></span> Advanced <span class="art-scale__band">— Band 6.5–8.0</span></span>
+      <span class="art-scale__item"><span class="art-scale__dot art-scale__dot--expert" aria-hidden="true"></span> Expert <span class="art-scale__band">— Band 7.5–9.0</span></span>
+    </div>
+  </nav>
+</div>
+{% endblock %}

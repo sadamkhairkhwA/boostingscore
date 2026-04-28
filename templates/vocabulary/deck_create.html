@@ -3,66 +3,69 @@
 
 {% block title %}Create deck — Boosting Score{% endblock %}
 
-{% block body_class %}fc-create-page-body vocab-app{% endblock %}
+{% block body_class %}fc-create-page-body{% endblock %}
 
-{% block extra_head %}
-  <link rel="stylesheet" href="{% static 'css/fc_create.css' %}?v=7" />
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/fc_create.css' %}?v=9" />
 {% endblock %}
 
 {% block content %}
   <div class="fc-create-page">
-    <div class="fc-create-layout">
-      <section class="fc-create-deck" aria-labelledby="deck-create-heading">
-        <p class="fc-create-back">
-          <a href="{% url 'vocabulary:index' %}">← Back to vocabulary</a>
-        </p>
-        <header class="fc-create-page-head">
-          <h1 class="fc-create-heading" id="deck-create-heading">Create a deck</h1>
-          <div class="fc-create-deck-head-actions">
-            <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-save" data-practice="0">
-              Save
-            </button>
-            <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-deck-save" data-practice="1">
-              Save and practice
-            </button>
-          </div>
-        </header>
+    <nav class="fc-create-breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'vocabulary:index' %}">Flashcard studio</a>
+      <span class="fc-create-breadcrumb-sep" aria-hidden="true">/</span>
+      <span class="fc-create-breadcrumb-current">Create deck</span>
+    </nav>
 
-        <div class="fc-create-field fc-create-field--set">
+    <header class="fc-create-page-head">
+      <h1 class="fc-create-heading" id="deck-create-heading">Create a deck</h1>
+      <div class="fc-create-deck-head-actions">
+        <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-save" data-practice="0">Save</button>
+        <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-deck-save" data-practice="1">Save and practice</button>
+      </div>
+    </header>
+
+    <form id="deck-create-csrf" class="fc-create-csrf" aria-hidden="true">{% csrf_token %}</form>
+
+    <div class="fc-create-stack">
+      <!-- Deck details -->
+      <section class="fc-create-panel fc-create-panel--deck" aria-labelledby="deck-details-label">
+        <p class="fc-create-section-label" id="deck-details-label">Deck details</p>
+        <div class="fc-create-field">
           <label class="fc-create-label" for="deck-create-name">Deck name</label>
           <input
             type="text"
             id="deck-create-name"
-            class="fc-create-input fc-create-input--set fc-create-input--deck-title"
+            class="fc-create-input fc-create-input--deck"
             maxlength="120"
             autocomplete="off"
             required
             placeholder="e.g. IELTS collocations"
           />
         </div>
-        <div class="fc-create-field fc-create-field--set">
+        <div class="fc-create-field fc-create-field--last">
           <label class="fc-create-label" for="deck-create-description">Description <span class="fc-create-optional">(optional)</span></label>
           <textarea
             id="deck-create-description"
-            class="fc-create-textarea fc-create-textarea--set"
+            class="fc-create-textarea fc-create-textarea--deck"
             rows="2"
             maxlength="4000"
             placeholder="What this deck is for…"
           ></textarea>
         </div>
-
-        <p class="fc-create-aside-hint" style="margin: 0 0 1rem; font-size: 0.875rem; color: #6b7280">
-          Cards are saved at your vocabulary level (<strong>{{ user_vocab_level }}</strong>). To change it, retake the placement test from <a href="{% url 'profile_settings' %}">your profile</a>.
+        <p class="fc-create-panel-footnote">
+          Cards are saved at your vocabulary level (<strong>{{ user_vocab_level }}</strong>). Adjust placement from your <a href="{% url 'home' %}">home</a> when available.
         </p>
+      </section>
 
-        <p class="fc-create-subtitle fc-create-subtitle--cards">
-          Cards — generate with AI on the right, edit here, or add rows manually.
-        </p>
-        <p class="fc-create-ready-count" id="deck-create-ready-count" aria-live="polite">0 cards ready</p>
-        <p class="fc-create-valid-line" id="deck-create-valid-line" hidden aria-live="polite"></p>
-
-        <div class="fc-create-cards-toolbar">
-          <button type="button" class="fc-create-btn fc-create-btn--outline" id="deck-add-row">+ Add card</button>
+      <!-- Cards grid -->
+      <section class="fc-create-panel fc-create-panel--cards" aria-labelledby="cards-heading">
+        <div class="fc-create-cards-head">
+          <h2 class="fc-create-sr-only" id="cards-heading">Cards</h2>
+          <div class="fc-create-cards-status">
+            <p class="fc-create-ready-count" id="deck-create-ready-count" aria-live="polite">0 cards ready</p>
+            <p class="fc-create-valid-line" id="deck-create-valid-line" hidden aria-live="polite"></p>
+          </div>
         </div>
 
         <div class="fc-create-loading" id="deck-create-loading" hidden>
@@ -70,76 +73,79 @@
           <p class="fc-create-loading__sub">This usually takes a few seconds.</p>
           <div class="fc-create-skeleton" aria-hidden="true">
             <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
-            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
-            <div class="fc-create-skeleton__row"><span class="fc-create-skeleton__bar fc-create-skeleton__bar--w"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--d"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--e"></span><span class="fc-create-skeleton__bar fc-create-skeleton__bar--x"></span></div>
           </div>
         </div>
 
-        <div class="fc-create-list" id="deck-create-list"></div>
-        <p class="fc-create-empty-hint" id="deck-create-empty-hint">No cards yet — use the AI generator or add a row.</p>
+        <div class="fc-create-table-wrap">
+          <div class="fc-create-table-head" aria-hidden="true">
+            <span class="fc-create-th fc-create-th--num">#</span>
+            <span class="fc-create-th">Word</span>
+            <span class="fc-create-th">Definition</span>
+            <span class="fc-create-th">Picture</span>
+            <span class="fc-create-th fc-create-th--check"></span>
+          </div>
+          <div class="fc-create-list" id="deck-create-list"></div>
+        </div>
+
+        <p class="fc-create-empty-hint" id="deck-create-empty-hint">No cards yet — use the AI generator below or add a row.</p>
+
+        <button type="button" class="fc-create-btn fc-create-btn--add fc-create-btn--outline" id="deck-add-row">+ Add card</button>
 
         <div class="fc-create-save-row fc-create-save-row--deck">
-          <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-btn--large fc-create-deck-save" data-practice="0">
-            Save deck
-          </button>
-          <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-btn--large fc-create-deck-save" data-practice="1">
-            Save and practice
-          </button>
+          <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-btn--large fc-create-deck-save" data-practice="0">Save deck</button>
+          <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-btn--large fc-create-deck-save" data-practice="1">Save and practice</button>
         </div>
         <p class="fc-create-panel__status" id="deck-create-status" hidden role="status"></p>
       </section>
 
-      <aside class="fc-create-sidebar" aria-label="AI tools">
-        <form id="deck-create-csrf" class="fc-create-csrf" aria-hidden="true">{% csrf_token %}</form>
+      <!-- AI generator -->
+      <section class="fc-create-panel fc-create-panel--ai" aria-labelledby="ai-generator-title">
+        <h2 class="fc-create-panel__title" id="ai-generator-title">AI generator</h2>
+        <p class="fc-create-panel__subtitle">Describe what you need — cards appear in the grid.</p>
 
-        <div class="fc-create-panel fc-create-panel--ai">
-          <h2 class="fc-create-panel__title">AI generator</h2>
-          <p class="fc-create-panel__subtitle">Describe what you need; cards appear in the grid.</p>
-
-          <div class="fc-create-field">
-            <label class="fc-create-label" for="deck-ai-prompt">Prompt</label>
-            <textarea
-              id="deck-ai-prompt"
-              class="fc-create-textarea fc-create-textarea--prompt"
-              rows="4"
-              maxlength="120000"
-              placeholder="e.g. IELTS environment vocabulary for Task 2&#10;e.g. Medical terms for healthcare essays"
-            ></textarea>
-          </div>
-
-          <div class="fc-create-field">
-            <span class="fc-create-label" id="deck-ai-count-label">How many cards?</span>
-            <div class="fc-create-pills" role="group" aria-labelledby="deck-ai-count-label">
-              <button type="button" class="fc-create-pill" data-count="5">5</button>
-              <button type="button" class="fc-create-pill is-selected" data-count="10">10</button>
-              <button type="button" class="fc-create-pill" data-count="15">15</button>
-              <button type="button" class="fc-create-pill" data-count="20">20</button>
-              <button type="button" class="fc-create-pill" data-count="25">25</button>
-            </div>
-          </div>
-
-          <div class="fc-create-field">
-            <span class="fc-create-label" id="deck-ai-topic-label">Topic</span>
-            <div class="fc-create-topic-pills" id="deck-ai-topic-pills" role="group" aria-labelledby="deck-ai-topic-label">
-              {% for value, label in topic_choices %}
-                <button
-                  type="button"
-                  class="fc-create-topic-pill{% if value == 'other' %} fc-create-topic-pill--my-vocab{% endif %}{% if value == initial_topic %} is-selected{% endif %}"
-                  data-topic="{{ value }}"
-                  data-topic-label="{% if value == 'other' %}Personal vocabulary{% else %}{{ label|escape }}{% endif %}"
-                >{% if value == 'other' %}Personal vocabulary{% else %}{{ label }}{% endif %}</button>
-              {% endfor %}
-            </div>
-          </div>
-
-          <button type="button" class="fc-create-generate" id="deck-ai-generate">
-            <span class="fc-create-generate__spinner" aria-hidden="true"></span>
-            <span class="fc-create-generate__text">Generate with AI</span>
-          </button>
-          <p class="fc-create-panel__foot">Uses your OpenAI API key</p>
-          <p class="fc-create-panel__status" id="deck-ai-panel-status" hidden role="status"></p>
+        <div class="fc-create-field">
+          <label class="fc-create-label" for="deck-ai-prompt">Prompt</label>
+          <textarea
+            id="deck-ai-prompt"
+            class="fc-create-textarea fc-create-textarea--prompt"
+            rows="4"
+            maxlength="120000"
+            placeholder="e.g. IELTS environment vocabulary for Task 2&#10;e.g. Medical terms for healthcare essays"
+          ></textarea>
         </div>
-      </aside>
+
+        <div class="fc-create-field">
+          <span class="fc-create-label" id="deck-ai-count-label">How many cards?</span>
+          <div class="fc-create-pills" role="group" aria-labelledby="deck-ai-count-label">
+            <button type="button" class="fc-create-pill" data-count="5">5</button>
+            <button type="button" class="fc-create-pill is-selected" data-count="10">10</button>
+            <button type="button" class="fc-create-pill" data-count="15">15</button>
+            <button type="button" class="fc-create-pill" data-count="20">20</button>
+            <button type="button" class="fc-create-pill" data-count="25">25</button>
+          </div>
+        </div>
+
+        <div class="fc-create-field">
+          <span class="fc-create-label" id="deck-ai-topic-label">Topic</span>
+          <div class="fc-create-topic-pills" id="deck-ai-topic-pills" role="group" aria-labelledby="deck-ai-topic-label">
+            {% for value, label in topic_choices %}
+              <button
+                type="button"
+                class="fc-create-topic-pill{% if value == 'other' %} fc-create-topic-pill--my-vocab{% endif %}{% if value == initial_topic %} is-selected{% endif %}"
+                data-topic="{{ value }}"
+                data-topic-label="{% if value == 'other' %}Personal vocabulary{% else %}{{ label|escape }}{% endif %}"
+              >{% if value == 'other' %}Personal vocabulary{% else %}{{ label }}{% endif %}</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="button" class="fc-create-generate" id="deck-ai-generate">
+          <span class="fc-create-generate__spinner" aria-hidden="true"></span>
+          <span class="fc-create-generate__text">Generate with AI</span>
+        </button>
+        <p class="fc-create-panel__foot">Uses your OpenAI API key</p>
+        <p class="fc-create-panel__status" id="deck-ai-panel-status" hidden role="status"></p>
+      </section>
     </div>
   </div>
 
@@ -213,10 +219,24 @@
         return { valid: v, total: rows.length };
       }
 
+      function renumberRows() {
+        if (!listEl) return;
+        listEl.querySelectorAll(".fc-create-deck-row").forEach(function (row, i) {
+          const num = row.querySelector(".fc-create-row-num");
+          if (num) num.textContent = String(i + 1);
+          const inp = row.querySelector('[data-field="word"]');
+          const chk = row.querySelector(".fc-create-row-check");
+          if (chk && inp) {
+            chk.classList.toggle("fc-create-row-check--ok", !!inp.value.trim());
+          }
+        });
+      }
+
       function updateCounts() {
         const n = cardCount();
         if (readyEl) readyEl.textContent = n + " card" + (n === 1 ? "" : "s") + " ready";
         if (emptyHint) emptyHint.hidden = n > 0;
+        renumberRows();
         const { valid, total } = validCount();
         if (validLine) {
           if (total === 0) {
@@ -225,11 +245,11 @@
           } else if (valid === total) {
             validLine.hidden = false;
             validLine.className = "fc-create-valid-line fc-create-valid-line--ok";
-            validLine.textContent = "All " + total + " card" + (total === 1 ? "" : "s") + " valid";
+            validLine.textContent = "✓ All " + total + " card" + (total === 1 ? "" : "s") + " valid";
           } else {
             validLine.hidden = false;
             validLine.className = "fc-create-valid-line fc-create-valid-line--warn";
-            validLine.textContent = valid + " of " + total + " valid — each row needs a term";
+            validLine.textContent = "⚠️ " + valid + " of " + total + " valid — each row needs a term";
           }
         }
       }
@@ -251,15 +271,16 @@
         const d = definition != null ? definition : "";
         wrap.innerHTML =
           '<div class="fc-create-deck-row__grid">' +
+          '<div class="fc-create-cell fc-create-cell--idx"><span class="fc-create-row-num">1</span></div>' +
           '<div class="fc-create-cell">' +
           '<span class="fc-create-mini-label">Word</span>' +
-          '<input type="text" class="fc-create-input" data-field="word" value="' +
+          '<input type="text" class="fc-create-input" data-field="word" placeholder="Term…" value="' +
           escapeAttr(w) +
           '" />' +
           "</div>" +
           '<div class="fc-create-cell">' +
           '<span class="fc-create-mini-label">Definition</span>' +
-          '<textarea class="fc-create-textarea fc-create-textarea--cell" rows="2" data-field="definition">' +
+          '<textarea class="fc-create-textarea fc-create-textarea--cell" rows="2" data-field="definition" placeholder="Definition…">' +
           escapeText(d) +
           "</textarea>" +
           "</div>" +
@@ -270,13 +291,14 @@
           '<img class="fc-create-deck-ill-img" alt="" width="120" height="120" loading="lazy" />' +
           "</div>" +
           '<div class="fc-create-deck-ill-actions">' +
-          '<button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-ai-img">AI illustration</button>' +
-          '<button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-clear-img" hidden>Remove image</button>' +
+          '<button type="button" class="fc-create-btn fc-create-btn--pic fc-create-deck-ai-img">AI image</button>' +
+          '<button type="button" class="fc-create-btn fc-create-btn--pic fc-create-deck-clear-img" hidden>Remove image</button>' +
+          '<button type="button" class="fc-create-btn fc-create-btn--pic fc-create-deck-row-remove">Remove</button>' +
           "</div>" +
-          '<p class="fc-create-deck-ill-hint">OpenAI Images (paid). Uses word + definition.</p>' +
+          '<p class="fc-create-deck-ill-hint">Optional — uses your OpenAI key when available.</p>' +
           "</div>" +
           "</div>" +
-          '<button type="button" class="fc-create-del" title="Remove row" aria-label="Remove row">×</button>' +
+          '<div class="fc-create-cell fc-create-cell--check"><span class="fc-create-row-check" aria-hidden="true" title=""></span></div>' +
           "</div>";
         return wrap;
       }
@@ -331,7 +353,7 @@
         listEl.addEventListener("input", updateCounts);
         listEl.addEventListener("click", function (ev) {
           const t = ev.target;
-          if (t && t.closest && t.closest(".fc-create-del")) {
+          if (t && t.closest && t.closest(".fc-create-deck-row-remove")) {
             const row = t.closest(".fc-create-deck-row");
             if (row) {
               clearRowImage(row);
@@ -360,12 +382,12 @@
           const dEl = row.querySelector('[data-field="definition"]');
           const word = wEl && wEl.value ? wEl.value.trim() : "";
           if (!word) {
-            setStatus("Enter a word before generating an illustration.", true);
+            setStatus("Enter a term before generating an image.", true);
             if (wEl && wEl.focus) wEl.focus();
             return;
           }
           const definition = dEl && dEl.value ? dEl.value.trim() : "";
-          setStatus("Generating illustration (often 30–60s)…", true);
+          setStatus("Generating illustration…", true);
           aiBtn.disabled = true;
           fetch(aiImageUrl, {
             method: "POST",
@@ -399,7 +421,7 @@
               if (img) img.src = "data:image/png;base64," + data.image_base64;
               if (prev) prev.hidden = false;
               if (clr) clr.hidden = false;
-              setStatus("Illustration attached — it will save with the deck.", true);
+              setStatus("Image attached — save with your deck.", true);
             })
             .catch(function () {
               setStatus("Network error.", true);

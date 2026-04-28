@@ -8,53 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}?v={{ static_css_version|default:'1' }}">
-  <link rel="stylesheet" href="{% static 'css/vocabulary.css' %}?v={{ static_css_version|default:'1' }}">
-  <link rel="stylesheet" href="{% static 'css/reading.css' %}?v={{ static_css_version|default:'1' }}">
-  <link rel="stylesheet" href="{% static 'css/writing.css' %}?v={{ static_css_version|default:'1' }}">
-  {% block extra_head %}{% endblock %}
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
   {% block extra_css %}{% endblock %}
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #F7F6F3; color: #111827; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    a { text-decoration: none; color: inherit; }
-    button { font-family: inherit; cursor: pointer; }
-  </style>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-
-  <div hidden id="global-csrf" aria-hidden="true">{% csrf_token %}</div>
-
   {% include 'partials/nav.html' %}
-
-  {% if messages %}
-    <div class="flash-stack" id="flash-stack" aria-live="polite">
-      {% for message in messages %}
-        <div class="flash {% if 'success' in message.tags %}flash--success{% elif 'error' in message.tags %}flash--error{% elif 'warning' in message.tags %}flash--warning{% else %}flash--info{% endif %}" data-flash>
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-
-  <main class="site-main">
-    {% block content %}{% endblock %}
-  </main>
-
+  <main class="{% block main_class %}{% endblock %}">{% block content %}{% endblock %}</main>
   {% include 'partials/footer.html' %}
-
-  <script>
-    (function () {
-      document.querySelectorAll("[data-flash]").forEach(function (el) {
-        setTimeout(function () {
-          el.style.opacity = "0";
-          el.style.transform = "translateY(-8px)";
-          el.style.transition = "opacity 0.25s ease, transform 0.25s ease";
-          setTimeout(function () { el.remove(); }, 280);
-        }, 4000);
-      });
-    })();
-  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

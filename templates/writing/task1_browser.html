@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Writing — Task 1{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  {% include "writing/_task1_topbar.html" %}
+  <section class="wt1-wrap">
+    <h1 class="wt1-title wt1-title--hero">Writing — Task 1</h1>
+    <p class="wt1-sub">Choose a question type, then select a question to practise. Write at least <strong>150 words</strong> in 20 minutes.</p>
+    <p class="wt1-label">Choose a question type</p>
+    <div class="wt1-type-grid">
+      {% for card in type_cards %}
+      <a class="wt1-type-card" href="{% url 'writing:task1_question_list' card.slug %}">
+        <div class="wt1-type-card__emoji">{{ card.emoji }}</div>
+        <h3>{{ card.name }}</h3>
+        <p>{{ card.description }}</p>
+        <div class="wt1-type-card__meta">{{ card.done }} / {{ card.total }} done</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+{% endblock %}

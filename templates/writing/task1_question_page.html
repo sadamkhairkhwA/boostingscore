@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ question.title }} — Task 1{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  {% include "writing/_task1_topbar.html" %}
+  <section class="wt1-wrap">
+    <div class="wt1-question-head">
+      <div>
+        <p class="wt1-label wt1-label--tight">{{ type_meta.name }}</p>
+        <h1 class="wt1-title wt1-title--small">{{ question.title }}</h1>
+        <p class="wt1-sub">150 words minimum · 20 minutes</p>
+      </div>
+      <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task1_question_list' type_slug %}">← Questions</a>
+    </div>
+    {% if prev_attempt %}
+    <details class="wt1-card">
+      <summary>📝 Your previous attempt</summary>
+      <p>Band {{ prev_attempt.band_score|default:"—" }} · {{ prev_attempt.word_count|default:0 }} words</p>
+    </details>
+    {% endif %}
+
+    <div class="wt1-card">
+      <p class="wt1-label wt1-label--tight">Task prompt</p>
+      <p class="wt1-prompt">{{ question.prompt }}</p>
+      <div class="wt1-chart">{{ chart_svg|safe }}</div>
+      <div class="wt1-instruction">
+        <p class="wt1-label wt1-label--tight">Task instruction</p>
+        <p><em>{{ task_instruction }}</em></p>
+      </div>
+    </div>
+
+    <form id="wt1-response-form" data-min-words="150" data-duration-minutes="20" action="{% url 'writing:task1_feedback_page' type_slug question.id %}" method="post" class="wt1-card">
+      {% csrf_token %}
+      <input type="hidden" name="time_taken_seconds" id="wt1-time-used" value="0" />
+      <div class="wt1-response-head">
+        <h2>Your response</h2>
+        <div><span id="wt1-live-count">0</span> / 150 words minimum</div>
+      </div>
+      <textarea name="response_text" id="wt1-response" class="wt1-textarea" placeholder="Begin your response here. Start with an overview of the main trend or feature shown..."></textarea>
+      <div class="wt1-progress">
+        <div class="wt1-progress__bar"><span id="wt1-progress-fill"></span></div>
+        <div class="wt1-progress__txt"><span id="wt1-progress-count">0</span> / 150</div>
+      </div>
+      <p class="wt1-tip">💡 Write an overview first, then describe key features with specific data and comparisons.</p>
+      <button class="wt1-btn wt1-btn--green wt1-btn--full" type="submit">Get AI feedback →</button>
+      <a class="wt1-back wt1-back--small" href="{% url 'writing:task1_question_list' type_slug %}">← Choose a different question</a>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+{% endblock %}

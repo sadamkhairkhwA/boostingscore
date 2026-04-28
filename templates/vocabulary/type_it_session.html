@@ -1,472 +1,133 @@
-{% extends "base.html" %}
-
-{% block title %}Type it — practice{% endblock %}
-
-{% block body_class %}ti-session-body{% endblock %}
-
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Type it session — Boosting Score{% endblock %}
 {% block content %}
-<div class="ti-session-page">
-  <div class="ti-prog-wrap">
-    <a href="{% url 'vocabulary:type_it_deck_select' %}" class="ti-prog-back">← Change deck</a>
-    <div class="ti-prog-track" aria-hidden="true">
-      <div class="ti-prog-fill" style="width: {{ progress_pct }}%;"></div>
+<div class="bs-page">
+  <div class="bs-sec-hd">
+    <div>
+      <h1 class="bs-page-title">Type it</h1>
+      <p class="bs-page-sub">Write one sentence that uses the word naturally. Submit for AI scoring (gpt-4o-mini).</p>
     </div>
-    <div class="ti-prog-txt">{{ current_index }} / {{ total_words }}</div>
+    <a class="bs-btn-dark" href="{% url 'vocabulary:type_it_deck' %}">Decks</a>
   </div>
 
-  <div class="ti-instr">
-    You see a <b>word</b> (🔊 to hear it). Choose to write an <b>example sentence</b> that uses the word, or write
-    the <b>definition</b> in your own words. AI says if it's right or wrong and shows the correct meaning.
-    <span class="ti-kbd">Ctrl</span> + <span class="ti-kbd">Enter</span> to submit.
+  {% if not word_obj %}
+  <div class="bs-empty">
+    <div class="bs-empty-icon">🧩</div>
+    <div class="bs-empty-title">No word found</div>
+    <div class="bs-empty-sub">Seed the vocabulary bank or pick another topic/level.</div>
+    <a class="bs-btn-primary" href="{% url 'vocabulary:type_it_deck' %}">Choose another deck</a>
+  </div>
+  {% else %}
+  <div style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;margin-bottom:12px;">
+    <div class="bs-sec-lbl">Target word</div>
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:800;color:#111827;">{{ word_obj.word }}</div>
+    <div class="bs-muted" style="font-size:12px;margin-top:6px;">{{ word_obj.get_topic_display }} · {{ word_obj.get_level_display }}</div>
   </div>
 
-  <div class="ti-word-card" id="word-card">
-    <div class="ti-wc-badges">
-      {% if word.part_of_speech %}
-        <div class="ti-wcb ti-wcb-gray">{{ word.part_of_speech }}</div>
-      {% endif %}
-      <div class="ti-wcb ti-wcb-blue">Level {{ word.level }}</div>
-      <div class="ti-wcb ti-wcb-green">{{ word.topic }}</div>
-    </div>
-    <div class="ti-wc-word-row">
-      <div class="ti-wc-word">{{ word.word }}</div>
-      <button class="ti-spk" type="button" id="ti-speak-btn" data-speak="{{ word.word|escapejs }}" aria-label="Hear word">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-        </svg>
-      </button>
-    </div>
-    {% if word.phonetic %}
-      <div class="ti-wc-ph">{{ word.phonetic }}</div>
-    {% endif %}
-    <div class="ti-wc-dots">
-      {% for i in "12345" %}
-        <div class="ti-wd {% if forloop.counter <= progress.mastery_level %}ti-wd-on{% else %}ti-wd-off{% endif %}"></div>
-      {% endfor %}
-      <div class="ti-wdlbl">Level {{ progress.mastery_level }} — {{ progress.mastery_label }}</div>
-    </div>
-    <div class="ti-wc-task" id="wc-task">Write a full sentence that uses the word naturally.</div>
-  </div>
+  <label class="bs-auth-label" for="student_text">Your sentence</label>
+  <textarea id="student_text" class="bs-auth-input" style="min-height:120px;resize:vertical;" placeholder="Write a clear, accurate sentence using the word."></textarea>
 
-  <div
-    id="ti-nav-meta"
-    data-check-url="{{ type_it_check_api_url|escape }}"
-    data-next-done="{{ next_url_done|escape }}"
-    data-next-skip="{{ next_url_skip|escape }}"
-    data-last-word="{% if type_it_is_last_word %}1{% else %}0{% endif %}"
-    hidden
-  ></div>
+  <button id="type-submit" class="bs-btn-green" type="button">Get AI feedback</button>
+  <div id="type-status" class="bs-muted" style="font-size:12px;margin-top:10px;"></div>
 
-  <form id="ti-form" onsubmit="return false;">
-    {% csrf_token %}
-    <input type="hidden" name="word_key" value="{{ word.key }}" id="word-key" />
-    <input type="hidden" name="mode" value="sentence" id="mode-input" />
-    <input type="hidden" name="ielts_mode" value="1" id="ielts-input" />
-
-    <div class="ti-mode-bar-label">What are you writing?</div>
-    <div class="ti-mode-bar">
-      <div class="ti-mode-opt on" id="mo-sent" data-mode="sentence">
-        <div class="ti-mode-radio on" id="mr-s" aria-hidden="true"></div>
-        <div class="ti-mode-lbl">Example sentence</div>
+  <div id="type-result" style="display:none;margin-top:16px;background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px;">
+      <div>
+        <div class="bs-muted" style="font-size:11px;">Estimated band</div>
+        <div id="tr-band" style="font-size:34px;font-weight:800;color:#3B6D11;line-height:1;">—</div>
       </div>
-      <div class="ti-mode-opt" id="mo-def" data-mode="definition">
-        <div class="ti-mode-radio" id="mr-d" aria-hidden="true"></div>
-        <div class="ti-mode-lbl">Definition</div>
+      <div style="text-align:right;">
+        <div id="tr-title" style="font-size:14px;font-weight:700;color:#111827;"></div>
+        <div id="tr-sub" style="font-size:12px;color:#6B7280;"></div>
       </div>
     </div>
-
-    <div class="ti-ielts-row" id="ti-ielts-row" role="button" tabindex="0">
-      <div class="ti-ielts-chk on" id="ielts-chk" aria-hidden="true">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+    <div class="bs-muted" style="font-size:12px;margin-bottom:8px;">Improved sentence</div>
+    <div id="tr-improved" style="font-size:13px;line-height:1.6;color:#111827;padding:12px;border-radius:10px;background:#F7F6F3;border:.5px solid #E5E7EB;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+      <div>
+        <div class="bs-muted" style="font-size:11px;margin-bottom:6px;">Strengths</div>
+        <ul id="tr-str" style="font-size:12px;color:#111827;padding-left:18px;line-height:1.55;"></ul>
       </div>
       <div>
-        <div class="ti-ielts-name">IELTS Mode</div>
-        <div class="ti-ielts-desc">Band-focused feedback and academic tone when on.</div>
+        <div class="bs-muted" style="font-size:11px;margin-bottom:6px;">Improvements</div>
+        <ul id="tr-imp" style="font-size:12px;color:#111827;padding-left:18px;line-height:1.55;"></ul>
       </div>
     </div>
-
-    <div class="ti-write-lbl" id="ti-write-lbl">Your sentence</div>
-    <textarea
-      class="ti-write-area"
-      id="write-area"
-      name="student_text"
-      placeholder="Type a full sentence that uses the word naturally."
-    ></textarea>
-    <div class="ti-write-meta">
-      <div class="ti-write-count" id="wcount">0 words</div>
-      <div class="ti-write-tip">Tip: use academic IELTS style</div>
-    </div>
-
-    <div class="ti-btn-row" id="write-btns">
-      <a href="{{ next_url_skip|escape }}" class="ti-btn ti-btn-skip">
-        {% if type_it_is_last_word %}Skip to summary{% else %}Next word{% endif %}
-      </a>
-      <button type="button" class="ti-btn ti-btn-ai" id="ti-check-btn">Check with AI →</button>
-    </div>
-
-    <div class="ti-loading" id="ti-loading" style="display: none">
-      <div class="ti-loading-dot"></div>
-      <div class="ti-loading-dot"></div>
-      <div class="ti-loading-dot"></div>
-      <div class="ti-loading-txt">AI is reading your sentence…</div>
-    </div>
-  </form>
-
-  <div id="ai-result-area"></div>
-
-  <div class="ti-session-stats">
-    <div class="ti-sts">
-      <div class="ti-stsv ti-stsv--green">{{ session_done }}</div>
-      <div class="ti-stsl">Done</div>
-    </div>
-    <div class="ti-sts">
-      <div class="ti-stsv ti-stsv--muted" id="remaining-count">{{ session_remaining }}</div>
-      <div class="ti-stsl">Remaining</div>
-    </div>
-    <div class="ti-sts">
-      <div class="ti-stsv ti-stsv--amber" id="avg-band">
-        {% if session_avg_band %}{{ session_avg_band }}{% else %}—{% endif %}
-      </div>
-      <div class="ti-stsl">Avg band</div>
-    </div>
-    <div class="ti-sts">
-      <div class="ti-stsv ti-stsv--muted">{{ session_skipped }}</div>
-      <div class="ti-stsl">Skipped</div>
+    <div style="margin-top:12px;">
+      <div class="bs-muted" style="font-size:11px;margin-bottom:6px;">IELTS tip</div>
+      <div id="tr-tip" style="font-size:12px;color:#374151;line-height:1.55;"></div>
     </div>
   </div>
+  {% endif %}
 </div>
 {% endblock %}
-
 {% block extra_js %}
+{% if word_obj %}
 <script>
-(function () {
-  var meta = document.getElementById("ti-nav-meta");
-  if (!meta) return;
-  var CHECK_URL = meta.getAttribute("data-check-url") || "";
-  var NEXT_DONE = meta.getAttribute("data-next-done") || "";
-  var NEXT_SKIP = meta.getAttribute("data-next-skip") || "";
-  var IS_LAST_WORD = meta.getAttribute("data-last-word") === "1";
-
-  var ieltsOn = true;
-  var currentMode = "sentence";
-
-  function esc(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function setMode(m) {
-    currentMode = m;
-    document.getElementById("mo-sent").className = "ti-mode-opt" + (m === "sentence" ? " on" : "");
-    document.getElementById("mo-def").className = "ti-mode-opt" + (m === "definition" ? " on" : "");
-    document.getElementById("mr-s").className = "ti-mode-radio" + (m === "sentence" ? " on" : "");
-    document.getElementById("mr-d").className = "ti-mode-radio" + (m === "definition" ? " on" : "");
-    document.getElementById("mode-input").value = m;
-    var a = document.getElementById("write-area");
-    a.placeholder =
-      m === "sentence"
-        ? "Type a full sentence that uses the word naturally."
-        : "Write a clear definition of this word in your own words.";
-    document.getElementById("wc-task").textContent =
-      m === "sentence"
-        ? "Write a full sentence that uses the word naturally."
-        : "Write the definition of this word in your own words.";
-    document.getElementById("ti-write-lbl").textContent =
-      m === "sentence" ? "Your sentence" : "Your definition";
-  }
-
-  document.getElementById("mo-sent").addEventListener("click", function () {
-    setMode("sentence");
-  });
-  document.getElementById("mo-def").addEventListener("click", function () {
-    setMode("definition");
-  });
-
-  function toggleIELTS() {
-    ieltsOn = !ieltsOn;
-    var c = document.getElementById("ielts-chk");
-    c.className = "ti-ielts-chk " + (ieltsOn ? "on" : "off");
-    c.innerHTML = ieltsOn
-      ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
-      : "";
-    document.getElementById("ielts-input").value = ieltsOn ? "1" : "0";
-  }
-  var ieltsRow = document.getElementById("ti-ielts-row");
-  ieltsRow.addEventListener("click", toggleIELTS);
-  ieltsRow.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      toggleIELTS();
+function getCookie(name) {
+  var cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+      var cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
     }
-  });
-
-  function countWords() {
-    var el = document.getElementById("write-area");
-    var w = el.value
-      .trim()
-      .split(/\s+/)
-      .filter(function (x) {
-        return x.length > 0;
-      });
-    document.getElementById("wcount").textContent =
-      w.length + " word" + (w.length !== 1 ? "s" : "");
   }
-  document.getElementById("write-area").addEventListener("input", countWords);
-
-  document.getElementById("ti-speak-btn").addEventListener("click", function () {
-    var word = document.getElementById("ti-speak-btn").getAttribute("data-speak") || "";
-    window.speechSynthesis.cancel();
-    var msg = new SpeechSynthesisUtterance(word);
-    var voices = window.speechSynthesis.getVoices();
-    var british = voices.find(function (v) {
-      return v.lang === "en-GB";
-    });
-    if (british) msg.voice = british;
-    msg.lang = "en-GB";
-    msg.rate = 0.85;
-    window.speechSynthesis.speak(msg);
-  });
-  window.speechSynthesis.onvoiceschanged = function () {};
-
-  function getCookie(name) {
-    var value = "; " + document.cookie;
-    var parts = value.split("; " + name + "=");
-    if (parts.length === 2) return parts.pop().split(";").shift();
-    return "";
-  }
-
-  function getCsrfToken() {
-    var inp = document.querySelector("#ti-form input[name='csrfmiddlewaretoken']");
-    if (inp && inp.value) return inp.value;
-    return getCookie("csrftoken") || "";
-  }
-
-  function checkWithAI() {
-    var text = document.getElementById("write-area").value.trim();
-    if (text.length < 5) {
-      document.getElementById("write-area").focus();
-      return;
-    }
-    document.getElementById("write-btns").style.display = "none";
-    document.getElementById("ti-loading").style.display = "flex";
-    document.getElementById("ai-result-area").innerHTML = "";
-
-    var token = getCsrfToken();
-    if (!token) {
-      document.getElementById("ti-loading").style.display = "none";
-      document.getElementById("write-btns").style.display = "flex";
-      window.alert("Missing security token. Refresh the page and try again.");
-      return;
-    }
-
-    fetch(CHECK_URL, {
-      method: "POST",
-      credentials: "same-origin",
+  return cookieValue;
+}
+(function(){
+  var btn = document.getElementById('type-submit');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    var text = (document.getElementById('student_text') || {}).value || '';
+    var status = document.getElementById('type-status');
+    var csrftoken = getCookie('csrftoken');
+    status.textContent = 'Scoring…';
+    fetch("{% url 'vocabulary:type_it_check' %}", {
+      method: 'POST',
+      credentials: 'same-origin',
       headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": token,
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken || ''
       },
       body: JSON.stringify({
-        word_key: document.getElementById("word-key").value,
-        student_text: text,
-        mode: currentMode,
-        ielts_mode: ieltsOn,
-      }),
-    })
-      .then(function (r) {
-        return r.text().then(function (body) {
-          var j = {};
-          if (body) {
-            try {
-              j = JSON.parse(body);
-            } catch (e) {
-              j = {
-                ok: false,
-                error:
-                  "Unexpected response (HTTP " +
-                  r.status +
-                  "). Try refreshing the page.",
-              };
-            }
-          }
-          return { ok: r.ok, status: r.status, j: j };
+        word: "{{ word_obj.word|escapejs }}",
+        word_id: {{ word_obj.id }},
+        student_text: text
+      })
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if(!data.ok){
+        status.textContent = data.error || 'Something went wrong.';
+        return;
+      }
+      status.textContent = '';
+      var res = data.result || {};
+      document.getElementById('type-result').style.display = 'block';
+      document.getElementById('tr-band').textContent = (res.band != null ? res.band : '—');
+      document.getElementById('tr-title').textContent = res.title || '';
+      document.getElementById('tr-sub').textContent = res.subtitle || '';
+      document.getElementById('tr-improved').textContent = res.improved || '';
+      function fillList(id, items){
+        var ul = document.getElementById(id);
+        ul.innerHTML = '';
+        (items || []).forEach(function(x){
+          var li = document.createElement('li');
+          li.textContent = x;
+          ul.appendChild(li);
         });
-      })
-      .then(function (pack) {
-        document.getElementById("ti-loading").style.display = "none";
-        if (!pack.ok || !pack.j || pack.j.ok !== true) {
-          document.getElementById("write-btns").style.display = "flex";
-          var msg =
-            (pack.j && (pack.j.error || pack.j.detail)) ||
-            ("Request failed" + (pack.status ? " (HTTP " + pack.status + ")" : "") + ".");
-          window.alert(msg);
-          return;
-        }
-        renderResult(pack.j, text);
-      })
-      .catch(function (err) {
-        document.getElementById("ti-loading").style.display = "none";
-        document.getElementById("write-btns").style.display = "flex";
-        console.error("Type it check failed:", err);
-        window.alert("Could not reach the server. Check your connection and try again.");
-      });
-  }
-  document.getElementById("ti-check-btn").addEventListener("click", checkWithAI);
-
-  function renderResult(data, studentText) {
-    var bandHidden = data.band_hidden === true;
-    var band = parseFloat(data.band) || 0;
-    var isGood = band >= 6;
-    var tier = bandHidden ? "mid" : band < 5 ? "low" : band < 7 ? "mid" : "hi";
-    var headerBg;
-    var headerBorder;
-    var bandBg;
-    var subColor;
-    if (tier === "hi") {
-      headerBg = "#f0fdf4";
-      headerBorder = "#bbf7d0";
-      bandBg = "#166534";
-      subColor = "#166534";
-    } else if (tier === "mid") {
-      headerBg = "#fffbeb";
-      headerBorder = "#fde68a";
-      bandBg = "#b45309";
-      subColor = "#92400e";
-    } else {
-      headerBg = "#fef2f2";
-      headerBorder = "#fecaca";
-      bandBg = "#991b1b";
-      subColor = "#991b1b";
-    }
-
-    var errorsHtml = "";
-    if (data.errors && data.errors.length > 0) {
-      var errTags = data.errors
-        .map(function (e) {
-          return '<div class="ti-atg ti-atg-r">' + esc(e) + "</div>";
-        })
-        .join("");
-      errorsHtml =
-        '<div class="ti-ai-box ti-ai-box--err">' +
-        '<div class="ti-ai-box-lbl ti-ai-box-lbl--err">Errors found</div>' +
-        '<div class="ti-ai-tags">' +
-        errTags +
-        "</div></div>";
-    }
-
-    var strengthTags = (data.strengths || [])
-      .map(function (s) {
-        return '<div class="ti-atg ti-atg-g">' + esc(s) + "</div>";
-      })
-      .join("");
-    var improveTags = (data.improvements || [])
-      .map(function (s) {
-        return '<div class="ti-atg ti-atg-a">' + esc(s) + "</div>";
-      })
-      .join("");
-
-    var wordEl = document.querySelector(".ti-wc-word");
-    var wordTxt = wordEl ? wordEl.textContent.trim() : "";
-
-    var html =
-      '<div class="ti-word-mini">' +
-      '<div class="ti-wm-word">' +
-      esc(wordTxt) +
-      "</div>" +
-      '<div class="ti-wm-your">"' +
-      esc(studentText) +
-      '"</div></div>' +
-      '<div class="ti-ai-result">' +
-      '<div class="ti-ai-header" style="background:' +
-      headerBg +
-      ";border-bottom:0.5px solid " +
-      headerBorder +
-      ';">' +
-      '<div class="ti-band-circle" style="background:' +
-      bandBg +
-      ';">' +
-      '<div class="ti-band-num">' +
-      (bandHidden ? "—" : band.toFixed(1)) +
-      "</div>" +
-      '<div class="ti-band-lbl">' +
-      (bandHidden ? "Practice" : "Band") +
-      "</div></div><div>" +
-      '<div class="ti-ai-hd-title">' +
-      esc(data.title) +
-      "</div>" +
-      '<div class="ti-ai-hd-sub" style="color:' +
-      subColor +
-      ';">' +
-      esc(data.subtitle) +
-      "</div></div></div>" +
-      '<div class="ti-ai-body">' +
-      errorsHtml +
-      (data.improved
-        ? '<div class="ti-ai-box ti-ai-box--ok">' +
-          '<div class="ti-ai-box-lbl ti-ai-box-lbl--ok">' +
-          (isGood ? "Improved version" : "Corrected version") +
-          "</div>" +
-          '<div class="ti-ai-box-txt">"' +
-          esc(data.improved) +
-          '"</div></div>'
-        : "") +
-      '<div class="ti-ai-cols">' +
-      '<div class="ti-ai-col"><div class="ti-ai-col-lbl">What worked well</div>' +
-      '<div class="ti-ai-col-txt">' +
-      esc(data.strength_text || "") +
-      "</div>" +
-      '<div class="ti-ai-tags">' +
-      strengthTags +
-      "</div></div>" +
-      '<div class="ti-ai-col"><div class="ti-ai-col-lbl">To improve</div>' +
-      '<div class="ti-ai-col-txt">' +
-      esc(data.improve_text || "") +
-      "</div>" +
-      '<div class="ti-ai-tags">' +
-      improveTags +
-      "</div></div></div>" +
-      (data.ielts_tip
-        ? '<div class="ti-ai-box ti-ai-box--tip">' +
-          '<div class="ti-ai-box-lbl ti-ai-box-lbl--tip">IELTS writing tip</div>' +
-          '<div class="ti-ai-box-txt ti-ai-box-txt--tip">' +
-          esc(data.ielts_tip) +
-          "</div></div>"
-        : "") +
-      "</div></div>" +
-      '<div class="ti-btn-row">' +
-      '<button type="button" class="ti-btn ti-btn-retry" id="ti-retry-btn">Rewrite →</button>' +
-      '<a href="' +
-      esc(NEXT_DONE) +
-      '" class="ti-btn ti-btn-next">' +
-      (IS_LAST_WORD ? "Session summary →" : "Next word →") +
-      "</a></div>";
-
-    document.getElementById("ai-result-area").innerHTML = html;
-    document.getElementById("write-area").disabled = true;
-    document.getElementById("ti-retry-btn").addEventListener("click", retryWord);
-  }
-
-  function retryWord() {
-    document.getElementById("ai-result-area").innerHTML = "";
-    document.getElementById("write-btns").style.display = "flex";
-    var area = document.getElementById("write-area");
-    area.value = "";
-    area.disabled = false;
-    area.focus();
-    document.getElementById("wcount").textContent = "0 words";
-  }
-
-  document.addEventListener("keydown", function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      checkWithAI();
-    }
+      }
+      fillList('tr-str', res.strengths);
+      fillList('tr-imp', res.improvements);
+      document.getElementById('tr-tip').textContent = res.ielts_tip || '';
+    }).catch(function(){
+      status.textContent = 'Network error. Try again.';
+    });
   });
 })();
 </script>
+{% endif %}
 {% endblock %}

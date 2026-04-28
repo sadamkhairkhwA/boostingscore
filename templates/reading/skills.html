@@ -1,81 +1,94 @@
-{% extends "base.html" %}
-{% block title %}Reading Skills — Boosting Score{% endblock %}
-
-{% block extra_css %}
-<style>
-.bs-read-page { max-width: 900px; margin: 0 auto; padding: 32px 32px 60px; }
-.bs-read-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: #6b7280;
-  padding: 4px 12px;
-  border-radius: 20px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  text-decoration: none;
-  margin-bottom: 14px;
-}
-.bs-read-back:hover { border-color: #3b6d11; color: #111827; }
-.bs-read-title { font-size: 1.35rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
-.bs-read-lead { font-size: 0.85rem; color: #6b7280; margin-bottom: 18px; }
-.bs-pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-.bs-mini-pill { font-size: 0.68rem; font-weight: 600; padding: 6px 12px; border-radius: 7px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
-.bs-mini-pill--on { background: #111827; color: #fff; border-color: #111827; }
-.bs-lesson { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
-.bs-lesson-kicker { font-size: 0.56rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: #eff6ff; color: #185fa5; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
-.bs-lesson-title { font-size: 1.05rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
-.bs-lesson-lead { font-size: 0.75rem; color: #6b7280; line-height: 1.65; margin-bottom: 12px; }
-.bs-callout { background: #eff6ff; border: 1px solid #b5d4f4; border-radius: 10px; padding: 12px 14px; display: flex; gap: 10px; margin-bottom: 10px; }
-.bs-callout-ic { font-size: 1.1rem; flex-shrink: 0; }
-.bs-callout-k { font-size: 0.56rem; font-weight: 700; color: #185fa5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
-.bs-callout-t { font-size: 0.75rem; color: #0c447c; line-height: 1.6; }
-.bs-lesson-box { font-size: 0.75rem; color: #374151; line-height: 1.7; background: #fff; border: 1px solid #e5e7eb; border-radius: 9px; padding: 12px 14px; }
-.bs-cta { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; text-align: center; }
-.bs-cta p { margin: 0 0 10px; font-size: 0.82rem; color: #6b7280; }
-</style>
-{% endblock %}
-
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Reading skills — Boosting Score{% endblock %}
 {% block content %}
-<div class="bs-read-page">
-  <a class="bs-read-back" href="{% url 'reading:strategies' %}">← Strategies &amp; tips</a>
-  <h1 class="bs-read-title">Reading skills — practical lessons</h1>
-  <p class="bs-read-lead">Each lesson teaches you a skill through explanation, examples, and practice.</p>
+<div class="bs-page">
+  <h1 class="bs-page-title">Skills lab</h1>
+  <p class="bs-page-sub">Short lessons you can complete in 5–10 minutes. Use “Reveal” to check understanding.</p>
 
-  <div class="bs-pill-row" aria-label="Lessons">
-    <span class="bs-mini-pill bs-mini-pill--on">Scanning</span>
-    <span class="bs-mini-pill">Skimming</span>
-    <span class="bs-mini-pill">Paraphrase</span>
-    <span class="bs-mini-pill">True/False/NG</span>
-    <span class="bs-mini-pill">Yes/No/NG</span>
-    <span class="bs-mini-pill">Reading speed</span>
+  <div class="bs-tabs" role="tablist">
+    <button type="button" class="bs-tab active" data-tab="scan">Scanning</button>
+    <button type="button" class="bs-tab" data-tab="skim">Skimming</button>
+    <button type="button" class="bs-tab" data-tab="para">Paraphrase</button>
+    <button type="button" class="bs-tab" data-tab="tfng">T/F/NG</button>
+    <button type="button" class="bs-tab" data-tab="ynng">Y/N/NG</button>
+    <button type="button" class="bs-tab" data-tab="speed">Speed</button>
   </div>
 
-  <section class="bs-lesson bs-animate bs-delay-1">
-    <div class="bs-lesson-kicker">Lesson 1 of 6</div>
-    <div class="bs-lesson-title">Scanning — find information fast</div>
-    <p class="bs-lesson-lead">Scanning means moving your eyes quickly to find one specific thing. You do not read every word — you search, like Ctrl+F on a computer.</p>
-
-    <div class="bs-callout">
-      <div class="bs-callout-ic" aria-hidden="true">🔍</div>
-      <div>
-        <div class="bs-callout-k">Think of it like this</div>
-        <div class="bs-callout-t">
-          You are in a library looking for “The Great Gatsby”. You do not read every title. Your eyes move fast looking for G, then Ga, then Gatsby. You <strong>ignore everything else</strong>. That is scanning.
-        </div>
-      </div>
+  <div class="bs-tab-panel active" data-panel="scan" style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:18px;">
+    <h2 style="font-family:Georgia,serif;font-size:16px;margin-bottom:8px;">Scanning</h2>
+    <p style="font-size:13px;color:#374151;line-height:1.65;margin-bottom:10px;">Scanning means moving your eyes quickly to find a specific keyword or synonym — not reading every word.</p>
+    <div style="background:#F7F6F3;border:.5px solid #E5E7EB;border-radius:10px;padding:12px;font-family:'Times New Roman',Times,serif;font-size:14px;line-height:1.65;margin-bottom:10px;">
+      The council introduced new parking rules near the station to reduce congestion during peak hours.
     </div>
-
-    <div class="bs-lesson-box">
-      In IELTS, the question gives you a keyword. Your job is to find that keyword — or its synonym — in the passage.
-      <strong>You do not need to understand the passage.</strong> You need to locate one piece of information.
+    <button type="button" class="bs-btn-dark js-reveal" style="margin-bottom:10px;">Reveal: keywords to scan for</button>
+    <div class="js-answer" style="display:none;font-size:13px;color:#111827;line-height:1.6;">
+      Try scanning for: <strong>parking</strong>, <strong>station</strong>, <strong>congestion</strong>, <strong>peak</strong>.
     </div>
-  </section>
+  </div>
 
-  <section class="bs-cta bs-animate bs-delay-2">
-    <p>More skill lessons — full interactive versions coming soon</p>
-    <a class="bs-btn-primary" href="{% url 'reading:ielts_practice' %}">Start practising now →</a>
-  </section>
+  <div class="bs-tab-panel" data-panel="skim" style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:18px;">
+    <h2 style="font-family:Georgia,serif;font-size:16px;margin-bottom:8px;">Skimming</h2>
+    <p style="font-size:13px;color:#374151;line-height:1.65;margin-bottom:10px;">Skim for structure: first sentences, headings, and repeated nouns. Goal: map the passage in 60–90 seconds.</p>
+    <div style="font-size:12px;color:#6B7280;line-height:1.6;">
+      Checklist: What is the topic? What changes between paragraphs? Where is the definition/example/contrast?
+    </div>
+  </div>
+
+  <div class="bs-tab-panel" data-panel="para" style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:18px;">
+    <h2 style="font-family:Georgia,serif;font-size:16px;margin-bottom:8px;">Paraphrase radar</h2>
+    <p style="font-size:13px;color:#374151;line-height:1.65;">IELTS questions rarely repeat passage wording. Train yourself to recognize synonyms and grammatical shifts.</p>
+    <div style="margin-top:10px;font-size:13px;color:#111827;">
+      Example: “reduce costs” ↔ “cut spending”, “since 2010” ↔ “for more than a decade”.
+    </div>
+  </div>
+
+  <div class="bs-tab-panel" data-panel="tfng" style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:18px;">
+    <h2 style="font-family:Georgia,serif;font-size:16px;margin-bottom:8px;">True / False / Not Given</h2>
+    <ul style="font-size:13px;color:#374151;line-height:1.65;padding-left:18px;">
+      <li><strong>True:</strong> matches the passage.</li>
+      <li><strong>False:</strong> contradicts the passage.</li>
+      <li><strong>Not Given:</strong> not mentioned (do not infer from “common sense”).</li>
+    </ul>
+  </div>
+
+  <div class="bs-tab-panel" data-panel="ynng" style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:18px;">
+    <h2 style="font-family:Georgia,serif;font-size:16px;margin-bottom:8px;">Yes / No / Not Given</h2>
+    <p style="font-size:13px;color:#374151;line-height:1.65;">These questions usually target claims or views. Treat “Not Given” the same way: if the passage does not address the statement, choose Not Given.</p>
+  </div>
+
+  <div class="bs-tab-panel" data-panel="speed" style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:18px;">
+    <h2 style="font-family:Georgia,serif;font-size:16px;margin-bottom:8px;">Speed without panic</h2>
+    <p style="font-size:13px;color:#374151;line-height:1.65;margin-bottom:10px;">Speed comes from decision rules: if a question burns more than 90 seconds, mark your best guess, flag it mentally, and move on.</p>
+    <button type="button" class="bs-btn-primary js-reveal">Reveal: pacing mantra</button>
+    <div class="js-answer" style="display:none;margin-top:10px;font-size:13px;color:#111827;">
+      Accuracy first on Parts 1–2; stamina for Part 3. Finish the test — unanswered questions always score zero.
+    </div>
+  </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  function activate(key){
+    document.querySelectorAll('.bs-tab').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-tab') === key);
+    });
+    document.querySelectorAll('.bs-tab-panel').forEach(function(p){
+      p.classList.toggle('active', p.getAttribute('data-panel') === key);
+    });
+  }
+  document.querySelectorAll('.bs-tab').forEach(function(btn){
+    btn.addEventListener('click', function(){ activate(btn.getAttribute('data-tab')); });
+  });
+  document.querySelectorAll('.js-reveal').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var panel = btn.closest('.bs-tab-panel');
+      if(!panel) return;
+      var ans = panel.querySelector('.js-answer');
+      if(ans) ans.style.display = 'block';
+    });
+  });
+})();
+</script>
 {% endblock %}

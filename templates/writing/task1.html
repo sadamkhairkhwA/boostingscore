@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Task 1 — Boosting Score{% endblock %}
+{% block content %}
+<div class="bs-page">
+  <div class="bs-sec-hd">
+    <div>
+      <h1 class="bs-page-title">Task 1</h1>
+      <p class="bs-page-sub">Write a clear summary of the visual information. Aim for overview + key features.</p>
+    </div>
+    <a class="bs-btn-dark" href="{% url 'writing:home' %}">Back</a>
+  </div>
+
+  <div style="background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;margin-bottom:12px;">
+    <div class="bs-sec-lbl">Prompt</div>
+    <div style="font-size:13px;color:#374151;line-height:1.65;white-space:pre-wrap;">{{ question }}</div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <label class="bs-auth-label" for="essay_text">Your response</label>
+    <textarea id="essay_text" name="essay_text" class="bs-auth-input" style="min-height:220px;resize:vertical;">{{ essay_text_value }}</textarea>
+    <button type="submit" class="bs-btn-green">Submit for AI feedback</button>
+  </form>
+
+  {% if feedback %}
+  <div style="margin-top:16px;background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px;">
+      <div>
+        <div class="bs-muted" style="font-size:11px;">Estimated band</div>
+        <div style="font-size:30px;font-weight:900;color:#3B6D11;line-height:1;">{{ feedback.band|default:"—" }}</div>
+      </div>
+      <div style="font-size:12px;color:#6B7280;max-width:520px;text-align:right;">{{ feedback.summary|default:"" }}</div>
+    </div>
+    <div style="font-size:12px;color:#374151;line-height:1.65;">
+      Saved to your writing history.
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

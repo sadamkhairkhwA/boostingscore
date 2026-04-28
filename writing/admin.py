@@ -1,55 +1,48 @@
 from django.contrib import admin
 
-from .models import Essay, ParaphrasePractice, WordBankEntry, WritingCoachingSession, WritingQuestion
-
-
-@admin.register(WritingQuestion)
-class WritingQuestionAdmin(admin.ModelAdmin):
-    list_display = ("id", "topic", "level", "question_type", "prompt_kind", "preview")
-    list_filter = ("topic", "level", "question_type", "prompt_kind")
-    search_fields = ("question_text",)
-    ordering = ("topic", "level", "id")
-
-    @admin.display(description="Question")
-    def preview(self, obj: WritingQuestion) -> str:
-        t = (obj.question_text or "").strip()
-        return (t[:70] + "…") if len(t) > 70 else t or "—"
+from .models import Essay, LessonProgress, SkillProgress, WritingTask1Attempt, WritingTask2Attempt
 
 
 @admin.register(Essay)
 class EssayAdmin(admin.ModelAdmin):
+    list_display = ("student", "task_type", "band_score", "word_count", "created_at")
+
+
+@admin.register(WritingTask1Attempt)
+class WritingTask1AttemptAdmin(admin.ModelAdmin):
     list_display = (
-        "id",
-        "student",
-        "word_count",
+        "user",
+        "question_id",
+        "question_type",
         "band_score",
-        "submitted_at",
+        "word_count",
+        "completed_at",
     )
-    list_filter = ("question_type", "submitted_at")
-    search_fields = ("student_answer", "question", "student__username")
-    raw_id_fields = ("student", "writing_question")
-    ordering = ("-submitted_at",)
+    list_filter = ("question_type",)
+    search_fields = ("user__username", "response_text")
 
 
-@admin.register(WritingCoachingSession)
-class WritingCoachingSessionAdmin(admin.ModelAdmin):
-    list_display = ("id", "student", "writing_question", "stage", "updated_at")
-    list_filter = ("stage",)
-    raw_id_fields = ("student", "writing_question")
-    ordering = ("-updated_at",)
+@admin.register(WritingTask2Attempt)
+class WritingTask2AttemptAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "question_id",
+        "essay_type",
+        "band_score",
+        "word_count",
+        "completed_at",
+    )
+    list_filter = ("essay_type",)
+    search_fields = ("user__username", "response_text")
 
 
-@admin.register(ParaphrasePractice)
-class ParaphrasePracticeAdmin(admin.ModelAdmin):
-    list_display = ("id", "student", "topic", "level", "created_at")
-    list_filter = ("level",)
-    raw_id_fields = ("student",)
-    ordering = ("-created_at",)
+@admin.register(LessonProgress)
+class LessonProgressAdmin(admin.ModelAdmin):
+    list_display = ("user", "lesson_id", "completed_at")
+    search_fields = ("user__username", "lesson_id")
 
 
-@admin.register(WordBankEntry)
-class WordBankEntryAdmin(admin.ModelAdmin):
-    list_display = ("user", "phrase", "essay", "created_at")
-    list_filter = ("created_at",)
-    search_fields = ("phrase", "user__username")
-    raw_id_fields = ("user", "essay")
+@admin.register(SkillProgress)
+class SkillProgressAdmin(admin.ModelAdmin):
+    list_display = ("user", "skill_id", "completed_at")
+    search_fields = ("user__username", "skill_id")

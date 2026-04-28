@@ -1,613 +1,70 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
-{% block title %}Word list — {{ topic_name }}{% endblock %}
-{% block body_class %}wl-body{% endblock %}
+{% block title %}Word list — Boosting Score{% endblock %}
 {% block content %}
-<div
-  class="wl-page"
-  id="wl-page"
-  data-topic-label="{{ topic_name|escapejs }}"
-  data-user-level="{{ user_level_label|escapejs }}"
-  data-toggle-url="{{ toggle_url }}"
-  data-word-bank-url="{{ word_bank_url }}"
-  data-url-flashcard="{{ url_flashcard_pick|escape }}"
-  data-url-quiz-setup="{{ url_quiz_setup|escape }}"
-  data-url-type-it="{{ url_type_it_session|escape }}"
-  data-deck-save-url="{{ deck_create_save_url }}"
->
-  <div class="wl-topbar">
-    {% if word_list_all %}
-    <a href="{% url 'vocabulary:home' %}" class="wl-back-btn">← Vocabulary</a>
-    {% else %}
-    <a href="{% url 'vocabulary:index' %}?topic={{ topic_code|urlencode }}{% if active_deck %}&deck={{ active_deck.pk }}{% endif %}#flashcard" class="wl-back-btn">
-      ← Change deck
-    </a>
-    {% endif %}
-    <div class="wl-bc">
-      <span>Vocabulary</span>
-      <span class="wl-bc-sep">›</span>
-      <span>Word list</span>
-      <span class="wl-bc-sep">›</span>
-      <span class="wl-bc-active">{{ topic_name }}</span>
+<div class="bs-page">
+  <div class="bs-sec-hd">
+    <div>
+      <h1 class="bs-page-title">Word list</h1>
+      <p class="bs-page-sub">Filter by topic and level. Star words to add them to your favorites.</p>
     </div>
-    <div class="wl-topbar-spacer" aria-hidden="true"></div>
+    <a class="bs-btn-dark" href="{% url 'vocabulary:home' %}">Back</a>
   </div>
 
-  <div class="wl-stats">
-    <div class="wl-stat">
-      <div class="wl-stat-val wl-stat-val--total">{{ total_words }}</div>
-      <div class="wl-stat-lbl">Total words</div>
-    </div>
-    <div class="wl-stat">
-      <div class="wl-stat-val wl-stat-val--mastered">{{ mastered_count }}</div>
-      <div class="wl-stat-lbl">Mastered</div>
-    </div>
-    <div class="wl-stat">
-      <div class="wl-stat-val wl-stat-val--struggling">{{ struggling_count }}</div>
-      <div class="wl-stat-lbl">Struggling</div>
-    </div>
-    <div class="wl-stat">
-      <div class="wl-stat-val wl-stat-val--favored">{{ favored_count }}</div>
-      <div class="wl-stat-lbl">Favored</div>
-    </div>
-  </div>
-
-  <div class="wl-toolbar">
-    <input class="wl-search" id="wl-search" type="search" placeholder="Search words…" autocomplete="off" />
-    <div class="wl-filters" role="tablist" aria-label="Filter list">
-      <button type="button" class="wl-fp on" data-filter="all" role="tab" aria-selected="true">All</button>
-      <button type="button" class="wl-fp" data-filter="favored" role="tab" aria-selected="false">Favored</button>
-      <button type="button" class="wl-fp" data-filter="mastered" role="tab" aria-selected="false">Mastered</button>
-      <button type="button" class="wl-fp" data-filter="not_studied" role="tab" aria-selected="false">Not studied</button>
-      <button type="button" class="wl-fp" data-filter="struggling" role="tab" aria-selected="false">Struggling</button>
-    </div>
-    <button type="button" class="wl-select-btn" id="wl-sel-btn" aria-pressed="false">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <rect x="3" y="5" width="6" height="6" rx="1" />
-        <rect x="3" y="13" width="6" height="6" rx="1" />
-        <line x1="13" y1="8" x2="21" y2="8" />
-        <line x1="13" y1="16" x2="21" y2="16" />
-      </svg>
-      Select
-    </button>
-  </div>
-
-  <div class="wl-smbar" id="wl-smbar">
-    <div class="wl-smbar-left">
-      <div class="wl-smbar-count" id="wl-smbar-count">0 selected</div>
-      <button type="button" class="wl-smbar-selall" id="wl-sel-all">Select all visible</button>
-    </div>
-    <button type="button" class="wl-smbar-cancel" id="wl-sel-cancel">Cancel</button>
-  </div>
-
-  <div class="wl-count" id="wl-count">
-    Showing {{ total_words }} words · {{ topic_name }} · {{ user_level_label }}
-  </div>
-
-  <div class="wl-list" id="wl-list">
-    {% for item in wl_items %}
-    <div
-      class="wl-row"
-      id="row-{{ item.row_id }}"
-      data-word="{{ item.word_text|lower }}"
-      data-mastery="{{ item.mastery_level }}"
-      data-favored="{% if item.favorited %}true{% else %}false{% endif %}"
-      data-struggling="{% if item.is_struggling %}true{% else %}false{% endif %}"
-      data-progress-key="{{ item.progress_key }}"
-    >
-      <div class="wl-row-main" data-toggle-row="{{ item.row_id }}">
-        <div class="wl-chk-wrap" data-wl-chk aria-hidden="true">
-          <div class="wl-chk">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </div>
-        </div>
-        <button
-          class="wl-star{% if item.favorited %} active{% endif %}"
-          id="star-{{ item.row_id }}"
-          type="button"
-          data-star-btn
-          data-kind="{{ item.kind }}"
-          data-pk="{% if item.kind == 'word' %}{{ item.word_id }}{% else %}{{ item.custom_id }}{% endif %}"
-        >
-          {% if item.favorited %}★{% else %}☆{% endif %}
-        </button>
-
-        <div class="wl-content">
-          <div class="wl-top-row">
-            <div class="wl-word">{{ item.word_text }}</div>
-            {% if item.part_of_speech %}
-              <span class="wl-pos">{{ item.part_of_speech }}</span>
-            {% endif %}
-            {% if item.is_struggling %}
-              <span class="wl-badge wl-struggling">Struggling</span>
-            {% elif item.is_mastered %}
-              <span class="wl-badge wl-mastered">Mastered</span>
-            {% endif %}
-            {% if word_list_all and item.source_label %}
-              <span class="wl-source">{{ item.source_label }}</span>
-            {% endif %}
-          </div>
-          <div class="wl-def">{{ item.definition }}</div>
-        </div>
-
-        <div class="wl-right">
-          <div class="wl-dots" aria-hidden="true">
-            {% for i in "12345" %}
-              <div class="wl-dot {% if forloop.counter <= item.mastery_level %}wl-dot-on{% else %}wl-dot-off{% endif %}"></div>
-            {% endfor %}
-          </div>
-          <button class="wl-icon-btn wl-speak" type="button" data-speak="{{ item.word_text|escape }}">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-            </svg>
-          </button>
-          <button class="wl-icon-btn wl-arrow" id="arrow-{{ item.row_id }}" type="button" data-toggle-row="{{ item.row_id }}">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="wl-expand" id="expand-{{ item.row_id }}" hidden>
-        <div class="wl-expand-inner">
-          {% if item.example %}
-            <div class="wl-ex">{{ item.example }}</div>
-          {% endif %}
-          {% if item.synonyms %}
-            <div class="wl-section">
-              <div class="wl-sec-lbl">Synonyms</div>
-              <div class="wl-tags">
-                {% for s in item.synonyms %}
-                  <span class="wl-tag wl-syn">{{ s }}</span>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-          {% if item.antonyms %}
-            <div class="wl-section">
-              <div class="wl-sec-lbl">Antonyms</div>
-              <div class="wl-tags">
-                {% for a in item.antonyms %}
-                  <span class="wl-tag wl-ant">{{ a }}</span>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-          {% if item.collocations %}
-            <div class="wl-section">
-              <div class="wl-sec-lbl">Common phrases</div>
-              <div class="wl-tags">
-                {% for c in item.collocations %}
-                  <span class="wl-tag wl-coll">{{ c }}</span>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-          <div class="wl-actions">
-            <button type="button" class="wl-btn wl-bank" data-word-bank data-kind="{{ item.kind }}" data-pk="{% if item.kind == 'word' %}{{ item.word_id }}{% else %}{{ item.custom_id }}{% endif %}">
-              + Word bank
-            </button>
-            <a
-              class="wl-btn wl-practice"
-              href="{% url 'vocabulary:index' %}?topic={% if word_list_all %}{{ item.practice_topic|urlencode }}{% else %}{{ topic_code|urlencode }}{% endif %}&panel=flashcards{% if word_list_all %}{% if item.practice_deck_pk %}&deck={{ item.practice_deck_pk }}{% endif %}{% elif active_deck %}&deck={{ active_deck.pk }}{% endif %}{% if item.kind == 'word' %}&focus_w={{ item.word_id }}{% else %}&focus_c={{ item.custom_id }}{% endif %}#flashcard"
-            >Practice this word →</a>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% empty %}
-    <p class="wl-empty">{% if word_list_all %}No words at your level yet.{% else %}No words match your level in this deck yet.{% endif %}</p>
+  <div class="bs-pills">
+    <a class="bs-pill {% if not filter_topic %}active{% endif %}" href="{% url 'vocabulary:word_list' %}">All topics</a>
+    {% for k,v in topics %}
+    <a class="bs-pill {% if filter_topic == k %}active{% endif %}" href="{% url 'vocabulary:word_list' %}?topic={{ k }}{% if filter_level %}&level={{ filter_level }}{% endif %}">{{ v }}</a>
     {% endfor %}
   </div>
-</div>
+  <div class="bs-pills">
+    <a class="bs-pill {% if not filter_level %}active{% endif %}" href="{% url 'vocabulary:word_list' %}{% if filter_topic %}?topic={{ filter_topic }}{% endif %}">All levels</a>
+    {% for lvl,lbl in levels %}
+    <a class="bs-pill {% if filter_level == lvl|stringformat:'s' %}active{% endif %}" href="{% url 'vocabulary:word_list' %}?level={{ lvl }}{% if filter_topic %}&topic={{ filter_topic }}{% endif %}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
 
-<div class="wl-sticky-bar" id="wl-sbar">
-  <div class="wl-sb-inner">
-    <div class="wl-sb-info">
-      <div class="wl-sb-count"><span id="wl-sc">0</span> words selected</div>
-      <div class="wl-sb-hint">Choose how to practise them</div>
-    </div>
-    <div class="wl-sb-div" aria-hidden="true"></div>
-    <div class="wl-sb-actions">
-      <a href="#" id="wl-fc-btn" class="wl-sbb wl-sbb-fc">📚 Flashcards</a>
-      <a href="#" id="wl-quiz-btn" class="wl-sbb wl-sbb-quiz">❓ Quiz</a>
-      <a href="#" id="wl-type-btn" class="wl-sbb wl-sbb-type">✏️ Type it</a>
-      <button type="button" class="wl-sbb wl-sbb-deck" id="wl-open-deck-modal">+ Create deck</button>
-    </div>
-    <button type="button" class="wl-sb-clear" id="wl-clear-sel">✕ Clear</button>
+  <div class="bs-table-wrap">
+    <table class="bs-table">
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Topic</th>
+          <th>Level</th>
+          <th>Mastery</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.word.word }}</strong><div class="bs-muted" style="font-size:12px;margin-top:4px;">{{ row.word.part_of_speech }}</div></td>
+          <td>{{ row.word.get_topic_display }}</td>
+          <td>{{ row.word.get_level_display }}</td>
+          <td>
+            <span style="font-weight:700;color:#3B6D11;">{{ row.mastery }}</span><span class="bs-muted">/5</span>
+          </td>
+          <td style="text-align:right;">
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="toggle_favorite">
+              <input type="hidden" name="word_id" value="{{ row.word.id }}">
+              <button type="submit" class="bs-btn-dark" style="padding:7px 10px;font-size:12px;">
+                {% if row.favored %}★ Saved{% else %}☆ Save{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="5" style="background:#FAFAF9;font-size:12px;color:#6B7280;">
+            {{ row.word.definition|truncatechars:220 }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="bs-muted">No words match these filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
-
-<div class="wl-overlay" id="wl-overlay">
-  <div class="wl-modal" role="dialog" aria-labelledby="wl-modal-title" aria-modal="true">
-    <div class="wl-modal-title" id="wl-modal-title">Create a new deck</div>
-    <div class="wl-modal-sub">Give it a name — selected words will be added as cards in this deck.</div>
-    <label class="wl-modal-lbl" for="wl-deck-inp">Deck name</label>
-    <input class="wl-modal-inp" id="wl-deck-inp" type="text" placeholder="e.g. Struggling words" autocomplete="off" />
-    <div class="wl-modal-lbl" style="margin-top: 14px">Words to add (<span id="wl-mc">0</span>)</div>
-    <div class="wl-modal-words" id="wl-mwords"></div>
-    <div class="wl-modal-btns">
-      <button type="button" class="wl-mbtn-c" id="wl-modal-cancel">Cancel</button>
-      <button type="button" class="wl-mbtn-ok" id="wl-modal-create">Create deck →</button>
-    </div>
-  </div>
-</div>
-
-<script>
-(function () {
-  var page = document.getElementById("wl-page");
-  if (!page) return;
-
-  function csrf() {
-    var el = document.querySelector('#global-csrf input[name="csrfmiddlewaretoken"]');
-    return el ? el.value : "";
-  }
-
-  var currentFilter = "all";
-  var selMode = false;
-  var selected = new Set();
-
-  function setSelMode(on) {
-    selMode = on;
-    var btn = document.getElementById("wl-sel-btn");
-    var sm = document.getElementById("wl-smbar");
-    if (!btn || !sm) return;
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-    btn.classList.toggle("is-active", on);
-    sm.classList.toggle("show", on);
-    document.querySelectorAll(".wl-row").forEach(function (r) {
-      r.classList.toggle("wl-sel-mode", on);
-    });
-    if (!on) {
-      selected.clear();
-      document.querySelectorAll(".wl-row").forEach(function (r) {
-        r.classList.remove("wl-selected");
-      });
-      syncSticky();
-      document.getElementById("wl-smbar-count").textContent = "0 selected";
-    }
-  }
-
-  function toggleSelRow(row) {
-    if (!row) return;
-    var key = row.getAttribute("data-progress-key");
-    if (!key) return;
-    if (selected.has(key)) {
-      selected.delete(key);
-      row.classList.remove("wl-selected");
-    } else {
-      selected.add(key);
-      row.classList.add("wl-selected");
-    }
-    document.getElementById("wl-smbar-count").textContent = selected.size + " selected";
-    syncSticky();
-  }
-
-  function syncSticky() {
-    var bar = document.getElementById("wl-sbar");
-    var n = selected.size;
-    document.getElementById("wl-sc").textContent = String(n);
-    bar.classList.toggle("show", n > 0);
-
-    var keys = Array.from(selected);
-    var qw = keys.join(",");
-    var fcBase = page.getAttribute("data-url-flashcard") || "";
-    var quizBase = page.getAttribute("data-url-quiz-setup") || "";
-    var tiBase = page.getAttribute("data-url-type-it") || "";
-
-    function setHref(id, urlBase) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      if (!qw) {
-        el.setAttribute("href", "#");
-        return;
-      }
-      var sep = urlBase.indexOf("?") >= 0 ? "&" : "?";
-      el.setAttribute("href", urlBase + sep + "words=" + encodeURIComponent(qw));
-    }
-    setHref("wl-fc-btn", fcBase);
-    setHref("wl-quiz-btn", quizBase);
-    setHref("wl-type-btn", tiBase);
-  }
-
-  function toggleRow(rowId) {
-    var row = document.getElementById("row-" + rowId);
-    var exp = document.getElementById("expand-" + rowId);
-    var arrow = document.getElementById("arrow-" + rowId);
-    if (!row || !exp) return;
-    var open = !exp.hasAttribute("hidden");
-    if (open) {
-      exp.setAttribute("hidden", "");
-      if (arrow) arrow.classList.remove("rotated");
-      row.classList.remove("expanded");
-    } else {
-      exp.removeAttribute("hidden");
-      if (arrow) arrow.classList.add("rotated");
-      row.classList.add("expanded");
-    }
-  }
-
-  document.getElementById("wl-list").addEventListener("click", function (ev) {
-    var t = ev.target;
-    var tr = t.closest("[data-toggle-row]");
-    if (tr && !t.closest("[data-star-btn]") && !t.closest(".wl-speak")) {
-      ev.preventDefault();
-      if (selMode) {
-        toggleSelRow(tr.closest(".wl-row"));
-        return;
-      }
-      toggleRow(tr.getAttribute("data-toggle-row"));
-    }
-    var star = t.closest("[data-star-btn]");
-    if (star) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      var kind = star.getAttribute("data-kind");
-      var pk = parseInt(star.getAttribute("data-pk"), 10);
-      if (!kind || isNaN(pk)) return;
-      var wasOn = star.classList.contains("active");
-      var url = page.getAttribute("data-toggle-url");
-      fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrf(),
-        },
-        body: JSON.stringify({ kind: kind, id: pk }),
-      })
-        .then(function (r) {
-          return r.json();
-        })
-        .then(function (data) {
-          if (!data || !data.ok) return;
-          var on = !!data.favorited;
-          star.classList.toggle("active", on);
-          star.textContent = on ? "★" : "☆";
-          var row = star.closest(".wl-row");
-          if (row) row.setAttribute("data-favored", on ? "true" : "false");
-          filterWords();
-        })
-        .catch(function () {});
-    }
-    var sp = t.closest(".wl-speak");
-    if (sp) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      var w = sp.getAttribute("data-speak") || "";
-      speakWord(w);
-    }
-    var wb = t.closest("[data-word-bank]");
-    if (wb) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      var wkind = wb.getAttribute("data-kind");
-      var wpk = parseInt(wb.getAttribute("data-pk"), 10);
-      if (!wkind || isNaN(wpk)) return;
-      wb.disabled = true;
-      fetch(page.getAttribute("data-word-bank-url"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrf(),
-        },
-        body: JSON.stringify({ kind: wkind, id: wpk }),
-      })
-        .then(function (r) {
-          return r.json();
-        })
-        .then(function (data) {
-          if (data && data.ok) {
-            wb.textContent = "Added";
-            wb.classList.add("is-done");
-          } else if (data && data.error) {
-            window.alert(data.error);
-          }
-        })
-        .catch(function () {
-          window.alert("Network error.");
-        })
-        .finally(function () {
-          wb.disabled = false;
-        });
-    }
-  });
-
-  document.querySelectorAll(".wl-filters .wl-fp").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      currentFilter = btn.getAttribute("data-filter") || "all";
-      document.querySelectorAll(".wl-filters .wl-fp").forEach(function (b) {
-        var on = b.getAttribute("data-filter") === currentFilter;
-        b.classList.toggle("on", on);
-        b.setAttribute("aria-selected", on ? "true" : "false");
-      });
-      filterWords();
-    });
-  });
-
-  var searchEl = document.getElementById("wl-search");
-  if (searchEl) {
-    searchEl.addEventListener("input", filterWords);
-  }
-
-  function filterWords() {
-    var search = (searchEl && searchEl.value) ? searchEl.value.toLowerCase() : "";
-    var rows = document.querySelectorAll(".wl-row");
-    var visible = 0;
-    rows.forEach(function (row) {
-      var word = row.getAttribute("data-word") || "";
-      var mastery = parseInt(row.getAttribute("data-mastery") || "0", 10);
-      var favored = row.getAttribute("data-favored") === "true";
-      var struggling = row.getAttribute("data-struggling") === "true";
-      var matchSearch = !search || word.indexOf(search) !== -1;
-      var matchFilter = true;
-      if (currentFilter === "favored") matchFilter = favored;
-      else if (currentFilter === "mastered") matchFilter = mastery === 5;
-      else if (currentFilter === "not_studied") matchFilter = mastery === 0;
-      else if (currentFilter === "struggling") matchFilter = struggling;
-      if (matchSearch && matchFilter) {
-        row.style.display = "";
-        visible++;
-      } else {
-        row.style.display = "none";
-      }
-    });
-    var countEl = document.getElementById("wl-count");
-    if (countEl) {
-      countEl.textContent =
-        "Showing " +
-        visible +
-        " words · " +
-        (page.getAttribute("data-topic-label") || "") +
-        " · " +
-        (page.getAttribute("data-user-level") || "");
-    }
-  }
-
-  function speakWord(word) {
-    if (!word || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    var msg = new SpeechSynthesisUtterance(word);
-    var voices = window.speechSynthesis.getVoices();
-    var british = voices.find(function (v) {
-      return v.lang === "en-GB";
-    });
-    if (british) msg.voice = british;
-    msg.lang = "en-GB";
-    msg.rate = 0.85;
-    window.speechSynthesis.speak(msg);
-  }
-
-  if (window.speechSynthesis) {
-    window.speechSynthesis.onvoiceschanged = function () {};
-  }
-
-  document.getElementById("wl-sel-btn").addEventListener("click", function () {
-    setSelMode(!selMode);
-  });
-  document.getElementById("wl-sel-cancel").addEventListener("click", function () {
-    setSelMode(false);
-  });
-  document.getElementById("wl-sel-all").addEventListener("click", function () {
-    document.querySelectorAll(".wl-row").forEach(function (row) {
-      if (row.style.display === "none") return;
-      var key = row.getAttribute("data-progress-key");
-      if (!key) return;
-      selected.add(key);
-      row.classList.add("wl-selected");
-    });
-    document.getElementById("wl-smbar-count").textContent = selected.size + " selected";
-    syncSticky();
-  });
-  document.getElementById("wl-clear-sel").addEventListener("click", function () {
-    selected.clear();
-    document.querySelectorAll(".wl-row").forEach(function (r) {
-      r.classList.remove("wl-selected");
-    });
-    document.getElementById("wl-smbar-count").textContent = "0 selected";
-    syncSticky();
-  });
-
-  var overlay = document.getElementById("wl-overlay");
-  function wlCloseModal() {
-    overlay.classList.remove("show");
-    document.getElementById("wl-deck-inp").value = "";
-  }
-  overlay.addEventListener("click", function (ev) {
-    if (ev.target === overlay) wlCloseModal();
-  });
-  document.getElementById("wl-modal-cancel").addEventListener("click", wlCloseModal);
-  document.getElementById("wl-open-deck-modal").addEventListener("click", function () {
-    if (selected.size === 0) return;
-    var words = [];
-    selected.forEach(function (key) {
-      var row = document.querySelector('.wl-row[data-progress-key="' + key + '"]');
-      if (!row) return;
-      var w = row.querySelector(".wl-word");
-      var d = row.querySelector(".wl-def");
-      words.push({ text: w ? w.textContent.trim() : "", def: d ? d.textContent.trim() : "" });
-    });
-    document.getElementById("wl-mc").textContent = String(words.length);
-    document.getElementById("wl-mwords").innerHTML = words
-      .map(function (x) {
-        return (
-          '<span class="wl-mwp">' +
-          String(x.text || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;") +
-          "</span>"
-        );
-      })
-      .join("");
-    overlay.classList.add("show");
-    setTimeout(function () {
-      document.getElementById("wl-deck-inp").focus();
-    }, 80);
-  });
-  document.getElementById("wl-modal-create").addEventListener("click", function () {
-    var name = document.getElementById("wl-deck-inp").value.trim();
-    if (!name) {
-      document.getElementById("wl-deck-inp").focus();
-      return;
-    }
-    var cards = [];
-    selected.forEach(function (key) {
-      var row = document.querySelector('.wl-row[data-progress-key="' + key + '"]');
-      if (!row) return;
-      var w = row.querySelector(".wl-word");
-      var d = row.querySelector(".wl-def");
-      var term = w ? w.textContent.trim() : "";
-      if (!term) return;
-      cards.push({ word: term, definition: d ? d.textContent.trim() : "" });
-    });
-    if (!cards.length) return;
-    var tok = csrf();
-    if (!tok) {
-      window.alert("Missing security token. Refresh the page.");
-      return;
-    }
-    var btn = document.getElementById("wl-modal-create");
-    btn.disabled = true;
-    fetch(page.getAttribute("data-deck-save-url"), {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": tok,
-      },
-      body: JSON.stringify({ name: name, description: "", cards: cards, practice: true }),
-    })
-      .then(function (r) {
-        return r.text().then(function (txt) {
-          try {
-            return { ok: r.ok, data: JSON.parse(txt || "{}") };
-          } catch (e) {
-            return { ok: false, data: { error: "Bad response" } };
-          }
-        });
-      })
-      .then(function (pack) {
-        btn.disabled = false;
-        if (!pack.ok || !pack.data || !pack.data.ok) {
-          window.alert((pack.data && pack.data.error) || "Could not create deck.");
-          return;
-        }
-        wlCloseModal();
-        if (pack.data.redirect_url) {
-          window.location.href = pack.data.redirect_url;
-        } else {
-          window.alert('Deck "' + name + '" created.');
-        }
-      })
-      .catch(function () {
-        btn.disabled = false;
-        window.alert("Network error.");
-      });
-  });
-})();
-</script>
 {% endblock %}

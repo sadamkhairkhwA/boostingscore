@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ type_meta.name }} Questions{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  {% include "writing/_task1_topbar.html" %}
+  <section class="wt1-wrap">
+    <a class="wt1-back" href="{% url 'writing:task1' %}">← All question types</a>
+    <header class="wt1-list-head">
+      <div class="wt1-list-head__emoji">{{ type_meta.emoji }}</div>
+      <div>
+        <h1 class="wt1-title wt1-title--list">{{ type_meta.name }} Questions</h1>
+        <p class="wt1-sub">{{ type_meta.description }}</p>
+      </div>
+    </header>
+    <p class="wt1-label">{{ rows|length }} questions available</p>
+    <div class="wt1-q-list">
+      {% for row in rows %}
+      <a class="wt1-q-row" href="{% url 'writing:task1_question_page' type_slug row.id %}">
+        <div class="wt1-q-row__icon">{{ type_meta.emoji }}</div>
+        <div class="wt1-q-row__body">
+          <div class="wt1-q-row__title">{{ row.title }}</div>
+          {% if row.best_band %}
+          <span class="wt1-badge">Done · Band {{ row.best_band|floatformat:1 }}</span>
+          {% endif %}
+          <div class="wt1-q-row__preview">{{ row.prompt_preview }}</div>
+        </div>
+        <div class="wt1-q-row__arrow">›</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}IELTS reading — Boosting Score{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=7">
+{% endblock %}
+{% block content %}
+<div class="bs-page">
+  <h1 class="bs-page-title">IELTS Academic Reading</h1>
+  <p class="bs-page-sub">
+    The <strong>timed 60-minute mock</strong> (three passages, 40 questions, full-screen layout) is here and at
+    <a href="{% url 'reading:academic_tests_index' %}"><code>/reading/tests/</code></a>.
+  </p>
+
+  <div class="art-list-page" style="margin-bottom:28px;">
+  <div class="art-list-grid">
+    <article class="art-test-card art-test-card--live">
+      <span class="art-test-card__badge-num">1</span>
+      <span class="art-test-card__badge-live">Live</span>
+      <h2 class="art-test-card__title">Test 1 · Services, Travel &amp; Bilingualism</h2>
+      <p class="art-test-card__desc">Three authentic passages — library notices, workplace flexibility, and an academic article on bilingualism.</p>
+      <div class="art-test-card__tags">
+        <span>Band 5.0–7.5</span>
+        <span>40 Q</span>
+        <span>3 parts</span>
+        <span>60 min</span>
+        <span>T/F/NG</span>
+        <span>MC</span>
+        <span>Gap-fill</span>
+      </div>
+      <a class="art-test-card__btn" href="{% url 'reading:academic_test_session' test_number=1 %}">Start test →</a>
+    </article>
+  </div>
+  </div>
+
+  <p class="bs-sec-lbl" style="margin-top:8px;">Legacy · AI-generated packs</p>
+  <p class="bs-page-sub" style="margin-top:-6px;">Older flow: AI builds passages in the browser. Different layout from the academic mock above.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+    {% for t in tests %}
+      {% if t.available %}
+      <a class="bs-method" href="{% url 'reading:ielts_exam' %}" style="color:inherit;">
+      {% else %}
+      <div class="bs-method" style="opacity:.65;cursor:not-allowed;">
+      {% endif %}
+        <span class="bs-method-badge" style="background:{% if t.available %}#EAF3DE;color:#27500A{% else %}#F3F4F6;color:#6B7280{% endif %};">
+          {% if t.available %}Live{% else %}Soon{% endif %}
+        </span>
+        <div class="bs-method-icon" style="background:#F3F4F6;">{{ forloop.counter }}</div>
+        <div class="bs-method-name">Test {{ t.id }} · {{ t.title }}</div>
+        <div class="bs-method-desc">{{ t.desc }}</div>
+        <div class="bs-method-foot">
+          <span class="bs-method-stat"><b>{{ t.band }}</b> · {{ t.types }}</span>
+          {% if t.available %}
+          <span class="bs-method-go">Start →</span>
+          {% else %}
+          <span class="bs-method-go" style="color:#9CA3AF;">Coming soon</span>
+          {% endif %}
+        </div>
+      {% if t.available %}
+      </a>
+      {% else %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

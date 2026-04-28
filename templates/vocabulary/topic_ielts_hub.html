@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ topic_label }} — IELTS vocabulary{% endblock %}
+{% block content %}
+<div
+  class="topic-ielts-hub"
+  id="topic-ielts-hub"
+  data-topic="{{ topic|escape }}"
+  data-topic-label="{{ topic_label|escape }}"
+  data-api-url="{{ api_url|escape }}"
+  data-flashcard-url="{{ flashcard_session_url|escape }}"
+>
+  <div class="topic-ielts-hub__head">
+    <div>
+      <p class="topic-ielts-hub__eyebrow">IELTS vocabulary</p>
+      <h1 class="topic-ielts-hub__title">
+        <span class="topic-ielts-hub__title-emoji" id="topic-hub-emoji" aria-hidden="true">📚</span>
+        {{ topic_label }}
+      </h1>
+      <p class="topic-ielts-hub__sub" id="topic-hub-meta">195 words · 3 levels · start anywhere</p>
+    </div>
+    <a class="topic-ielts-hub__back" href="{% url 'vocabulary:index' %}">← All topics</a>
+  </div>
+
+  <div class="topic-ielts-hub__overall" id="topic-hub-overall" hidden>
+    <div class="topic-ielts-hub__overall-label" id="topic-hub-overall-label">Overall progress —</div>
+    <div class="topic-ielts-hub__overall-bar" aria-hidden="true">
+      <div class="topic-ielts-hub__overall-fill" id="topic-hub-overall-fill" style="width:0%;"></div>
+    </div>
+    <div class="topic-ielts-hub__overall-pct" id="topic-hub-overall-pct">0%</div>
+  </div>
+
+  <div class="topic-ielts-hub__loading" id="topic-hub-loading">
+    <p class="topic-ielts-hub__loading-msg" id="topic-hub-loading-msg">Loading vocabulary…</p>
+    <div class="topic-ielts-hub__skeleton-chips" id="topic-hub-skeleton" aria-hidden="true">
+      {% for _ in "12345678901234567890" %}
+      <span class="topic-hub-chip topic-hub-chip--skeleton"></span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div
+    class="topic-ielts-hub__error"
+    id="topic-hub-error"
+    role="alert"
+    hidden
+    tabindex="0"
+  >
+    <span id="topic-hub-error-msg">Could not load words — tap to retry</span>
+  </div>
+
+  <div class="topic-ielts-hub__levels" id="topic-hub-levels" hidden></div>
+</div>
+<link rel="stylesheet" href="{% static 'css/vocabulary.css' %}?v=topic-hub-2" />
+<script src="{% static 'js/topic_ielts_hub.js' %}?v=5" defer></script>
+{% endblock %}

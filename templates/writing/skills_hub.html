@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Writing Skills{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  <section class="wt1-wrap">
+    <h1 class="wt1-title wt1-title--hero">Writing Skills</h1>
+    <p class="wt1-sub">Learn vocabulary, grammar, and phrases. Linked directly to your AI feedback.</p>
+    {% if recommended %}
+    <div class="wr-rec">
+      <p><strong>Recommended from your last feedback</strong></p>
+      <div class="wr-rec-pills">
+        {% for s in recommended %}
+        <a href="{% url 'writing:skill_detail' s.id %}?from_feedback=1&criterion={{ weakest }}">{{ s.title }} →</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <div class="wr-skill-list">
+      {% for s in skills %}
+      <a href="{% url 'writing:skill_detail' s.id %}" class="wr-skill-row">
+        <div class="ic">✦</div>
+        <div><strong>{{ s.title }}</strong><p>{{ s.desc }}</p></div>
+        <div>
+          {% if s.id in done_ids %}<span class="done">Done ✓</span>{% endif %}
+          {% if s.new %}<span class="new">New</span>{% endif %}
+          {% if recommended and s in recommended %}<span class="rec">Recommended</span>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

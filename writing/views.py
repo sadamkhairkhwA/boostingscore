@@ -1,710 +1,935 @@
-from django.contrib import messages
+import json
+import re
+
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import Http404
+from django.shortcuts import redirect, render
 from django.urls import reverse
+from openai import OpenAI
 
-from .coaching import (
-    coach_round_one,
-    coach_round_three,
-    coach_round_two,
-    count_sentences,
-    generate_paraphrase_source,
-    paraphrase_feedback,
+from vocabulary.streak_utils import bump_streak_for_user
+
+from .models import Essay
+from .models import LessonProgress, SkillProgress, WritingTask1Attempt, WritingTask2Attempt
+from .task1_charts import render_question_chart
+from .task1_content import (
+    TASK_INSTRUCTION,
+    TYPE_META,
+    get_question,
+    get_questions_by_type,
+    question_type_list,
 )
-from .forms import CoachingDraftForm, ParaphraseForm
-from .grading import essay_word_count, grade_task1_response, grade_task2_essay, parse_vocabulary_lines
-from .models import Essay, ParaphrasePractice, WordBankEntry, WritingCoachingSession, WritingQuestion
+from .content import LESSONS, SKILL_MAP, SKILLS, TASK2_QUESTIONS, TASK2_TYPE_META
+
+CRITERION_META = {
+    "task_achievement": {
+        "label": "Task Achievement",
+        "color": "#3b82f6",
+        "tag_bg": "#dbeafe",
+        "status_good": "Good",
+    },
+    "coherence_cohesion": {
+        "label": "Coherence & Cohesion",
+        "color": "#22c55e",
+        "tag_bg": "#dcfce7",
+        "status_good": "Good",
+    },
+    "lexical_resource": {
+        "label": "Lexical Resource",
+        "color": "#f59e0b",
+        "tag_bg": "#fef3c7",
+        "status_good": "Needs work",
+    },
+    "grammar_accuracy": {
+        "label": "Grammar Range & Accuracy",
+        "color": "#f43f5e",
+        "tag_bg": "#ffe4e6",
+        "status_good": "Good",
+    },
+}
 
 
-def _parse_level(raw: str | None) -> int:
+def _streak_ctx(request):
+    streak = getattr(getattr(request.user, "profile", None), "streak", 0) or 0
+    return {"streak": streak}
+
+
+def _word_count(text):
+    return len([w for w in (text or "").split() if w.strip()])
+
+
+def _extract_json(text):
+    text = (text or "").strip()
+    m = re.search(r"\{[\s\S]*\}", text)
+    if not m:
+        return {}
     try:
-        v = int((raw or "3").strip())
-        return v if v in (1, 2, 3) else 3
-    except ValueError:
-        return 3
+        return json.loads(m.group())
+    except json.JSONDecodeError:
+        return {}
 
 
-def _parse_qtype(raw: str | None) -> str:
-    v = (raw or WritingQuestion.TASK2).strip().lower()
-    return WritingQuestion.TASK1 if v == "task1" else WritingQuestion.TASK2
-
-
-TASK1_KINDS = frozenset(
-    {
-        WritingQuestion.T1_CHART,
-        WritingQuestion.T1_TABLE,
-        WritingQuestion.T1_PROCESS,
-        WritingQuestion.T1_MAP,
-    }
-)
-TASK2_KINDS = frozenset(
-    {
-        WritingQuestion.T2_OPINION,
-        WritingQuestion.T2_DISCUSSION,
-        WritingQuestion.T2_PROBLEM,
-        WritingQuestion.T2_ADVANTAGES,
-        WritingQuestion.T2_TWO_PART,
-    }
-)
-
-
-def _normalize_prompt_kind(qtype: str, raw: str | None) -> str:
-    k = (raw or "").strip()
-    if not k:
-        return ""
-    allowed = TASK1_KINDS if qtype == WritingQuestion.TASK1 else TASK2_KINDS
-    return k if k in allowed else ""
-
-
-def _pick_writing_question(qtype: str, level: int, kind: str):
-    qs = WritingQuestion.objects.filter(question_type=qtype, level=level)
-    if kind:
-        sub = qs.filter(prompt_kind=kind)
-        if sub.exists():
-            return sub.order_by("?").first()
-    return qs.order_by("?").first()
-
-
-PARAPHRASE_SESSION_KEY = "writing_paraphrase_ctx"
-
-
-def _target_words(qtype: str, _level: int) -> int:
-    """Official IELTS minimums; level only affects feedback tone elsewhere."""
-    if qtype == WritingQuestion.TASK1:
-        return 150
-    return 250
-
-
-def _timer_seconds(qtype: str, _level: int) -> int:
-    if qtype == WritingQuestion.TASK1:
-        return 20 * 60
-    return 40 * 60
-
-
-def _min_words_warn(qtype: str, _level: int) -> int:
-    if qtype == WritingQuestion.TASK1:
-        return 150
-    return 250
-
-
-def _essay_draft_count(e: Essay) -> int:
-    n = 1
-    try:
-        if (e.draft_1 or "").strip():
-            n += 1
-        if (e.draft_2 or "").strip():
-            n += 1
-    except Exception:
-        return 1
-    return n
-
-
-def _grading_summary(grades: dict) -> str:
-    lines = []
-    bs = grades.get("band_score")
-    if bs is not None:
-        lines.append(f"Overall band: {bs}")
-    pairs = [
-        ("task_achievement_score", "Task achievement"),
-        ("coherence_score", "Coherence and cohesion"),
-        ("lexical_score", "Lexical resource"),
-        ("grammar_score", "Grammar"),
-    ]
-    for key, label in pairs:
-        v = grades.get(key)
-        if v is not None:
-            lines.append(f"{label}: {v} / 9")
-    fb = (grades.get("ai_feedback") or "").strip()
-    if fb:
-        lines.append("Examiner-style feedback (excerpt):\n" + fb[:1200])
-    return "\n".join(lines) if lines else "No numeric scores returned."
+def _essay_feedback(task_label, question, essay_text):
+    if not settings.OPENAI_API_KEY:
+        return {
+            "band": 6.0,
+            "summary": "OpenAI API key is not configured. This is placeholder feedback.",
+            "criteria": {},
+        }
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = (
+        f"You are an IELTS writing examiner. Evaluate this {task_label} response.\n\n"
+        f"Question:\n{question}\n\nStudent essay:\n{essay_text}\n\n"
+        "Return ONLY valid JSON with keys: band (float 0-9), summary (string), "
+        "criteria (object with task_response, coherence, lexical, grammar each having "
+        "short_comment and score 0-9), improvements (array of strings)."
+    )
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        max_tokens=2000,
+        temperature=0.25,
+        messages=[
+            {"role": "system", "content": "You return strict JSON only."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    raw = completion.choices[0].message.content or ""
+    data = _extract_json(raw)
+    if not data:
+        data = {
+            "band": 6.0,
+            "summary": raw[:2000],
+            "criteria": {},
+            "improvements": [],
+        }
+    return data
 
 
 @login_required
-def writing_task1_redirect(request: HttpRequest) -> HttpResponse:
-    return redirect(f"{reverse('writing:pick')}?qtype=task1")
-
-
-@login_required
-def writing_task2_redirect(request: HttpRequest) -> HttpResponse:
-    return redirect(f"{reverse('writing:pick')}?qtype=task2")
-
-
-@login_required
-def writing_home(request: HttpRequest) -> HttpResponse:
-    user = request.user
-    latest_band = None
-    essays_count = 0
-    streak = 0
-    writing_history: list[dict] = []
-
-    try:
-        essays_count = Essay.objects.filter(student=user).count()
-    except Exception:
-        essays_count = 0
-
-    try:
-        latest = Essay.objects.filter(student=user).order_by("-submitted_at").first()
-        if latest is not None and latest.band_score is not None:
-            latest_band = latest.band_score
-    except Exception:
-        latest_band = None
-
-    try:
-        streak = int(getattr(getattr(user, "profile", None), "streak", 0) or 0)
-    except Exception:
-        streak = 0
-
-    try:
-        for e in Essay.objects.filter(student=user).order_by("-submitted_at")[:8]:
-            task_label = e.get_question_type_display()
-            qdetail = ""
-            try:
-                if e.writing_question_id and e.writing_question is not None:
-                    qdetail = e.writing_question.get_prompt_kind_display() or e.writing_question.get_topic_display()
-                else:
-                    qdetail = (e.question or "")[:80]
-            except Exception:
-                qdetail = "Essay"
-            band_val = e.band_score if e.band_score is not None else "—"
-            writing_history.append(
-                {
-                    "task_type": task_label,
-                    "question_type": qdetail,
-                    "band_score": band_val,
-                    "created_at": e.submitted_at,
-                    "drafts": _essay_draft_count(e),
-                }
-            )
-    except Exception:
-        writing_history = []
-
+def writing_home(request):
+    essays = Essay.objects.filter(student=request.user).order_by("-created_at")[:20]
     return render(
         request,
         "writing/writing_home.html",
         {
-            "latest_band": latest_band,
-            "essays_count": essays_count,
-            "writing_history": writing_history,
-            "streak": streak,
+            "essays": essays,
+            **_streak_ctx(request),
         },
     )
 
 
 @login_required
-def task_chooser(request: HttpRequest) -> HttpResponse:
-    qtype_raw = (
-        (request.GET.get("qtype") or request.POST.get("qtype") or "task1").strip().lower()
+def task1(request):
+    question = (
+        "The chart below shows the percentage of households in one country that used selected "
+        "forms of transport to travel to work in one year. Summarise the information by selecting "
+        "and reporting the main features, and make comparisons where relevant.\n\n"
+        "(Imagine an appropriate chart is provided.)"
     )
-    qtype = WritingQuestion.TASK1 if qtype_raw == "task1" else WritingQuestion.TASK2
-
-    if request.method == "POST":
-        level = _parse_level(request.POST.get("level"))
-        kind = _normalize_prompt_kind(qtype, request.POST.get("prompt_kind"))
-        base = reverse("writing:question")
-        q = f"qtype={qtype}&level={level}"
-        if kind:
-            q += f"&kind={kind}"
-        return redirect(f"{base}?{q}")
-
-    kinds = (
-        [
-            (WritingQuestion.T1_CHART, "Charts & graphs (bar, line, pie)"),
-            (WritingQuestion.T1_TABLE, "Tables"),
-            (WritingQuestion.T1_PROCESS, "Process / diagram"),
-            (WritingQuestion.T1_MAP, "Maps"),
-        ]
-        if qtype == WritingQuestion.TASK1
-        else [
-            (WritingQuestion.T2_OPINION, "Opinion / agree–disagree"),
-            (WritingQuestion.T2_DISCUSSION, "Discussion (both views)"),
-            (WritingQuestion.T2_PROBLEM, "Problem & solution"),
-            (WritingQuestion.T2_ADVANTAGES, "Advantages & disadvantages"),
-            (WritingQuestion.T2_TWO_PART, "Two-part / direct questions"),
-        ]
-    )
-
-    return render(
-        request,
-        "writing/task_chooser.html",
-        {
-            "qtype": qtype,
-            "task_label": "Task 1 · Academic" if qtype == WritingQuestion.TASK1 else "Task 2",
-            "kinds": kinds,
-        },
-    )
-
-
-@login_required
-def writing_question(request: HttpRequest) -> HttpResponse:
-    session_id_raw = request.GET.get("session") or request.POST.get("session_id")
-    session_id: int | None = None
-    if session_id_raw not in (None, ""):
-        try:
-            session_id = int(session_id_raw)
-        except ValueError:
-            session_id = None
-
-    coaching_session: WritingCoachingSession | None = None
-    if session_id is not None:
-        coaching_session = get_object_or_404(
-            WritingCoachingSession,
-            pk=session_id,
-            student=request.user,
-        )
-        wq = coaching_session.writing_question
-        level = wq.level
-        qtype = wq.question_type
-        picked = wq
-        coach_stage = coaching_session.stage
-        kind = _normalize_prompt_kind(qtype, coaching_session.writing_question.prompt_kind)
-    else:
-        level = _parse_level(request.GET.get("level") if request.method == "GET" else request.POST.get("level"))
-        qtype = _parse_qtype(
-            request.GET.get("qtype") if request.method == "GET" else request.POST.get("question_type")
-        )
-        kind_raw = (
-            request.GET.get("kind")
-            if request.method == "GET"
-            else request.POST.get("prompt_kind")
-        )
-        kind = _normalize_prompt_kind(qtype, kind_raw)
-        picked = _pick_writing_question(qtype, level, kind)
-        coach_stage = 1
-
-    task_label = "Task 1" if qtype == WritingQuestion.TASK1 else "Task 2"
-    target_words = _target_words(qtype, level)
-    timer_seconds = _timer_seconds(qtype, level)
-    min_words_warn = _min_words_warn(qtype, level)
-    min_lens = {1: 40, 2: 60, 3: 80}
-
-    if request.method == "POST":
-        step = int(request.POST.get("coach_step") or 1)
-        form = CoachingDraftForm(
-            request.POST,
-            min_answer_len=min_lens.get(step, 40),
-        )
-        if form.is_valid():
-            answer = form.cleaned_data["answer"]
-            wc = essay_word_count(answer)
-            min_w = _min_words_warn(qtype, level)
-            if wc < min_w:
-                messages.warning(
-                    request,
-                    f"This draft is {wc} words. Aim for about {min_w}+ words for this task and level.",
-                )
-
-            if step == 1 and coaching_session is None:
-                wq = get_object_or_404(
-                    WritingQuestion,
-                    pk=form.cleaned_data["question_id"],
-                    level=form.cleaned_data["level"],
-                    question_type=form.cleaned_data["question_type"],
-                )
-                try:
-                    r1 = coach_round_one(
-                        question_text=wq.question_text,
-                        question_type=wq.question_type,
-                        draft_text=answer,
-                        word_count=wc,
-                        learner_level=level,
-                    )
-                except RuntimeError as exc:
-                    messages.error(request, f"AI coaching failed: {exc}")
-                    return redirect(request.path)
-
-                sess = WritingCoachingSession.objects.create(
-                    student=request.user,
-                    writing_question=wq,
-                    draft_1=answer,
-                    round_1_feedback=r1,
-                    stage=2,
-                )
-                return redirect(f"{request.path}?session={sess.pk}")
-
-            if step == 2 and coaching_session is not None and coaching_session.stage == 2:
-                try:
-                    r2 = coach_round_two(
-                        question_text=coaching_session.writing_question.question_text,
-                        question_type=coaching_session.writing_question.question_type,
-                        draft_1=coaching_session.draft_1,
-                        draft_2=answer,
-                        wc1=essay_word_count(coaching_session.draft_1),
-                        wc2=wc,
-                        round_1_feedback=coaching_session.round_1_feedback,
-                        learner_level=level,
-                    )
-                except RuntimeError as exc:
-                    messages.error(request, f"AI coaching failed: {exc}")
-                    return redirect(f"{request.path}?session={coaching_session.pk}")
-
-                coaching_session.draft_2 = answer
-                coaching_session.round_2_feedback = r2
-                coaching_session.stage = 3
-                coaching_session.save(update_fields=["draft_2", "round_2_feedback", "stage", "updated_at"])
-                return redirect(f"{request.path}?session={coaching_session.pk}")
-
-            if step == 3 and coaching_session is not None and coaching_session.stage == 3:
-                wq = coaching_session.writing_question
-                grade_fn = (
-                    grade_task1_response
-                    if wq.question_type == WritingQuestion.TASK1
-                    else grade_task2_essay
-                )
-                try:
-                    grades = grade_fn(
-                        question_text=wq.question_text,
-                        essay_text=answer,
-                        word_count=wc,
-                        learner_level=level,
-                    )
-                except RuntimeError as exc:
-                    grades = {
-                        "band_score": None,
-                        "task_achievement_score": None,
-                        "coherence_score": None,
-                        "lexical_score": None,
-                        "grammar_score": None,
-                        "ai_feedback": f"Automatic grading failed: {exc}",
-                        "grammar_mistakes": "",
-                        "vocabulary_suggestions": "",
-                        "issue_spans": [],
-                        "strength_spans": [],
-                    }
-                    messages.warning(
-                        request,
-                        "Draft 3 was saved but automatic grading failed. Check API key.",
-                    )
-
-                gsum = _grading_summary(grades)
-                try:
-                    r3 = coach_round_three(
-                        question_text=wq.question_text,
-                        question_type=wq.question_type,
-                        draft_1=coaching_session.draft_1,
-                        draft_2=coaching_session.draft_2,
-                        draft_3=answer,
-                        wc1=essay_word_count(coaching_session.draft_1),
-                        wc2=essay_word_count(coaching_session.draft_2),
-                        wc3=wc,
-                        grading_summary=gsum,
-                        learner_level=level,
-                    )
-                except RuntimeError as exc:
-                    r3 = {"journey_summary": "", "error": str(exc)}
-                    messages.warning(request, "Final coaching summary could not be generated.")
-
-                journey = {
-                    "round1": coaching_session.round_1_feedback,
-                    "round2": coaching_session.round_2_feedback,
-                    "round3": r3,
-                }
-
-                with transaction.atomic():
-                    essay = Essay.objects.create(
-                        student=request.user,
-                        writing_question=wq,
-                        question=wq.question_text,
-                        question_type=wq.question_type,
-                        draft_1=coaching_session.draft_1,
-                        draft_2=coaching_session.draft_2,
-                        coaching_journey=journey,
-                        student_answer=answer,
-                        word_count=wc,
-                        band_score=grades.get("band_score"),
-                        task_achievement_score=grades.get("task_achievement_score"),
-                        coherence_score=grades.get("coherence_score"),
-                        lexical_score=grades.get("lexical_score"),
-                        grammar_score=grades.get("grammar_score"),
-                        ai_feedback=grades.get("ai_feedback") or "",
-                        grammar_mistakes=grades.get("grammar_mistakes") or "",
-                        vocabulary_suggestions=grades.get("vocabulary_suggestions") or "",
-                        feedback_highlights={
-                            "issue_spans": grades.get("issue_spans") or [],
-                            "strength_spans": grades.get("strength_spans") or [],
-                        },
-                    )
-                    for phrase in parse_vocabulary_lines(grades.get("vocabulary_suggestions") or ""):
-                        WordBankEntry.objects.create(
-                            user=request.user,
-                            essay=essay,
-                            phrase=phrase[:500],
-                        )
-                    coaching_session.delete()
-
-                messages.success(request, "All three drafts submitted — see your results.")
-                return redirect("writing:result", pk=essay.pk)
-
-            messages.error(
-                request,
-                "That submit did not match the current step. Continue from your open practice or start again from Writing.",
-            )
-            if coaching_session:
-                return redirect(f"{request.path}?session={coaching_session.pk}")
-            return redirect("writing:home")
-
-        # Invalid form — fall through to re-render
-        if coaching_session is not None:
-            picked = coaching_session.writing_question
-        else:
-            picked = (
-                WritingQuestion.objects.filter(
-                    pk=int(request.POST.get("question_id") or 0),
-                    level=_parse_level(request.POST.get("level")),
-                    question_type=_parse_qtype(request.POST.get("question_type")),
-                ).first()
-            )
-    else:
-        form = None
-
-    if request.method == "GET":
-        if coaching_session:
-            form = CoachingDraftForm(
-                initial={
-                    "coach_step": coaching_session.stage,
-                    "session_id": coaching_session.pk,
-                    "question_id": picked.pk,
-                    "level": level,
-                    "question_type": qtype,
-                },
-                min_answer_len=min_lens.get(coaching_session.stage, 40),
-            )
-        elif picked:
-            form = CoachingDraftForm(
-                initial={
-                    "coach_step": 1,
-                    "question_id": picked.pk,
-                    "level": level,
-                    "question_type": qtype,
-                },
-                min_answer_len=min_lens[1],
-            )
-
-    style_label = ""
-    if picked and picked.prompt_kind:
-        style_label = picked.get_prompt_kind_display()
-
-    return render(
-        request,
-        "writing/question.html",
-        {
-            "level": level,
-            "qtype": qtype,
-            "task_label": task_label,
-            "target_words": target_words,
-            "timer_seconds": timer_seconds,
-            "min_words_warn": min_words_warn,
-            "question": picked,
-            "form": form,
-            "coaching_session": coaching_session,
-            "coach_stage": coach_stage,
-            "prompt_kind": kind,
-            "question_style_label": style_label,
-            "practice_level_label": {1: "Level 1 (simple feedback · ~A2–B1)", 2: "Level 2 (~B1–B2)", 3: "Level 3 (B2+)"}.get(
-                level, ""
-            ),
-        },
-    )
-
-
-@login_required
-def writing_result(request: HttpRequest, pk: int) -> HttpResponse:
-    essay = get_object_or_404(Essay, pk=pk, student=request.user)
-    wq = essay.writing_question
-    level = wq.level if wq else 3
-    gm = (essay.grammar_mistakes or "").splitlines()
-    vs = (essay.vocabulary_suggestions or "").splitlines()
-    mistake_lines = [ln.strip() for ln in gm if ln.strip()]
-    vocab_lines = [ln.strip() for ln in vs if ln.strip()]
-    style_label = wq.get_prompt_kind_display() if wq and wq.prompt_kind else ""
-    level_feedback_hint = {
-        1: "This page uses simple English in the written feedback (about A2–B1).",
-        2: "Feedback is written in clear B1–B2 English.",
-        3: "Feedback may use full IELTS terms and detail.",
-    }.get(level, "")
-    return render(
-        request,
-        "writing/result.html",
-        {
-            "essay": essay,
-            "level": level,
-            "grammar_lines": mistake_lines,
-            "vocab_lines": vocab_lines,
-            "question_style_label": style_label,
-            "level_feedback_hint": level_feedback_hint,
-        },
-    )
-
-
-@login_required
-def paraphrase_practice(request: HttpRequest) -> HttpResponse:
-    if request.GET.get("reset"):
-        request.session.pop(PARAPHRASE_SESSION_KEY, None)
-        return redirect("writing:paraphrase")
-
-    para_ctx = request.session.get(PARAPHRASE_SESSION_KEY)
     feedback = None
-    paraphrase_highlight_text = ""
-    form = ParaphraseForm()
-
+    saved = None
+    essay_text_value = ""
     if request.method == "POST":
-        action = (request.POST.get("action") or "check").strip()
-        if action == "generate":
-            topic = (request.POST.get("topic") or "").strip()
-            gen_level = _parse_level(request.POST.get("level"))
-            valid_topics = {c[0] for c in WritingQuestion.TOPIC_CHOICES}
-            if topic not in valid_topics:
-                messages.error(request, "Please choose a topic.")
-                return redirect("writing:paraphrase")
-            topic_label = dict(WritingQuestion.TOPIC_CHOICES).get(topic, topic)
-            try:
-                source = generate_paraphrase_source(
-                    topic_label=topic_label,
-                    topic_code=topic,
-                    level=gen_level,
-                )
-            except RuntimeError as exc:
-                messages.error(request, str(exc))
-                return redirect("writing:paraphrase")
-            request.session[PARAPHRASE_SESSION_KEY] = {
-                "topic": topic,
-                "level": gen_level,
-                "source_text": source,
-            }
-            request.session.modified = True
-            messages.success(request, "Here is your practice text. Paraphrase it in your own words below.")
-            return redirect("writing:paraphrase")
+        essay_text_value = request.POST.get("essay_text") or ""
+        wc = _word_count(essay_text_value)
+        fb = _essay_feedback("Task 1", question, essay_text_value)
+        band = float(fb.get("band") or 0)
+        saved = Essay.objects.create(
+            student=request.user,
+            task_type="1",
+            question=question,
+            essay_text=essay_text_value,
+            word_count=wc,
+            band_score=band,
+            feedback_json=fb,
+        )
+        bump_streak_for_user(request.user)
+        feedback = fb
 
-        form = ParaphraseForm(request.POST)
-        para_ctx = request.session.get(PARAPHRASE_SESSION_KEY)
-        if not para_ctx or not para_ctx.get("source_text"):
-            messages.error(request, "Generate a practice text first (choose topic and level).")
-            return redirect("writing:paraphrase")
+    return render(
+        request,
+        "writing/task1.html",
+        {
+            "question": question,
+            "essay_text_value": essay_text_value,
+            "feedback": feedback,
+            "saved": saved,
+            **_streak_ctx(request),
+        },
+    )
 
-        level = int(para_ctx.get("level") or 2)
-        topic = para_ctx.get("topic") or ""
 
-        if form.is_valid():
-            text = form.cleaned_data["text"]
-            wc = essay_word_count(text)
-            sc = count_sentences(text)
-            ok = True
-            if level == 1:
-                if sc < 2 or sc > 5:
-                    messages.error(
-                        request,
-                        "Level 1: write between 2 and 5 complete sentences (end with . ! or ?).",
-                    )
-                    ok = False
-            elif level == 2:
-                if wc < 50 or wc > 70:
-                    messages.error(request, "Level 2: use between 50 and 70 words.")
-                    ok = False
-            else:
-                if wc < 70 or wc > 120:
-                    messages.error(request, "Level 3: use between 70 and 120 words.")
-                    ok = False
+@login_required
+def task2(request):
+    question = (
+        "Some people believe that the best way to reduce crime is to give longer prison sentences. "
+        "Others believe there are better alternatives. Discuss both views and give your opinion."
+    )
+    feedback = None
+    saved = None
+    essay_text_value = ""
+    if request.method == "POST":
+        essay_text_value = request.POST.get("essay_text") or ""
+        wc = _word_count(essay_text_value)
+        fb = _essay_feedback("Task 2", question, essay_text_value)
+        band = float(fb.get("band") or 0)
+        saved = Essay.objects.create(
+            student=request.user,
+            task_type="2",
+            question=question,
+            essay_text=essay_text_value,
+            word_count=wc,
+            band_score=band,
+            feedback_json=fb,
+        )
+        bump_streak_for_user(request.user)
+        feedback = fb
 
-            if ok:
-                try:
-                    feedback = paraphrase_feedback(
-                        level=level,
-                        text=text,
-                        word_count=wc,
-                        sentence_count=sc,
-                        source_text=para_ctx["source_text"],
-                        learner_level=level,
-                    )
-                    ParaphrasePractice.objects.create(
-                        student=request.user,
-                        topic=topic,
-                        level=level,
-                        source_text=para_ctx["source_text"],
-                        input_text=text,
-                        feedback=feedback,
-                    )
-                    messages.success(request, "Here is your AI feedback.")
-                    paraphrase_highlight_text = text
-                    form = ParaphraseForm(initial={"text": text})
-                except RuntimeError as exc:
-                    messages.error(request, str(exc))
+    return render(
+        request,
+        "writing/task2.html",
+        {
+            "question": question,
+            "essay_text_value": essay_text_value,
+            "feedback": feedback,
+            "saved": saved,
+            **_streak_ctx(request),
+        },
+    )
 
-    level_hints = {
-        1: "2–5 complete sentences",
-        2: "50–70 words",
-        3: "70–120 words",
-    }
-    gen_level_default = _parse_level(request.GET.get("level"))
-    active_level = int(para_ctx.get("level") or gen_level_default) if para_ctx else gen_level_default
-    level_caption = {
-        1: "Simple feedback (A2–B1 English)",
-        2: "Clear feedback (B1–B2)",
-        3: "Full detail (B2+)",
-    }[active_level]
+
+@login_required
+def paraphrase(request):
+    default_source = (
+        "Many governments are investing in public transport in order to reduce traffic congestion in cities."
+    )
+    tip = None
+    source = default_source
+    attempt = ""
+    if request.method == "POST":
+        source = request.POST.get("source_text") or default_source
+        attempt = request.POST.get("paraphrase_text") or ""
+        if settings.OPENAI_API_KEY:
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=800,
+                temperature=0.3,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You help IELTS students paraphrase. Return concise JSON with keys: feedback (string), score (1-9).",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Original:\n{source}\n\nStudent paraphrase:\n{attempt}",
+                    },
+                ],
+            )
+            raw = completion.choices[0].message.content or ""
+            tip = _extract_json(raw) or {"feedback": raw, "score": 6}
+        else:
+            tip = {"feedback": "Add OPENAI_API_KEY for live feedback.", "score": 0}
+        bump_streak_for_user(request.user)
 
     return render(
         request,
         "writing/paraphrase.html",
         {
-            "form": form,
-            "level": active_level,
-            "level_hint": level_hints[active_level],
-            "feedback": feedback,
-            "paraphrase_ctx": para_ctx,
-            "topic_choices": WritingQuestion.TOPIC_CHOICES,
-            "gen_level_default": gen_level_default,
-            "level_caption": level_caption,
-            "paraphrase_highlight_text": paraphrase_highlight_text,
+            "source_text": source,
+            "paraphrase_text": attempt,
+            "tip": tip,
+            **_streak_ctx(request),
+        },
+    )
+
+
+def _task1_topbar_ctx():
+    return {
+        "task1_topbar_title": "IELTS Academic — Writing Task 1",
+        "task1_timer_seed": "20:00",
+    }
+
+
+def _fmt_mmss(total_seconds):
+    s = max(0, int(total_seconds or 0))
+    m = s // 60
+    ss = s % 60
+    return f"{m:02d}:{ss:02d}"
+
+
+def _safe_float(v, default=6.0):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _task1_feedback_defaults(student_response):
+    return {
+        "band_score": 6.0,
+        "task_achievement": 6.0,
+        "coherence_cohesion": 6.0,
+        "lexical_resource": 5.5,
+        "grammar_accuracy": 6.0,
+        "summary": "Clear overall attempt with relevant data. Improve precision and vocabulary range for a higher band.",
+        "annotated_text": student_response,
+        "task_excerpt": student_response,
+        "coherence_excerpt": student_response,
+        "lexical_excerpt": student_response,
+        "grammar_excerpt": student_response,
+        "lexical_quickfixes": [
+            "a lot of → the majority of",
+            "went up → rose",
+            "the data shows → the figures indicate",
+        ],
+        "task_checks": [
+            {"type": "pass", "title": "Overview present", "detail": "You included an overall trend statement."},
+            {"type": "fail", "title": "Limited data support", "detail": "Add more exact figures for each comparison."},
+            {"type": "warn", "title": "Balance coverage", "detail": "Cover all categories briefly before details."},
+        ],
+        "coherence_checks": [
+            {"type": "pass", "title": "Logical paragraphing", "detail": "Your ideas are mostly grouped clearly."},
+            {"type": "fail", "title": "Connector punctuation", "detail": "Some linking phrases need commas."},
+            {"type": "warn", "title": "Variety of links", "detail": "Use a wider range of cohesive devices."},
+        ],
+        "lexical_checks": [
+            {"type": "pass", "title": "Topic vocabulary", "detail": "You used relevant transport terms."},
+            {"type": "fail", "title": "Informal word choice", "detail": "Replace informal phrases with academic wording."},
+            {"type": "warn", "title": "Reporting verbs", "detail": "Vary verbs like shows/indicates/reveals."},
+        ],
+        "grammar_checks": [
+            {"type": "pass", "title": "Sentence control", "detail": "Most sentences are clear and correct."},
+            {"type": "fail", "title": "Verb form issues", "detail": "Fix a few tense/form inaccuracies."},
+            {"type": "warn", "title": "Complex forms", "detail": "Add more accurate complex clauses."},
+        ],
+        "task_target": "To reach Band 7: give a clear overview and precise comparisons across all key features.",
+        "coherence_target": "To reach Band 7: organise ideas more tightly and improve connector accuracy.",
+        "lexical_target": "To reach Band 7: use more precise academic vocabulary and varied reporting verbs.",
+        "grammar_target": "To reach Band 7: reduce small grammar errors and show more accurate complex structures.",
+        "did_well": [
+            "Clear overview sentence identifying the main trend.",
+            "Included relevant figures from the chart.",
+            "Maintained a logical paragraph sequence.",
+        ],
+        "improve": [
+            "Use more precise academic reporting language.",
+            "Add more exact category-by-category comparisons.",
+            "Improve punctuation after linking expressions.",
+        ],
+        "language_suggestions": [
+            'Instead of "shows" → use "illustrates"',
+            'Instead of "went up a lot" → use "rose significantly"',
+            'Instead of "the data shows" → use "the figures indicate"',
+        ],
+        "model_answer": "Overall, car use remained the dominant mode of commuting in both years, while cycling recorded the largest increase. In 2005, 67% of households travelled to work by car, and this figure rose moderately to 71% by 2015. Public transport also became more common, increasing from 24% to 31%. The most striking shift occurred in bicycle use, which almost doubled from 8% to 15%, suggesting growing interest in sustainable travel. By contrast, walking declined from 18% to 12%, and motorcycle use dropped from 5% to 3%. Taken together, the data indicates that households relied more on cars and public transport in 2015, while less common modes moved in opposite directions.",
+    }
+
+
+def _extract_ann_items(raw):
+    red = re.findall(r"<<RED error=\"([^\"]*)\" reason=\"([^\"]*)\">>(.*?)<</RED>>", raw or "", re.S)
+    amber = re.findall(r"<<AMBER better=\"([^\"]*)\" reason=\"([^\"]*)\">>(.*?)<</AMBER>>", raw or "", re.S)
+    green = re.findall(r"<<GREEN>>(.*?)<</GREEN>>", raw or "", re.S)
+    return red, amber, green
+
+
+def _task1_best_by_question(user):
+    best = {}
+    rows = WritingTask1Attempt.objects.filter(user=user).values(
+        "question_id", "question_type", "band_score"
+    )
+    for row in rows:
+        key = (row["question_type"], row["question_id"])
+        band = float(row["band_score"] or 0.0)
+        best[key] = max(best.get(key, 0.0), band)
+    return best
+
+
+@login_required
+def task1_browser(request):
+    best = _task1_best_by_question(request.user)
+    cards = []
+    for qtype in question_type_list():
+        questions = get_questions_by_type(qtype)
+        done = sum(1 for q in questions if best.get((qtype, q["id"])))
+        cards.append(
+            {
+                "slug": qtype,
+                "name": TYPE_META[qtype]["name"],
+                "emoji": TYPE_META[qtype]["emoji"],
+                "description": TYPE_META[qtype]["description"],
+                "done": done,
+                "total": len(questions),
+            }
+        )
+    return render(
+        request,
+        "writing/task1_browser.html",
+        {
+            "type_cards": cards,
+            "show_submit": False,
+            "questions_url": reverse("writing:task1"),
+            **_task1_topbar_ctx(),
+            **_streak_ctx(request),
         },
     )
 
 
 @login_required
-def word_bank(request: HttpRequest) -> HttpResponse:
-    import csv
+def task1_question_list(request, question_type):
+    if question_type not in TYPE_META:
+        raise Http404("Unknown Task 1 type")
+    best = _task1_best_by_question(request.user)
+    rows = []
+    questions = get_questions_by_type(question_type)
+    for q in questions:
+        best_band = best.get((question_type, q["id"]))
+        rows.append(
+            {
+                "id": q["id"],
+                "title": q["title"],
+                "prompt_preview": (q["prompt"][:90] + "…") if len(q["prompt"]) > 90 else q["prompt"],
+                "best_band": best_band,
+            }
+        )
+    return render(
+        request,
+        "writing/task1_question_list.html",
+        {
+            "type_slug": question_type,
+            "type_meta": TYPE_META[question_type],
+            "rows": rows,
+            "show_submit": False,
+            "questions_url": reverse("writing:task1"),
+            **_task1_topbar_ctx(),
+            **_streak_ctx(request),
+        },
+    )
 
-    from django.http import HttpResponse
 
-    from vocabulary.models import CustomCard
+@login_required
+def task1_question_page(request, question_type, question_id):
+    question = get_question(question_type, question_id)
+    if not question:
+        raise Http404("Question not found")
+    prev = request.session.get(f"prev_attempt_{question_id}")
+    return render(
+        request,
+        "writing/task1_question_page.html",
+        {
+            "type_slug": question_type,
+            "type_meta": TYPE_META[question_type],
+            "question": question,
+            "chart_svg": render_question_chart(question),
+            "task_instruction": TASK_INSTRUCTION,
+            "show_submit": True,
+            "questions_url": reverse("writing:task1_question_list", kwargs={"question_type": question_type}),
+            "prev_attempt": prev,
+            **_task1_topbar_ctx(),
+            **_streak_ctx(request),
+        },
+    )
 
-    if (request.GET.get("export") or "").strip().lower() == "csv":
-        response = HttpResponse(content_type="text/csv; charset=utf-8")
-        response["Content-Disposition"] = 'attachment; filename="boosting-score-word-bank.csv"'
-        writer = csv.writer(response)
-        writer.writerow(["phrase", "source", "created_at"])
-        for e in WordBankEntry.objects.filter(user=request.user).order_by("-created_at"):
-            src = "writing_feedback" if e.essay_id else "vocabulary"
-            writer.writerow([e.phrase, src, e.created_at.isoformat()])
-        for c in CustomCard.objects.filter(student=request.user).order_by("-created_at"):
-            writer.writerow([c.word, f"flashcard_{c.topic}", c.created_at.isoformat()])
-        return response
 
-    entries = WordBankEntry.objects.filter(user=request.user).order_by("-created_at")
-    q = (request.GET.get("q") or "").strip()
-    if q:
-        entries = entries.filter(phrase__icontains=q)
+def _task1_eval_feedback(question_type_name, prompt_text, student_response, word_count):
+    if not settings.OPENAI_API_KEY:
+        return _task1_feedback_defaults(student_response)
 
-    flt = (request.GET.get("filter") or "all").strip().lower()
-    my_cards = []
-    if flt == "vocabulary":
-        entries = entries.filter(essay__isnull=True)
-    elif flt == "writing":
-        entries = entries.filter(essay__isnull=False)
-    elif flt == "mycards":
-        entries = WordBankEntry.objects.none()
-        my_cards = list(
-            CustomCard.objects.filter(student=request.user).order_by("-created_at")[:200]
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = f"""You are a fair and experienced IELTS Writing Task 1 examiner.
+
+Question type: {question_type_name}
+Task prompt: {prompt_text}
+Student response ({word_count} words):
+{student_response}
+
+Grade this accurately and fairly. Be encouraging and constructive.
+
+Grading rules:
+- 150+ words covering main features = at least Task Achievement 5.5
+- Uses data and comparisons = at least 6.0
+- Band 5.0 only for responses that seriously misunderstand the task
+- Band 7.0 needs: clear overview, accurate data, well-developed comparisons, varied vocabulary
+
+For annotated_text: return the student's COMPLETE response with markers:
+- <<GREEN>>phrase<</GREEN>> for well-written phrases (max 3)
+- <<RED error="correction" reason="why">>wrong text<</RED>> for errors (max 3)
+- <<AMBER better="improved" reason="why">>original<</AMBER>> for vocabulary (max 3)
+
+For each criterion excerpt: return the student's response with only the markers relevant to that criterion.
+
+Return ONLY this JSON with no markdown or backticks:
+{{
+  "band_score": 5.0-9.0,
+  "task_achievement": 5.0-9.0,
+  "coherence_cohesion": 5.0-9.0,
+  "lexical_resource": 5.0-9.0,
+  "grammar_accuracy": 5.0-9.0,
+  "summary": "2 sentence overall assessment",
+  "annotated_text": "full response with <<GREEN>> <<RED>> <<AMBER>> markers",
+  "task_excerpt": "response with task-related markers only",
+  "coherence_excerpt": "response with coherence markers only",
+  "lexical_excerpt": "response with vocabulary markers only",
+  "grammar_excerpt": "response with grammar markers only",
+  "lexical_quickfixes": ["original → better", "original → better", "original → better"],
+  "task_checks": [{{"type":"pass","title":"...","detail":"..."}}, {{"type":"fail","title":"...","detail":"..."}}, {{"type":"warn","title":"...","detail":"..."}}],
+  "coherence_checks": [{{"type":"pass","title":"...","detail":"..."}}, {{"type":"fail","title":"...","detail":"..."}}, {{"type":"warn","title":"...","detail":"..."}}],
+  "lexical_checks": [{{"type":"pass","title":"...","detail":"..."}}, {{"type":"fail","title":"...","detail":"..."}}, {{"type":"warn","title":"...","detail":"..."}}],
+  "grammar_checks": [{{"type":"pass","title":"...","detail":"..."}}, {{"type":"fail","title":"...","detail":"..."}}, {{"type":"warn","title":"...","detail":"..."}}],
+  "task_target": "To reach Band 7: ...",
+  "coherence_target": "To reach Band 7: ...",
+  "lexical_target": "To reach Band 7: ...",
+  "grammar_target": "To reach Band 7: ...",
+  "did_well": ["point 1", "point 2", "point 3"],
+  "improve": ["point 1", "point 2", "point 3"],
+  "language_suggestions": ["Instead of X use Y", "Instead of X use Y", "Instead of X use Y"],
+  "model_answer": "Complete Band 7 response 180-200 words"
+}}"""
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        temperature=0.2,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": "You are precise, strict, and return JSON only."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    raw = completion.choices[0].message.content or "{}"
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        data = _extract_json(raw) or {}
+    defaults = _task1_feedback_defaults(student_response)
+    defaults.update(data or {})
+    return defaults
+
+
+@login_required
+def task1_feedback_page(request, question_type, question_id):
+    question = get_question(question_type, question_id)
+    if not question:
+        raise Http404("Question not found")
+    if request.method != "POST":
+        return redirect("writing:task1_question_page", question_type=question_type, question_id=question_id)
+
+    response_text = (request.POST.get("response_text") or "").strip()
+    word_count = _word_count(response_text)
+    time_taken_seconds = int(request.POST.get("time_taken_seconds") or 0)
+    payload = _task1_eval_feedback(
+        TYPE_META[question_type]["name"],
+        question["prompt"],
+        response_text,
+        word_count,
+    )
+
+    def _f(name, default=6.0):
+        try:
+            return float(payload.get(name, default))
+        except (TypeError, ValueError):
+            return float(default)
+
+    attempt = WritingTask1Attempt.objects.create(
+        user=request.user,
+        question_id=question["id"],
+        question_type=question_type,
+        response_text=response_text,
+        word_count=word_count,
+        time_taken_seconds=time_taken_seconds,
+        band_score=_f("band_score"),
+        task_achievement=_f("task_achievement"),
+        coherence_cohesion=_f("coherence_cohesion"),
+        lexical_resource=_f("lexical_resource"),
+        grammar_accuracy=_f("grammar_accuracy"),
+        annotated_text=str(payload.get("annotated_text") or ""),
+        feedback_json=payload,
+    )
+    request.session[f"prev_attempt_{question['id']}"] = {
+        "band_score": attempt.band_score,
+        "word_count": word_count,
+        "annotated_html": str(payload.get("annotated_text") or ""),
+        "improve": payload.get("improve") or [],
+    }
+    bump_streak_for_user(request.user)
+    return redirect("writing:task1_feedback_page_by_id", question_id=question_id)
+
+
+@login_required
+def task1_feedback_page_by_id(request, question_id):
+    all_types = question_type_list()
+    question = None
+    question_type = None
+    for t in all_types:
+        q = get_question(t, question_id)
+        if q:
+            question = q
+            question_type = t
+            break
+    if not question or not question_type:
+        raise Http404("Question not found")
+    attempt = (
+        WritingTask1Attempt.objects.filter(
+            user=request.user,
+            question_id=question["id"],
+            question_type=question_type,
+        )
+        .order_by("-completed_at")
+        .first()
+    )
+    if not attempt:
+        return redirect("writing:task1_question_page", question_type=question_type, question_id=question_id)
+
+    feedback = attempt.feedback_json or _task1_feedback_defaults(attempt.response_text)
+    scores = {
+        "task_achievement": _safe_float(feedback.get("task_achievement"), attempt.task_achievement),
+        "coherence_cohesion": _safe_float(feedback.get("coherence_cohesion"), attempt.coherence_cohesion),
+        "lexical_resource": _safe_float(feedback.get("lexical_resource"), attempt.lexical_resource),
+        "grammar_accuracy": _safe_float(feedback.get("grammar_accuracy"), attempt.grammar_accuracy),
+    }
+    weakest_key = min(scores, key=lambda k: scores[k])
+    red, amber, green = _extract_ann_items(str(feedback.get("annotated_text") or attempt.annotated_text or ""))
+
+    criteria = []
+    for key in ("task_achievement", "coherence_cohesion", "lexical_resource", "grammar_accuracy"):
+        meta = CRITERION_META[key]
+        score = scores[key]
+        criteria.append(
+            {
+                "key": key,
+                "label": meta["label"],
+                "color": meta["color"],
+                "tag_bg": meta["tag_bg"],
+                "score": score,
+                "status": "Needs work" if score < 6.0 else "Good",
+                "excerpt_raw": str(feedback.get(f"{key.split('_')[0]}_excerpt") or feedback.get(f"{key}_excerpt") or attempt.response_text),
+                "checks": feedback.get(f"{key.split('_')[0]}_checks") or feedback.get(f"{key}_checks") or [],
+                "target": feedback.get(f"{key.split('_')[0]}_target") or feedback.get(f"{key}_target") or "",
+            }
         )
 
     return render(
         request,
-        "writing/word_bank.html",
+        "writing/task1_feedback_page.html",
         {
-            "entries": entries,
-            "my_cards": my_cards,
-            "current_filter": flt,
-            "search_q": q,
+            "type_slug": question_type,
+            "type_meta": TYPE_META[question_type],
+            "question": question,
+            "attempt": attempt,
+            "feedback": feedback,
+            "criteria": criteria,
+            "weakest_key": weakest_key,
+            "weakest_label": CRITERION_META[weakest_key]["label"],
+            "weakest_score": scores[weakest_key],
+            "ann_error_count": len(red),
+            "ann_improve_count": len(amber),
+            "ann_good_count": len(green),
+            "time_used_mmss": _fmt_mmss(attempt.time_taken_seconds),
+            "show_submit": False,
+            "show_try_again_top": True,
+            "questions_url": reverse("writing:task1_question_list", kwargs={"question_type": question_type}),
+            "try_again_url": reverse("writing:task1_question_page", kwargs={"question_type": question_type, "question_id": question["id"]}),
+            **_task1_topbar_ctx(),
+            **_streak_ctx(request),
         },
     )
+
+
+def _task2_questions_by_type(essay_type):
+    return [q for q in TASK2_QUESTIONS if q["type"] == essay_type]
+
+
+def _task2_get_question(essay_type, qid):
+    for q in TASK2_QUESTIONS:
+        if q["type"] == essay_type and int(q["id"]) == int(qid):
+            return q
+    return None
+
+
+def _best_task2_by_question(user):
+    best = {}
+    for row in WritingTask2Attempt.objects.filter(user=user).values("question_id", "essay_type", "band_score"):
+        key = (row["essay_type"], row["question_id"])
+        best[key] = max(best.get(key, 0.0), float(row["band_score"] or 0.0))
+    return best
+
+
+def _latest_attempts(user, limit=3):
+    t1 = [
+        {
+            "task": "Task 1",
+            "score": a.band_score,
+            "word_count": a.word_count,
+            "when": a.completed_at,
+            "title": f"{a.question_type} · Q{a.question_id}",
+            "feedback_url": redirect(
+                "writing:task1_feedback_page_by_id", question_id=a.question_id
+            ).url,
+        }
+        for a in WritingTask1Attempt.objects.filter(user=user).order_by("-completed_at")[:limit]
+    ]
+    t2 = [
+        {
+            "task": "Task 2",
+            "score": a.band_score,
+            "word_count": a.word_count,
+            "when": a.completed_at,
+            "title": f"{a.essay_type} · Q{a.question_id}",
+            "feedback_url": redirect(
+                "writing:task2_feedback_page", essay_type=a.essay_type, q_id=a.question_id
+            ).url,
+        }
+        for a in WritingTask2Attempt.objects.filter(user=user).order_by("-completed_at")[:limit]
+    ]
+    rows = sorted(t1 + t2, key=lambda x: x["when"], reverse=True)
+    return rows[:limit]
+
+
+@login_required
+def writing_home(request):
+    user = request.user
+    t1_best = (
+        WritingTask1Attempt.objects.filter(user=user)
+        .order_by("-band_score")
+        .values_list("band_score", flat=True)
+        .first()
+    )
+    t2_best = (
+        WritingTask2Attempt.objects.filter(user=user)
+        .order_by("-band_score")
+        .values_list("band_score", flat=True)
+        .first()
+    )
+    lesson_done = LessonProgress.objects.filter(user=user).values("lesson_id").distinct().count()
+    skill_done = SkillProgress.objects.filter(user=user).values("skill_id").distinct().count()
+    return render(
+        request,
+        "writing/writing_hub.html",
+        {
+            "task1_best": t1_best,
+            "task2_best": t2_best,
+            "recent_attempts": _latest_attempts(user),
+            "lesson_done": lesson_done,
+            "lesson_total": 18,
+            "skill_done": skill_done,
+            "skill_total": 32,
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def task2_browser(request):
+    best = _best_task2_by_question(request.user)
+    cards = []
+    for t, meta in TASK2_TYPE_META.items():
+        qs = _task2_questions_by_type(t)
+        done = sum(1 for q in qs if best.get((t, q["id"])))
+        cards.append({"slug": t, "name": meta["name"], "emoji": meta["emoji"], "description": meta["description"], "done": done, "total": len(qs)})
+    return render(
+        request,
+        "writing/task2_browser.html",
+        {"type_cards": cards, "show_submit": False, "task1_topbar_title": "IELTS Academic — Writing Task 2", "task1_timer_seed": "40:00", "questions_url": reverse("writing:task2"), **_streak_ctx(request)},
+    )
+
+
+@login_required
+def task2_question_list(request, essay_type):
+    if essay_type not in TASK2_TYPE_META:
+        raise Http404("Unknown Task 2 type")
+    best = _best_task2_by_question(request.user)
+    rows = []
+    for q in _task2_questions_by_type(essay_type):
+        band = best.get((essay_type, q["id"]))
+        rows.append({"id": q["id"], "title": q["title"], "prompt_preview": (q["prompt"][:90] + "…") if len(q["prompt"]) > 90 else q["prompt"], "best_band": band})
+    return render(
+        request,
+        "writing/task2_question_list.html",
+        {"essay_type": essay_type, "type_meta": TASK2_TYPE_META[essay_type], "rows": rows, "show_submit": False, "task1_topbar_title": "IELTS Academic — Writing Task 2", "task1_timer_seed": "40:00", "questions_url": reverse("writing:task2"), **_streak_ctx(request)},
+    )
+
+
+@login_required
+def task2_question_page(request, essay_type, q_id):
+    q = _task2_get_question(essay_type, q_id)
+    if not q:
+        raise Http404("Question not found")
+    prev = request.session.get(f"prev_attempt_{q_id}")
+    return render(
+        request,
+        "writing/task2_question_page.html",
+        {
+            "essay_type": essay_type,
+            "type_meta": TASK2_TYPE_META[essay_type],
+            "question": q,
+            "show_submit": True,
+            "task1_topbar_title": "IELTS Academic — Writing Task 2",
+            "task1_timer_seed": "40:00",
+            "questions_url": reverse("writing:task2_question_list", kwargs={"essay_type": essay_type}),
+            "prev_attempt": prev,
+            **_streak_ctx(request),
+        },
+    )
+
+
+def _task2_feedback_defaults(text):
+    d = _task1_feedback_defaults(text)
+    d["task_response"] = d.pop("task_achievement", 6.0)
+    d["task_response_checks"] = d.pop("task_checks", [])
+    d["task_response_target"] = d.pop("task_target", "")
+    return d
+
+
+def _task2_eval_feedback(essay_type_name, prompt_text, student_response, word_count):
+    if not settings.OPENAI_API_KEY:
+        return _task2_feedback_defaults(student_response)
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = f"""You are a fair IELTS Academic Writing Task 2 examiner.
+
+Essay type: {essay_type_name}
+Prompt: {prompt_text}
+Student response ({word_count} words):
+{student_response}
+
+Grading rules:
+- Full question answered, clear position, both parts addressed where required, and specific examples.
+- Use <<GREEN>>, <<RED error=".." reason="..">>, <<AMBER better=".." reason="..">> markers same as Task 1.
+- Return strict JSON with task_response instead of task_achievement and the same other fields.
+"""
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        temperature=0.2,
+        response_format={"type": "json_object"},
+        messages=[{"role": "system", "content": "Return strict JSON only."}, {"role": "user", "content": prompt}],
+    )
+    raw = completion.choices[0].message.content or "{}"
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        data = _extract_json(raw) or {}
+    defaults = _task2_feedback_defaults(student_response)
+    defaults.update(data or {})
+    return defaults
+
+
+@login_required
+def task2_feedback_page(request, essay_type, q_id):
+    q = _task2_get_question(essay_type, q_id)
+    if not q:
+        raise Http404("Question not found")
+    if request.method != "POST":
+        attempt = WritingTask2Attempt.objects.filter(user=request.user, essay_type=essay_type, question_id=q_id).order_by("-completed_at").first()
+        if not attempt:
+            return redirect("writing:task2_question_page", essay_type=essay_type, q_id=q_id)
+    else:
+        txt = (request.POST.get("response_text") or "").strip()
+        wc = _word_count(txt)
+        tsec = int(request.POST.get("time_taken_seconds") or 0)
+        feedback = _task2_eval_feedback(TASK2_TYPE_META[essay_type]["name"], q["prompt"], txt, wc)
+        attempt = WritingTask2Attempt.objects.create(
+            user=request.user,
+            question_id=q_id,
+            essay_type=essay_type,
+            response_text=txt,
+            word_count=wc,
+            time_taken_seconds=tsec,
+            band_score=_safe_float(feedback.get("band_score")),
+            task_response=_safe_float(feedback.get("task_response")),
+            coherence_cohesion=_safe_float(feedback.get("coherence_cohesion")),
+            lexical_resource=_safe_float(feedback.get("lexical_resource")),
+            grammar_accuracy=_safe_float(feedback.get("grammar_accuracy")),
+            annotated_text=str(feedback.get("annotated_text") or ""),
+            feedback_json=feedback,
+        )
+        request.session[f"prev_attempt_{q_id}"] = {
+            "band_score": attempt.band_score,
+            "word_count": wc,
+            "annotated_html": str(feedback.get("annotated_text") or ""),
+            "improve": feedback.get("improve") or [],
+        }
+        bump_streak_for_user(request.user)
+    feedback = attempt.feedback_json or _task2_feedback_defaults(attempt.response_text)
+    scores = {
+        "task_response": _safe_float(feedback.get("task_response"), attempt.task_response),
+        "coherence_cohesion": _safe_float(feedback.get("coherence_cohesion"), attempt.coherence_cohesion),
+        "lexical_resource": _safe_float(feedback.get("lexical_resource"), attempt.lexical_resource),
+        "grammar_accuracy": _safe_float(feedback.get("grammar_accuracy"), attempt.grammar_accuracy),
+    }
+    weakest_key = min(scores, key=lambda k: scores[k])
+    criteria = []
+    for key in ("task_response", "coherence_cohesion", "lexical_resource", "grammar_accuracy"):
+        meta = CRITERION_META.get(key.replace("task_response", "task_achievement"), CRITERION_META["coherence_cohesion"])
+        criteria.append({"key": key, "label": "Task Response" if key == "task_response" else meta["label"], "color": meta["color"], "tag_bg": meta["tag_bg"], "score": scores[key], "status": "Needs work" if scores[key] < 6 else "Good", "checks": feedback.get(f"{key.split('_')[0]}_checks") or feedback.get(f"{key}_checks") or [], "target": feedback.get(f"{key.split('_')[0]}_target") or feedback.get(f"{key}_target") or ""})
+    return render(
+        request,
+        "writing/task2_feedback_page.html",
+        {
+            "essay_type": essay_type,
+            "type_meta": TASK2_TYPE_META[essay_type],
+            "question": q,
+            "attempt": attempt,
+            "feedback": feedback,
+            "criteria": criteria,
+            "weakest_key": weakest_key,
+            "weakest_label": "Task Response" if weakest_key == "task_response" else CRITERION_META[weakest_key]["label"],
+            "weakest_score": scores[weakest_key],
+            "time_used_mmss": _fmt_mmss(attempt.time_taken_seconds),
+            "show_submit": False,
+            "show_try_again_top": True,
+            "task1_topbar_title": "IELTS Academic — Writing Task 2",
+            "task1_timer_seed": "40:00",
+            "questions_url": reverse("writing:task2_question_list", kwargs={"essay_type": essay_type}),
+            "try_again_url": reverse("writing:task2_question_page", kwargs={"essay_type": essay_type, "q_id": q["id"]}),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def lessons_hub(request):
+    done_ids = set(LessonProgress.objects.filter(user=request.user).values_list("lesson_id", flat=True))
+    t1 = [l for l in LESSONS if l["task"] == "task1"]
+    t2 = [l for l in LESSONS if l["task"] == "task2"]
+    return render(request, "writing/lessons_hub.html", {"task1_lessons": t1, "task2_lessons": t2, "done_ids": done_ids, **_streak_ctx(request)})
+
+
+@login_required
+def lesson_detail(request, lesson_id):
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if not lesson:
+        raise Http404("Lesson not found")
+    if request.method == "POST" and request.POST.get("mark_done") == "1":
+        LessonProgress.objects.get_or_create(user=request.user, lesson_id=lesson_id)
+        return redirect("writing:lesson_detail", lesson_id=lesson_id)
+    return render(request, "writing/lesson_detail.html", {"lesson": lesson, **_streak_ctx(request)})
+
+
+@login_required
+def skills_hub(request):
+    done_ids = set(SkillProgress.objects.filter(user=request.user).values_list("skill_id", flat=True))
+    latest_t1 = WritingTask1Attempt.objects.filter(user=request.user).order_by("-completed_at").first()
+    latest_t2 = WritingTask2Attempt.objects.filter(user=request.user).order_by("-completed_at").first()
+    weakest = None
+    if latest_t1 and (not latest_t2 or latest_t1.completed_at >= latest_t2.completed_at):
+        fb = latest_t1.feedback_json or {}
+        scores = {"task_achievement": _safe_float(fb.get("task_achievement"), latest_t1.task_achievement), "coherence_cohesion": _safe_float(fb.get("coherence_cohesion"), latest_t1.coherence_cohesion), "lexical_resource": _safe_float(fb.get("lexical_resource"), latest_t1.lexical_resource), "grammar_accuracy": _safe_float(fb.get("grammar_accuracy"), latest_t1.grammar_accuracy)}
+        weakest = min(scores, key=scores.get)
+    elif latest_t2:
+        fb = latest_t2.feedback_json or {}
+        scores = {"task_response": _safe_float(fb.get("task_response"), latest_t2.task_response), "coherence_cohesion": _safe_float(fb.get("coherence_cohesion"), latest_t2.coherence_cohesion), "lexical_resource": _safe_float(fb.get("lexical_resource"), latest_t2.lexical_resource), "grammar_accuracy": _safe_float(fb.get("grammar_accuracy"), latest_t2.grammar_accuracy)}
+        weakest = min(scores, key=scores.get)
+    rec = SKILL_MAP.get(weakest, []) if weakest else []
+    rec_skills = [s for s in SKILLS if s["id"] in rec]
+    return render(request, "writing/skills_hub.html", {"skills": SKILLS, "done_ids": done_ids, "recommended": rec_skills, "weakest": weakest, **_streak_ctx(request)})
+
+
+@login_required
+def skill_detail(request, skill_id):
+    skill = next((s for s in SKILLS if s["id"] == skill_id), None)
+    if not skill:
+        raise Http404("Skill not found")
+    if request.method == "POST" and request.POST.get("mark_done") == "1":
+        SkillProgress.objects.get_or_create(user=request.user, skill_id=skill_id)
+        return redirect("writing:skill_detail", skill_id=skill_id)
+    from_feedback = request.GET.get("from_feedback") == "1"
+    criterion = request.GET.get("criterion") or ""
+    return render(request, "writing/skill_detail.html", {"skill": skill, "from_feedback": from_feedback, "criterion": criterion, **_streak_ctx(request)})

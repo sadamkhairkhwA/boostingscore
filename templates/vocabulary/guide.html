@@ -1,95 +1,185 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Vocabulary guide — Boosting Score{% endblock %}
-{% block body_class %}vocab-app{% endblock %}
-
+{% block title %}Vocabulary guide — IELTS — Boosting Score{% endblock %}
+{% block body_class %}guide-page{% endblock %}
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'vocabulary/css/guide.css' %}" />
+  <link rel="stylesheet" href="{% static 'vocabulary/css/guide.css' %}?v=3" />
 {% endblock %}
-
 {% block content %}
-  <div class="guide-page">
-    <a class="guide-back" href="{% url 'vocabulary:home' %}">← Back to vocabulary</a>
-    <h1 class="guide-title">Vocabulary guide</h1>
-    <p class="guide-sub">
-      Methods, tips, and how bands relate to what you practice here.
-    </p>
-
-    <div class="guide-tabs guide-swTab" id="swTab" role="tablist" aria-label="Guide sections">
-      <button type="button" class="g-tab on" data-tab="methods" role="tab" aria-selected="true">Methods</button>
-      <button type="button" class="g-tab" data-tab="bands" role="tab" aria-selected="false">Bands</button>
-      <button type="button" class="g-tab" data-tab="plan" role="tab" aria-selected="false">Study plan</button>
+<div class="guide-wrap">
+  <header class="guide-header">
+    <div class="guide-header-text">
+      <h1 class="guide-title">IELTS vocabulary guide</h1>
+      <p class="guide-sub">Practical guidance you can apply this week — how to use this site, exam tips, band thinking, and a simple plan.</p>
     </div>
-
-    <div id="guide-panel-methods" class="g-section on" role="tabpanel">
-      <p class="g-sec-lbl">Study modes</p>
-      <div class="g-mcard">
-        <div class="g-mcard-hd">
-          <div class="g-mcard-icon" aria-hidden="true">📇</div>
-          <div class="g-mcard-info">
-            <div class="g-mcard-title">Flashcards</div>
-            <div class="g-mcard-sub">Mark Easy or Hard; due cards come back on your schedule.</div>
-          </div>
-          <span class="g-badge g-badge-review">Review</span>
-        </div>
+    <details class="guide-menu">
+      <summary class="guide-menu-btn" aria-label="More options">⋯</summary>
+      <div class="guide-menu-panel" role="menu">
+        <a class="guide-menu-item" role="menuitem" href="{% url 'vocabulary:home' %}">Vocabulary home</a>
+        <a class="guide-menu-item" role="menuitem" href="{% url 'vocabulary:index' %}">Flashcard studio</a>
       </div>
-      <div class="g-mcard">
-        <div class="g-mcard-hd">
-          <div class="g-mcard-icon" aria-hidden="true">⌨</div>
-          <div class="g-mcard-info">
-            <div class="g-mcard-title">Type it</div>
-            <div class="g-mcard-sub">Practice producing sentences; useful for writing and speaking.</div>
-          </div>
-          <span class="g-badge g-badge-mixed">Mixed</span>
-        </div>
-      </div>
-    </div>
+    </details>
+  </header>
 
-    <div id="guide-panel-bands" class="g-section" role="tabpanel">
-      <p class="g-sec-lbl">IELTS-style feedback</p>
-      <p style="font-size: 14px; color: #4b5563; line-height: 1.6">
-        Type it can return a band-style score. Treat it as formative feedback: focus on patterns
-        (collocations, precision, range) rather than a single number.
-      </p>
-    </div>
-
-    <div id="guide-panel-plan" class="g-section" role="tabpanel">
-      <p class="g-sec-lbl">Suggested rhythm</p>
-      <p style="font-size: 14px; color: #4b5563; line-height: 1.6">
-        Short daily sessions beat long occasional cramming. Mix flashcards with a little Type it
-        on the same topic to strengthen recognition and production together.
-      </p>
-    </div>
+  <div class="guide-tabs" id="swTab" role="tablist" aria-label="Guide sections">
+    <button type="button" class="g-tab on" role="tab" aria-selected="true" data-g="m" id="tab-m">Methods</button>
+    <button type="button" class="g-tab" role="tab" aria-selected="false" data-g="t" id="tab-t">IELTS tips</button>
+    <button type="button" class="g-tab" role="tab" aria-selected="false" data-g="b" id="tab-b">Band guide</button>
+    <button type="button" class="g-tab" role="tab" aria-selected="false" data-g="p" id="tab-p">Study plan</button>
   </div>
 
-  <script>
-    (function () {
-      var root = document.getElementById("swTab");
-      if (!root) return;
-      var tabs = root.querySelectorAll(".g-tab");
-      var panels = {
-        methods: document.getElementById("guide-panel-methods"),
-        bands: document.getElementById("guide-panel-bands"),
-        plan: document.getElementById("guide-panel-plan"),
-      };
-      function show(key) {
-        Object.keys(panels).forEach(function (k) {
-          var p = panels[k];
-          if (!p) return;
-          p.classList.toggle("on", k === key);
-        });
-        tabs.forEach(function (t) {
-          var on = t.getAttribute("data-tab") === key;
-          t.classList.toggle("on", on);
-          t.setAttribute("aria-selected", on ? "true" : "false");
-        });
-      }
-      tabs.forEach(function (t) {
-        t.addEventListener("click", function () {
-          show(t.getAttribute("data-tab") || "methods");
-        });
-      });
-    })();
-  </script>
+  <section class="g-section on" data-g="m" role="tabpanel" aria-labelledby="tab-m">
+    <h2 class="g-sec-heading">How to use this website</h2>
+    <div class="g-fcard-list">
+      <article class="g-fcard">
+        <span class="g-fcard-icon" aria-hidden="true">🗂️</span>
+        <div class="g-fcard-body">
+          <h3 class="g-fcard-title">Flashcards</h3>
+          <p class="g-fcard-txt">The core tool. See a word, try to recall the meaning yourself, then flip. Rate <strong>Hard</strong> if you struggled, <strong>Easy</strong> if you knew it. Hard cards come back again in the same session. Do this daily for 10–15 minutes.</p>
+        </div>
+      </article>
+      <article class="g-fcard">
+        <span class="g-fcard-icon" aria-hidden="true">⏱️</span>
+        <div class="g-fcard-body">
+          <h3 class="g-fcard-title">Smart review</h3>
+          <p class="g-fcard-txt">Words you marked Hard are scheduled to come back. The system tracks when each word is due. Always do your due reviews before starting new words.</p>
+        </div>
+      </article>
+      <article class="g-fcard">
+        <span class="g-fcard-icon" aria-hidden="true">🧠</span>
+        <div class="g-fcard-body">
+          <h3 class="g-fcard-title">Quick quiz</h3>
+          <p class="g-fcard-txt">Tests your knowledge under pressure. Use <strong>Multiple choice</strong> first when a word is new. Switch to <strong>Spell it</strong> and <strong>Fill in the blank</strong> once you’re more confident — those force active recall which is far more effective.</p>
+        </div>
+      </article>
+      <article class="g-fcard">
+        <span class="g-fcard-icon" aria-hidden="true">✏️</span>
+        <div class="g-fcard-body">
+          <h3 class="g-fcard-title">Type it</h3>
+          <p class="g-fcard-txt">Write a full sentence using the word. This is the most powerful exercise for Writing and Speaking band improvement. Don’t skip it.</p>
+        </div>
+      </article>
+      <article class="g-fcard">
+        <span class="g-fcard-icon" aria-hidden="true">📋</span>
+        <div class="g-fcard-body">
+          <h3 class="g-fcard-title">Word list</h3>
+          <p class="g-fcard-txt">Browse all words by topic and level. Star words you want to revisit. Use this to plan which topic to study next before your exam.</p>
+        </div>
+      </article>
+      <article class="g-fcard">
+        <span class="g-fcard-icon" aria-hidden="true">📚</span>
+        <div class="g-fcard-body">
+          <h3 class="g-fcard-title">Custom decks</h3>
+          <p class="g-fcard-txt">Build your own decks from words you encounter in practice tests or reading. Personalised vocabulary sticks better than generic lists.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="g-section" data-g="t" role="tabpanel" aria-labelledby="tab-t">
+    <h2 class="g-sec-heading">Why vocabulary matters in IELTS</h2>
+    <div class="g-tip-hero">
+      <p class="g-tip-hero-p">
+        <span class="g-tip-hero-gold">Vocabulary accounts for 25% of your Writing and Speaking score</span> directly, and affects Reading and Listening comprehension too.
+      </p>
+    </div>
+    <ul class="g-ielts-list">
+      <li class="g-ielts-card">Examiners look for <strong>range</strong> (variety of words), <strong>accuracy</strong> (correct meaning and form), and <strong>collocation</strong> — natural word combinations like “raise awareness” not “increase awareness”.</li>
+      <li class="g-ielts-card">Don’t just learn definitions — learn the word in a phrase. <strong>“Mitigate the impact”</strong> is more useful than knowing “mitigate” alone.</li>
+      <li class="g-ielts-card"><strong>Band 6</strong> uses basic vocabulary correctly. <strong>Band 7</strong> uses less common words accurately. <strong>Band 8+</strong> uses sophisticated vocabulary naturally with collocations.</li>
+      <li class="g-ielts-card"><strong>Passive vocabulary</strong> (words you recognise) is not enough. You need <strong>active vocabulary</strong> — words you can use spontaneously in writing and speech.</li>
+      <li class="g-ielts-card"><strong>Topic-specific vocabulary</strong> is high-yield. Environment, Health, Technology, Education, and Society appear in most Writing Task 2 questions. Master these first.</li>
+      <li class="g-ielts-card">Aim to learn <strong>10 new words per day</strong> with context, not just a list. Review them the next day, then again in 3 days, then in a week.</li>
+    </ul>
+  </section>
+
+  <section class="g-section" data-g="b" role="tabpanel" aria-labelledby="tab-b">
+    <h2 class="g-sec-heading">What vocabulary gets you each band</h2>
+    <div class="g-band-list">
+      <div class="g-band-strip">
+        <span class="g-band-pill g-band-pill--5">Band 5</span>
+        <p class="g-band-strip-txt">Limited range, repetition of basic words, errors in word choice. Relies on simple vocabulary from everyday topics.</p>
+      </div>
+      <div class="g-band-strip">
+        <span class="g-band-pill g-band-pill--6">Band 6</span>
+        <p class="g-band-strip-txt">Adequate range for familiar topics, some less common words attempted but with errors. Meaning is clear but choices feel <strong>generic</strong>.</p>
+      </div>
+      <div class="g-band-strip">
+        <span class="g-band-pill g-band-pill--7">Band 7</span>
+        <p class="g-band-strip-txt">Uses less common and topic-specific vocabulary with generally good awareness. <strong>Some collocations used naturally.</strong> Minor inaccuracies only.</p>
+      </div>
+      <div class="g-band-strip">
+        <span class="g-band-pill g-band-pill--8">Band 8</span>
+        <p class="g-band-strip-txt">Wide range used fluently and flexibly. <strong>Strong collocations, idiomatic awareness, rare errors.</strong> Words chosen feel precise and natural throughout.</p>
+      </div>
+      <div class="g-band-strip">
+        <span class="g-band-pill g-band-pill--9">Band 9</span>
+        <p class="g-band-strip-txt">Full command. Wide, sophisticated, and accurate vocabulary used effortlessly. <strong>Collocations, register, and nuance</strong> all handled correctly.</p>
+      </div>
+    </div>
+    <p class="g-band-tip">
+      <strong>To move from Band 6 to 7,</strong> focus on replacing overused words (big → substantial, show → demonstrate, important → crucial) and learning topic collocations.
+    </p>
+  </section>
+
+  <section class="g-section" data-g="p" role="tabpanel" aria-labelledby="tab-p">
+    <h2 class="g-sec-heading">A simple weekly vocabulary plan</h2>
+    <div class="g-plan-list">
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Monday</span>
+        <p class="g-plan-daytxt">Learn <strong>10 new words</strong> from your target topic using Flashcards. Don’t rush. Focus on meaning + example sentence.</p>
+      </div>
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Tuesday</span>
+        <p class="g-plan-daytxt">Do <strong>Smart review</strong> (due words). Then use <strong>Quick quiz</strong> (Multiple choice) on Monday’s words.</p>
+      </div>
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Wednesday</span>
+        <p class="g-plan-daytxt"><strong>Type it:</strong> write one sentence for each word you struggled with. Check your sentences.</p>
+      </div>
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Thursday</span>
+        <p class="g-plan-daytxt">Learn <strong>10 more new words</strong>. Do due reviews first.</p>
+      </div>
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Friday</span>
+        <p class="g-plan-daytxt">Quiz yourself with <strong>Fill in the blank</strong> and <strong>Spell it</strong> on all words from this week.</p>
+      </div>
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Saturday</span>
+        <p class="g-plan-daytxt"><strong>Free review:</strong> browse Word list, star anything you’re unsure about, redo Hard flashcards.</p>
+      </div>
+      <div class="g-plan-daycard">
+        <span class="g-day-pill">Sunday</span>
+        <p class="g-plan-daytxt"><strong>Rest or light review only.</strong> Consistency over intensity.</p>
+      </div>
+    </div>
+    <p class="g-plan-close">Three focused weeks on one topic — 60–90 words with full context — will have a measurable impact on your writing band score.</p>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  function activate(key) {
+    document.querySelectorAll(".g-tab").forEach(function (b) {
+      var on = b.getAttribute("data-g") === key;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    document.querySelectorAll(".g-section").forEach(function (p) {
+      p.classList.toggle("on", p.getAttribute("data-g") === key);
+    });
+  }
+  document.querySelectorAll(".g-tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      activate(btn.getAttribute("data-g"));
+    });
+  });
+  document.addEventListener("click", function (e) {
+    var m = document.querySelector(".guide-menu");
+    if (m && m.open && !m.contains(e.target)) m.open = false;
+  });
+})();
+</script>
 {% endblock %}

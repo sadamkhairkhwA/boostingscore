@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Quick quiz — Boosting Score{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/vocabulary.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/quiz_methods.css' %}" />
+{% endblock %}
+{% block body_class %}qq-play-page{% endblock %}
+{% block content %}
+<div class="bs-page qq-play">
+  <p class="qq-play-back"><a class="qq-link" href="{% url 'vocabulary:quiz_setup' %}">← Back to setup</a></p>
+  <h1 class="bs-page-title qq-play-title">Quick quiz</h1>
+  <p class="bs-page-sub">Topic: <strong>{{ quiz_config.topicLabel }}</strong> — work through each question, then continue.</p>
+  <div id="quiz-runner-root" class="qq-play-inner"></div>
+  <div id="quiz-runner-done" class="qq-quiz-done" hidden>
+    <p class="qq-quiz-done-title">Session complete</p>
+    <p class="qq-quiz-done-sub">Your setup was cleared. Start again anytime.</p>
+    <p class="qq-quiz-done-actions">
+      <a class="bs-btn-primary" href="{% url 'vocabulary:quiz_setup' %}">Quiz setup</a>
+      <a class="bs-btn-dark" href="{% url 'vocabulary:home' %}">Vocabulary home</a>
+    </p>
+  </div>
+</div>
+{{ quiz_config|json_script:"quiz-cfg-data" }}
+<script>
+  window.__QUIZ_INIT__ = JSON.parse(document.getElementById("quiz-cfg-data").textContent);
+</script>
+<script src="{% static 'js/quiz_runner.js' %}?v=2"></script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IELTS Academic Reading · Test 1 — Boosting Score</title>
+  <link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=8">
+</head>
+<body class="art-body">
+  {% csrf_token %}
+  <div
+    id="art-app"
+    class="art-app"
+    data-submit-url="{{ submit_url }}"
+    data-tests-url="{{ tests_index_url }}"
+  >
+    <header class="art-topbar">
+      <div class="art-topbar__left">
+        <span class="art-topbar__title">IELTS Academic Reading · Test 1</span>
+      </div>
+      <div class="art-topbar__center">
+        <span class="art-topbar__timer-label">Time remaining</span>
+        <div class="art-topbar__timer-box" id="art-timer-box" role="timer" aria-live="polite">
+          <span id="art-timer">60:00</span>
+        </div>
+      </div>
+      <div class="art-topbar__right">
+        <button type="button" class="art-btn art-btn--ghost" id="art-toggle-passage">Hide passage</button>
+        <button type="button" class="art-btn art-btn--ghost" id="art-help">Help</button>
+        <button type="button" class="art-btn art-btn--danger" id="art-submit">Submit test</button>
+      </div>
+    </header>
+
+    <div class="art-help-bar art-help-bar--hidden" id="art-help-bar" role="region" aria-label="Help">
+      <button type="button" class="art-help-bar__close" id="art-help-close" aria-label="Close help">✕</button>
+      <p><strong>How this practice test works:</strong> Use the part tabs to move between sections. Choose your answers and type gap-fill answers in the boxes — nothing is marked until you press <strong>Submit test</strong>. Your timer starts when the page loads. You can hide the passage to focus on questions. After submit, your score, band estimate, and an answer summary appear, and the result is saved to your profile.</p>
+    </div>
+
+    <nav class="art-tabs" role="tablist" aria-label="Test parts">
+      <button type="button" class="art-tab art-tab--active" role="tab" aria-selected="true" data-part="1" id="art-tab-1">Part 1 — Q 1–14</button>
+      <button type="button" class="art-tab" role="tab" aria-selected="false" data-part="2" id="art-tab-2">Part 2 — Q 15–27</button>
+      <button type="button" class="art-tab" role="tab" aria-selected="false" data-part="3" id="art-tab-3">Part 3 — Q 28–40</button>
+    </nav>
+
+    <div class="art-instruction" id="art-instruction"></div>
+
+    <div class="art-main" id="art-main">
+      <aside class="art-passage-col" id="art-passage-col">
+        <div class="art-passage-scroll" id="art-passage"></div>
+      </aside>
+      <section class="art-questions-col" id="art-questions-col">
+        <div class="art-questions-scroll" id="art-questions"></div>
+      </section>
+    </div>
+
+    <nav class="art-qnav" id="art-qnav" aria-label="Question numbers"></nav>
+  </div>
+
+  <div id="art-results" class="art-results art-results--hidden"></div>
+
+  {{ test_payload|json_script:"art-data" }}
+  <script src="{% static 'reading/js/academic_reading_test.js' %}?v=8" defer></script>
+</body>
+</html>

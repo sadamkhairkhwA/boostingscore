@@ -1,578 +1,444 @@
-{% extends "base.html" %}
-{% block title %}Quiz setup — Vocabulary{% endblock %}
-{% block body_class %}qs-body{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Quiz setup — Boosting Score{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/quiz_methods.css' %}" />
+{% endblock %}
+{% block body_class %}qq-setup-page{% endblock %}
 {% block content %}
-<div
-  class="qs-page"
-  id="qs-page"
-  data-words-url="{{ words_api_url|escape }}"
-  data-index-url="{{ index_url|escape }}"
-  data-flash-pick-url="{{ flashcard_pick_url|escape }}"
-  data-preset-words="{{ preset_words|escapejs }}"
->
-  <a href="{{ index_url }}" class="qs-back">← Change method</a>
+<div class="bs-page qq-setup" id="qq-setup-root" data-session-url="{{ quiz_session_url|escape }}" data-topic-words-url="{{ quiz_topic_words_url|escape }}">
+  {% if request.GET.error == 'minwords' %}
+  <p class="qq-banner qq-banner--warn" role="alert">Pick at least three words before starting the quiz.</p>
+  {% endif %}
 
-  <div class="qs-bc">
-    <span>Vocabulary</span>
-    <span class="qs-bc-sep">›</span>
-    <span>Quiz</span>
-    <span class="qs-bc-sep">›</span>
-    <span class="qs-bc-active" id="bc-step">Choose deck</span>
-  </div>
+  <header class="qq-head">
+    <div class="qq-head-text">
+      <h1 class="qq-title">Quick quiz</h1>
+      <p class="qq-sub">Choose your settings, then start a focused test session.</p>
+    </div>
+    <details class="qq-menu">
+      <summary class="qq-menu-btn" aria-label="More options">⋯</summary>
+      <div class="qq-menu-panel" role="menu">
+        <button type="button" class="qq-menu-item" id="qq-reset" role="menuitem">Reset setup</button>
+        <a class="qq-menu-item" role="menuitem" href="{% url 'vocabulary:home' %}">Vocabulary home</a>
+      </div>
+    </details>
+  </header>
 
-  <div class="qs-steps" aria-label="Progress">
-    <div class="qs-step">
-      <div class="qs-step-circle active" id="sc1">1</div>
-      <div class="qs-step-label active" id="sl1">Choose deck</div>
-    </div>
-    <div class="qs-step-line" id="line1"></div>
-    <div class="qs-step">
-      <div class="qs-step-circle pending" id="sc2">2</div>
-      <div class="qs-step-label" id="sl2">Choose words</div>
-    </div>
-    <div class="qs-step-line" id="line2"></div>
-    <div class="qs-step">
-      <div class="qs-step-circle pending" id="sc3">3</div>
-      <div class="qs-step-label" id="sl3">Quiz type</div>
-    </div>
-  </div>
+  <nav class="qq-stepper" aria-label="Quiz setup steps">
+    {% for i in "1234" %}
+    <button type="button" class="qq-step" data-step="{{ forloop.counter }}" id="qq-tab-{{ forloop.counter }}" disabled>
+      <span class="qq-step-k">Step {{ forloop.counter }}</span>
+      <span class="qq-step-label">
+        {% if forloop.counter == 1 %}Topic{% elif forloop.counter == 2 %}Words{% elif forloop.counter == 3 %}Method{% else %}Start{% endif %}
+      </span>
+      <span class="qq-step-check" aria-hidden="true">✓</span>
+    </button>
+    {% endfor %}
+  </nav>
 
-  <div class="qs-st on" id="s1">
-    <div class="qs-title">Choose a deck</div>
-    <div class="qs-sub">Which topic or deck do you want to be tested on?</div>
-    <div class="qs-deck-grid">
-      {% for deck in topic_decks %}
-        <button
-          type="button"
-          class="qs-deck-card"
-          data-qs-deck
-          data-topic="{% if deck.is_custom_deck %}other{% else %}{{ deck.slug }}{% endif %}"
-          {% if deck.is_custom_deck %}data-deck-pk="{{ deck.deck_pk }}"{% endif %}
-        >
-          <span class="qs-dck" aria-hidden="true">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </span>
-          <span class="qs-deck-icon" aria-hidden="true">{{ deck.emoji }}</span>
-          <span class="qs-deck-name">{{ deck.label }}</span>
-          <span class="qs-deck-meta">{{ deck.word_count }} word{{ deck.word_count|pluralize }}</span>
-          <span class="qs-deck-prog" role="img" aria-label="{{ deck.progress_pct }} percent mastered">
-            <span class="qs-deck-prog-fill" style="width: {{ deck.progress_pct }}%;"></span>
-          </span>
-        </button>
+  <section class="qq-panel" id="qq-panel-1" data-panel="1">
+    <h2 class="qq-panel-title">Pick a topic</h2>
+    <p class="qq-panel-sub">Select one IELTS topic — vocabulary for that theme loads in the next step.</p>
+    <div class="qq-pills" id="qq-topic-pills" role="group" aria-label="Topic">
+      {% for k,v in topics %}
+      <button type="button" class="qq-pill" data-topic="{{ k }}">{{ v }}</button>
       {% endfor %}
     </div>
-    <div class="qs-bottom">
-      <button type="button" class="qs-btn-next" id="btn1" disabled>Choose words →</button>
-    </div>
-    <p class="qs-hint" id="hint1">Select a deck to continue</p>
-  </div>
+    <p class="qq-selected-line" id="qq-topic-selected">Selected: <span id="qq-topic-label">—</span></p>
+  </section>
 
-  <div class="qs-st" id="s2">
-    <div class="qs-title">Choose words</div>
-    <div class="qs-sub">Select at least four words you want to be tested on</div>
-    <div class="qs-word-filters" role="tablist" aria-label="Filter words">
-      <button type="button" class="qs-wf on" data-wf="all">All words</button>
-      <button type="button" class="qs-wf" data-wf="not_mastered">Not mastered</button>
-      <button type="button" class="qs-wf" data-wf="struggling">Struggling</button>
-      <button type="button" class="qs-wf" data-wf="favored">Favored ★</button>
-    </div>
-    <div class="qs-sel-all-row">
-      <button type="button" class="qs-sel-all-btn" id="qs-select-all">Select all</button>
-      <span class="qs-sel-count-txt" id="word-sel-count">0 of 0 selected</span>
-    </div>
-    <div class="qs-word-list" id="wordlist" role="list"></div>
-    <p class="qs-hint qs-hint--err" id="word-load-err" hidden></p>
-    <div class="qs-bottom">
-      <button type="button" class="qs-btn-back" data-back="1">← Back</button>
-      <button type="button" class="qs-btn-next" id="btn2" disabled>Choose quiz type →</button>
-    </div>
-    <p class="qs-hint" id="word-hint">Select at least 4 words to continue</p>
-  </div>
-
-  <div class="qs-st" id="s3">
-    <div class="qs-title">Choose quiz type</div>
-    <div class="qs-sub">Pick one or more types — questions will rotate in order</div>
-    <div class="qs-qtype-grid">
-      <button type="button" class="qs-qt-card" data-qt="mc">
-        <span class="qs-qtck" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        <span class="qs-qt-icon" style="background: #eff6ff">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185fa5" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </span>
-        <span class="qs-qt-name">Multiple choice</span>
-        <span class="qs-qt-desc">Pick 1 of 4 words for a definition.</span>
-      </button>
-      <button type="button" class="qs-qt-card" data-qt="type">
-        <span class="qs-qtck" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        <span class="qs-qt-icon" style="background: #f0fdf4">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2">
-            <polyline points="4 7 4 4 20 4 20 7" />
-            <line x1="9" y1="20" x2="15" y2="20" />
-            <line x1="12" y1="4" x2="12" y2="20" />
-          </svg>
-        </span>
-        <span class="qs-qt-name">Type the word</span>
-        <span class="qs-qt-desc">Read a definition and type the correct word.</span>
-      </button>
-      <button type="button" class="qs-qt-card" data-qt="truefalse">
-        <span class="qs-qtck" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        <span class="qs-qt-icon" style="background: #fef3c7">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2">
-            <path d="M9 11l3 3L22 4" />
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-          </svg>
-        </span>
-        <span class="qs-qt-name">True or false</span>
-        <span class="qs-qt-desc">Is the statement about the word correct?</span>
-      </button>
-      <button type="button" class="qs-qt-card" data-qt="match">
-        <span class="qs-qtck" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        <span class="qs-qt-icon" style="background: #f4f0ff">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#534ab7" stroke-width="2">
-            <line x1="8" y1="6" x2="21" y2="6" />
-            <line x1="8" y1="12" x2="21" y2="12" />
-            <line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" />
-            <line x1="3" y1="12" x2="3.01" y2="12" />
-            <line x1="3" y1="18" x2="3.01" y2="18" />
-          </svg>
-        </span>
-        <span class="qs-qt-name">Match the word</span>
-        <span class="qs-qt-desc">Given the word, pick its definition from four options.</span>
-      </button>
-      <button type="button" class="qs-qt-card" data-qt="fillblank">
-        <span class="qs-qtck" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        <span class="qs-qt-icon" style="background: #fff0f6">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#993556" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-          </svg>
-        </span>
-        <span class="qs-qt-name">Fill in the blank</span>
-        <span class="qs-qt-desc">Complete the gap in a sentence with the right word.</span>
-      </button>
-      <button type="button" class="qs-qt-card" data-qt="syn">
-        <span class="qs-qtck" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        <span class="qs-qt-icon" style="background: #ecfdf5">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2">
-            <polyline points="17 1 21 5 17 9" />
-            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-            <polyline points="7 23 3 19 7 15" />
-            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-          </svg>
-        </span>
-        <span class="qs-qt-name">Synonyms</span>
-        <span class="qs-qt-desc">Pick the best synonym (needs saved synonyms on cards).</span>
-      </button>
-    </div>
-    <div class="qs-settings-row">
-      <div class="qs-setting">
-        <div class="qs-slbl">Order</div>
-        <div class="qs-spills" role="group" aria-label="Question order">
-          <button type="button" class="qs-spill on" data-order="random">Random</button>
-          <button type="button" class="qs-spill" data-order="alpha">A → Z</button>
-          <button type="button" class="qs-spill" data-order="hard">Hardest first</button>
-        </div>
+  <section class="qq-panel" id="qq-panel-2" data-panel="2" hidden>
+    <div class="qq-panel-head">
+      <div>
+        <h2 class="qq-panel-title">Choose words</h2>
+        <p class="qq-panel-sub">Select the vocabulary you want to be tested on. Minimum 3 words.</p>
+      </div>
+      <div class="qq-word-actions">
+        <button type="button" class="qq-btn qq-btn--ghost" id="qq-select-all">Select all</button>
+        <button type="button" class="qq-btn qq-btn--ghost" id="qq-deselect-all">Deselect all</button>
       </div>
     </div>
-    <div class="qs-bottom">
-      <button type="button" class="qs-btn-back" data-back="2">← Back</button>
-      <button type="button" class="qs-btn-next" id="btn3" disabled>Start quiz →</button>
-    </div>
-    <p class="qs-hint" id="qt-hint">Select at least one quiz type</p>
-  </div>
+    <p class="qq-count" id="qq-word-count" aria-live="polite">0 words selected</p>
+    <p class="qq-inline-err" id="qq-step2-err" hidden>Choose at least three words to continue.</p>
+    <div class="qq-word-grid" id="qq-word-grid"></div>
+    <p class="qq-loading" id="qq-words-loading" hidden>Loading words…</p>
+    <p class="qq-inline-err" id="qq-words-err" hidden></p>
+  </section>
 
+  <section class="qq-panel" id="qq-panel-3" data-panel="3" hidden>
+    <h2 class="qq-panel-title">Choose a testing method</h2>
+    <p class="qq-panel-sub">Pick how you want to be tested on the selected words.</p>
+    <p class="qq-inline-err" id="qq-step3-err" hidden>Select a method to continue.</p>
+    <div class="qq-method-grid" role="radiogroup" aria-label="Testing method">
+      <button type="button" class="qq-method qq-method--mc" data-method="mc" aria-pressed="false">
+        <span class="qq-method-badge qq-method-badge--rec" aria-hidden="true">Recommended</span>
+        <span class="qq-method-icon" aria-hidden="true">🔤</span>
+        <span class="qq-method-name">Multiple choice</span>
+        <span class="qq-method-desc">Pick the correct definition from four options</span>
+      </button>
+      <button type="button" class="qq-method qq-method--tf" data-method="truefalse" aria-pressed="false">
+        <span class="qq-method-icon" aria-hidden="true">⚖️</span>
+        <span class="qq-method-name">True / False</span>
+        <span class="qq-method-desc">Is this definition correct?</span>
+      </button>
+      <button type="button" class="qq-method qq-method--fb" data-method="fillblank" aria-pressed="false">
+        <span class="qq-method-icon" aria-hidden="true">✏️</span>
+        <span class="qq-method-name">Fill in the blank</span>
+        <span class="qq-method-desc">Complete the sentence with the missing word</span>
+      </button>
+      <button type="button" class="qq-method qq-method--match" data-method="match" aria-pressed="false">
+        <span class="qq-method-icon" aria-hidden="true">🔗</span>
+        <span class="qq-method-name">Match the pairs</span>
+        <span class="qq-method-desc">Connect words to their definitions</span>
+      </button>
+      <button type="button" class="qq-method qq-method--spell" data-method="type" aria-pressed="false">
+        <span class="qq-method-icon" aria-hidden="true">⌨️</span>
+        <span class="qq-method-name">Spell it</span>
+        <span class="qq-method-desc">Type the word from its definition</span>
+      </button>
+      <button type="button" class="qq-method qq-method--listen" data-method="listen" aria-pressed="false">
+        <span class="qq-method-icon" aria-hidden="true">🎧</span>
+        <span class="qq-method-name">Listen &amp; answer</span>
+        <span class="qq-method-desc">Hear the word, choose the meaning</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="qq-panel" id="qq-panel-4" data-panel="4" hidden>
+    <h2 class="qq-panel-title">Ready to start</h2>
+    <p class="qq-panel-sub">Review your settings before beginning the session.</p>
+    <dl class="qq-summary">
+      <div class="qq-summary-row"><dt>Topic</dt><dd id="qq-sum-topic">—</dd></div>
+      <div class="qq-summary-row"><dt>Words</dt><dd id="qq-sum-words">—</dd></div>
+      <div class="qq-summary-row"><dt>Method</dt><dd id="qq-sum-method">—</dd></div>
+      <div class="qq-summary-row"><dt>Batch size</dt><dd id="qq-sum-batch">—</dd></div>
+    </dl>
+    <p class="qq-batch-label" id="qq-batch-label">Batch size</p>
+    <div class="qq-pills qq-pills--batch" role="group" aria-labelledby="qq-batch-label">
+      <button type="button" class="qq-pill qq-pill--batch" data-batch="5">5</button>
+      <button type="button" class="qq-pill qq-pill--batch" data-batch="10">10</button>
+      <button type="button" class="qq-pill qq-pill--batch" data-batch="20">20</button>
+      <button type="button" class="qq-pill qq-pill--batch" data-batch="all">All</button>
+    </div>
+    <button type="button" class="qq-start" id="qq-start">Start quiz →</button>
+  </section>
+
+  <footer class="qq-nav">
+    <button type="button" class="qq-btn qq-btn--ghost qq-nav-back" id="qq-back" hidden>← Back</button>
+    <span class="qq-nav-spacer"></span>
+    <button type="button" class="qq-btn qq-btn--ghost qq-nav-next" id="qq-next">Next →</button>
+  </footer>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
 (function () {
-  var root = document.getElementById("qs-page");
+  var STORAGE_KEY = "quizSetupV1";
+  var root = document.getElementById("qq-setup-root");
   if (!root) return;
-  var wordsUrl = root.getAttribute("data-words-url") || "";
-  var indexUrl = root.getAttribute("data-index-url") || "/vocabulary/studio/";
-  var flashPickUrl = root.getAttribute("data-flash-pick-url") || "";
-  var presetWords = root.getAttribute("data-preset-words") || "";
 
-  var selTopic = "";
-  var selDeckPk = "";
-  var wordFilter = "all";
-  var orderVal = "random";
+  var SESSION_URL = root.getAttribute("data-session-url") || "";
+  var TW_TEMPLATE = root.getAttribute("data-topic-words-url") || "";
 
-  function showStep(n) {
-    var labels = ["Choose deck", "Choose words", "Quiz type"];
-    document.getElementById("bc-step").textContent = labels[n - 1];
-    for (var s = 1; s <= 3; s++) {
-      var el = document.getElementById("s" + s);
-      if (!el) continue;
-      el.classList.toggle("on", s === n);
-    }
-    for (var i = 1; i <= 3; i++) {
-      var sc = document.getElementById("sc" + i);
-      var sl = document.getElementById("sl" + i);
-      if (!sc || !sl) continue;
-      if (i < n) {
-        sc.className = "qs-step-circle done";
-        sc.innerHTML =
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-        sl.className = "qs-step-label";
-      } else if (i === n) {
-        sc.className = "qs-step-circle active";
-        sc.textContent = String(i);
-        sl.className = "qs-step-label active";
-      } else {
-        sc.className = "qs-step-circle pending";
-        sc.textContent = String(i);
-        sl.className = "qs-step-label";
-      }
-      if (i < 3) {
-        var ln = document.getElementById("line" + i);
-        if (ln) ln.className = "qs-step-line" + (i < n ? " done" : "");
-      }
-    }
+  var TOPIC_LABELS = {
+    {% for k,v in topics %}
+    "{{ k|escapejs }}": "{{ v|escapejs }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  var METHOD_LABELS = {
+    mc: "Multiple choice",
+    truefalse: "True / false",
+    fillblank: "Fill in the blank",
+    match: "Match the pairs",
+    type: "Spell it",
+    listen: "Listen & answer"
+  };
+
+  var state = {
+    v: 1,
+    step: 1,
+    topic: "",
+    wordIds: [],
+    method: "",
+    batch: "10",
+    maxStep: 1,
+    wordsMeta: []
+  };
+
+  function loadState() {
+    try {
+      var raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var o = JSON.parse(raw);
+      if (!o || o.v !== 1) return;
+      state.topic = o.topic || "";
+      state.wordIds = Array.isArray(o.wordIds) ? o.wordIds.map(Number).filter(function (n) { return !isNaN(n); }) : [];
+      state.method = o.method || "";
+      state.batch = o.batch || "10";
+      state.step = Math.min(4, Math.max(1, parseInt(o.step, 10) || 1));
+      state.maxStep = Math.min(4, Math.max(1, parseInt(o.maxStep, 10) || state.step));
+    } catch (e) {}
   }
 
-  document.querySelectorAll("[data-qs-deck]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      document.querySelectorAll("[data-qs-deck]").forEach(function (b) {
-        b.classList.remove("sel");
-      });
-      btn.classList.add("sel");
-      selTopic = btn.getAttribute("data-topic") || "";
-      selDeckPk = btn.getAttribute("data-deck-pk") || "";
-      document.getElementById("btn1").disabled = !selTopic;
-      document.getElementById("hint1").textContent = "Deck selected — continue to choose words";
+  function saveState() {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        v: 1,
+        step: state.step,
+        topic: state.topic,
+        wordIds: state.wordIds,
+        method: state.method,
+        batch: state.batch,
+        maxStep: state.maxStep
+      }));
+    } catch (e) {}
+  }
+
+  function topicWordsUrl(topic) {
+    return TW_TEMPLATE.replace("__topic__", topic);
+  }
+
+  var els = {
+    tabs: Array.prototype.slice.call(document.querySelectorAll(".qq-step")),
+    panels: [1,2,3,4].map(function (n) { return document.getElementById("qq-panel-" + n); }),
+    back: document.getElementById("qq-back"),
+    next: document.getElementById("qq-next"),
+    topicPills: document.querySelectorAll("#qq-topic-pills .qq-pill"),
+    topicLabel: document.getElementById("qq-topic-label"),
+    wordGrid: document.getElementById("qq-word-grid"),
+    wordCount: document.getElementById("qq-word-count"),
+    wordsLoading: document.getElementById("qq-words-loading"),
+    wordsErr: document.getElementById("qq-words-err"),
+    step2Err: document.getElementById("qq-step2-err"),
+    step3Err: document.getElementById("qq-step3-err"),
+    selectAll: document.getElementById("qq-select-all"),
+    deselectAll: document.getElementById("qq-deselect-all"),
+    methods: document.querySelectorAll(".qq-method"),
+    batchPills: document.querySelectorAll(".qq-pill--batch"),
+    sumTopic: document.getElementById("qq-sum-topic"),
+    sumWords: document.getElementById("qq-sum-words"),
+    sumMethod: document.getElementById("qq-sum-method"),
+    sumBatch: document.getElementById("qq-sum-batch"),
+    start: document.getElementById("qq-start"),
+    reset: document.getElementById("qq-reset")
+  };
+
+  function setStep(step) {
+    state.step = step;
+    if (state.maxStep < step) state.maxStep = step;
+    saveState();
+    render();
+  }
+
+  function render() {
+    var s = state.step;
+    els.panels.forEach(function (el, i) {
+      if (!el) return;
+      el.hidden = i + 1 !== s;
     });
-  });
+    els.tabs.forEach(function (tab, i) {
+      var n = i + 1;
+      tab.classList.toggle("is-active", s === n);
+      tab.classList.toggle("is-done", state.maxStep > n);
+      tab.disabled = n > state.maxStep;
+      var chk = tab.querySelector(".qq-step-check");
+      if (chk) chk.style.display = state.maxStep > n ? "inline" : "none";
+    });
+    els.back.hidden = s <= 1;
+    els.next.hidden = s >= 4;
 
-  document.getElementById("btn1").addEventListener("click", function () {
-    if (!selTopic) return;
-    showStep(2);
-    loadWords();
-  });
+    if (els.topicLabel) els.topicLabel.textContent = state.topic ? (TOPIC_LABELS[state.topic] || state.topic) : "—";
+    els.topicPills.forEach(function (p) {
+      p.classList.toggle("is-on", p.getAttribute("data-topic") === state.topic);
+    });
 
-  function loadWordsFromPreset(q) {
-    var errEl = document.getElementById("word-load-err");
-    var list = document.getElementById("wordlist");
-    errEl.hidden = true;
-    list.innerHTML = '<p class="qs-hint">Loading…</p>';
-    var u = wordsUrl + "?words=" + encodeURIComponent(q);
-    fetch(u, { credentials: "same-origin" })
-      .then(function (r) {
-        return r.json();
-      })
-      .then(function (data) {
-        list.innerHTML = "";
-        if (!data || !data.ok || !data.words) {
-          errEl.textContent = (data && data.error) || "Could not load words.";
-          errEl.hidden = false;
-          return;
-        }
-        data.words.forEach(function (w) {
-          var row = document.createElement("button");
-          row.type = "button";
-          row.className = "qs-word-row sel";
-          row.setAttribute("role", "listitem");
-          row.setAttribute("data-id", w.id);
-          row.setAttribute("data-mastery", String(w.mastery || 0));
-          row.setAttribute("data-favored", w.favored ? "true" : "false");
-          row.setAttribute("data-struggling", w.struggling ? "true" : "false");
-          var dots = "";
-          for (var i = 1; i <= 5; i++) {
-            dots +=
-              '<span class="qs-wd ' +
-              (i <= (w.mastery || 0) ? "qs-wd-on" : "qs-wd-off") +
-              '"></span>';
-          }
-          var badge = "";
-          if (w.struggling) {
-            badge = '<span class="qs-wbadge qs-wbadge-s">Struggling</span>';
-          } else if (w.mastery === 5) {
-            badge = '<span class="qs-wbadge qs-wbadge-m">Mastered</span>';
-          } else {
-            badge = '<span class="qs-wbadge-spacer"></span>';
-          }
-          row.innerHTML =
-            '<span class="qs-wchk" aria-hidden="true"></span>' +
-            '<span class="qs-wname">' +
-            escapeHtml(w.word) +
-            "</span>" +
-            (w.pos ? '<span class="qs-wpos">' + escapeHtml(w.pos) + "</span>" : "") +
-            badge +
-            '<span class="qs-wdots">' +
-            dots +
-            "</span>";
-          row.addEventListener("click", function () {
-            row.classList.toggle("sel");
-            updateWordCount();
-          });
-          list.appendChild(row);
-        });
-        applyWordFilter();
-        updateWordCount();
-      })
-      .catch(function () {
-        list.innerHTML = "";
-        errEl.textContent = "Network error loading words.";
-        errEl.hidden = false;
-      });
-  }
+    updateWordCount();
+    els.methods.forEach(function (m) {
+      var mm = m.getAttribute("data-method");
+      m.classList.toggle("is-selected", mm === state.method);
+      m.setAttribute("aria-pressed", mm === state.method ? "true" : "false");
+    });
+    els.batchPills.forEach(function (b) {
+      b.classList.toggle("is-on", b.getAttribute("data-batch") === state.batch);
+    });
 
-  function loadWords() {
-    var errEl = document.getElementById("word-load-err");
-    var list = document.getElementById("wordlist");
-    errEl.hidden = true;
-    list.innerHTML = '<p class="qs-hint">Loading…</p>';
-    var u = wordsUrl + "?topic=" + encodeURIComponent(selTopic);
-    if (selDeckPk) u += "&deck=" + encodeURIComponent(selDeckPk);
-    fetch(u, { credentials: "same-origin" })
-      .then(function (r) {
-        return r.json();
-      })
-      .then(function (data) {
-        list.innerHTML = "";
-        if (!data || !data.ok || !data.words) {
-          errEl.textContent = (data && data.error) || "Could not load words.";
-          errEl.hidden = false;
-          return;
-        }
-        data.words.forEach(function (w) {
-          var row = document.createElement("button");
-          row.type = "button";
-          row.className = "qs-word-row";
-          row.setAttribute("role", "listitem");
-          row.setAttribute("data-id", w.id);
-          row.setAttribute("data-mastery", String(w.mastery || 0));
-          row.setAttribute("data-favored", w.favored ? "true" : "false");
-          row.setAttribute("data-struggling", w.struggling ? "true" : "false");
-          var dots = "";
-          for (var i = 1; i <= 5; i++) {
-            dots +=
-              '<span class="qs-wd ' +
-              (i <= (w.mastery || 0) ? "qs-wd-on" : "qs-wd-off") +
-              '"></span>';
-          }
-          var badge = "";
-          if (w.struggling) {
-            badge = '<span class="qs-wbadge qs-wbadge-s">Struggling</span>';
-          } else if (w.mastery === 5) {
-            badge = '<span class="qs-wbadge qs-wbadge-m">Mastered</span>';
-          } else {
-            badge = '<span class="qs-wbadge-spacer"></span>';
-          }
-          row.innerHTML =
-            '<span class="qs-wchk" aria-hidden="true"></span>' +
-            '<span class="qs-wname">' +
-            escapeHtml(w.word) +
-            "</span>" +
-            (w.pos ? '<span class="qs-wpos">' + escapeHtml(w.pos) + "</span>" : "") +
-            badge +
-            '<span class="qs-wdots">' +
-            dots +
-            "</span>";
-          row.addEventListener("click", function () {
-            row.classList.toggle("sel");
-            updateWordCount();
-          });
-          list.appendChild(row);
-        });
-        applyWordFilter();
-        updateWordCount();
-      })
-      .catch(function () {
-        list.innerHTML = "";
-        errEl.textContent = "Network error loading words.";
-        errEl.hidden = false;
-      });
-  }
-
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    if (s === 4) {
+      els.sumTopic.textContent = state.topic ? (TOPIC_LABELS[state.topic] || state.topic) : "—";
+      els.sumWords.textContent = state.wordIds.length + " selected";
+      els.sumMethod.textContent = state.method ? (METHOD_LABELS[state.method] || state.method) : "—";
+      els.sumBatch.textContent = state.batch === "all" ? "All" : state.batch;
+    }
   }
 
   function updateWordCount() {
-    var rows = document.querySelectorAll("#wordlist .qs-word-row");
-    var visible = document.querySelectorAll("#wordlist .qs-word-row:not(.hidden)");
-    var nSel = document.querySelectorAll("#wordlist .qs-word-row.sel").length;
-    document.getElementById("word-sel-count").textContent =
-      nSel + " of " + visible.length + " selected";
-    document.getElementById("btn2").disabled = nSel < 4;
-    document.getElementById("word-hint").textContent =
-      nSel < 4
-        ? "Select at least 4 words to continue (" + nSel + " selected)"
-        : nSel + " words selected — ready";
+    var n = state.wordIds.length;
+    els.wordCount.textContent = n + " word" + (n === 1 ? "" : "s") + " selected";
   }
 
-  document.querySelectorAll(".qs-word-filters [data-wf]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      wordFilter = btn.getAttribute("data-wf") || "all";
-      document.querySelectorAll(".qs-word-filters [data-wf]").forEach(function (b) {
-        b.classList.toggle("on", b === btn);
+  function fetchWords() {
+    if (!state.topic) return Promise.resolve();
+    els.wordsLoading.hidden = false;
+    els.wordsErr.hidden = true;
+    return fetch(topicWordsUrl(state.topic), { credentials: "same-origin" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("Could not load words");
+        return r.json();
+      })
+      .then(function (data) {
+        els.wordsLoading.hidden = true;
+        state.wordsMeta = data.words || [];
+        renderWordChips();
+      })
+      .catch(function (e) {
+        els.wordsLoading.hidden = true;
+        els.wordsErr.hidden = false;
+        els.wordsErr.textContent = e.message || "Network error";
       });
-      applyWordFilter();
-      updateWordCount();
+  }
+
+  function renderWordChips() {
+    if (!els.wordGrid) return;
+    var selected = new Set(state.wordIds);
+    els.wordGrid.innerHTML = "";
+    state.wordsMeta.forEach(function (w) {
+      var id = w.id;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "qq-chip" + (selected.has(id) ? " is-on" : "");
+      btn.textContent = w.word;
+      btn.setAttribute("data-id", id);
+      btn.addEventListener("click", function () {
+        if (selected.has(id)) {
+          selected.delete(id);
+          state.wordIds = state.wordIds.filter(function (x) { return x !== id; });
+        } else {
+          state.wordIds.push(id);
+        }
+        btn.classList.toggle("is-on", selected.has(id));
+        saveState();
+        updateWordCount();
+      });
+      els.wordGrid.appendChild(btn);
+    });
+  }
+
+  els.topicPills.forEach(function (p) {
+    p.addEventListener("click", function () {
+      state.topic = p.getAttribute("data-topic") || "";
+      state.wordIds = [];
+      saveState();
+      render();
     });
   });
 
-  function applyWordFilter() {
-    document.querySelectorAll("#wordlist .qs-word-row").forEach(function (row) {
-      var m = parseInt(row.getAttribute("data-mastery") || "0", 10);
-      var fav = row.getAttribute("data-favored") === "true";
-      var str = row.getAttribute("data-struggling") === "true";
-      var show = true;
-      if (wordFilter === "not_mastered") show = m < 5;
-      else if (wordFilter === "struggling") show = str;
-      else if (wordFilter === "favored") show = fav;
-      row.classList.toggle("hidden", !show);
-    });
-  }
-
-  document.getElementById("qs-select-all").addEventListener("click", function () {
-    var rows = document.querySelectorAll("#wordlist .qs-word-row:not(.hidden)");
-    var allOn =
-      rows.length > 0 &&
-      document.querySelectorAll("#wordlist .qs-word-row:not(.hidden).sel").length === rows.length;
-    rows.forEach(function (r) {
-      r.classList.toggle("sel", !allOn);
-    });
+  els.selectAll.addEventListener("click", function () {
+    state.wordIds = state.wordsMeta.map(function (w) { return w.id; });
+    saveState();
+    renderWordChips();
+    updateWordCount();
+  });
+  els.deselectAll.addEventListener("click", function () {
+    state.wordIds = [];
+    saveState();
+    renderWordChips();
     updateWordCount();
   });
 
-  document.getElementById("btn2").addEventListener("click", function () {
-    showStep(3);
-    updateStartButton();
-  });
-
-  document.querySelectorAll("[data-back]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var t = btn.getAttribute("data-back");
-      if (t === "1") showStep(1);
-      else showStep(2);
+  els.methods.forEach(function (m) {
+    m.addEventListener("click", function () {
+      state.method = m.getAttribute("data-method") || "";
+      saveState();
+      render();
     });
   });
 
-  document.querySelectorAll("[data-qt]").forEach(function (card) {
-    card.addEventListener("click", function () {
-      card.classList.toggle("sel");
-      updateStartButton();
+  els.batchPills.forEach(function (b) {
+    b.addEventListener("click", function () {
+      state.batch = b.getAttribute("data-batch") || "10";
+      saveState();
+      render();
     });
   });
 
-  document.querySelectorAll("[data-order]").forEach(function (p) {
-    p.addEventListener("click", function () {
-      document.querySelectorAll("[data-order]").forEach(function (x) {
-        x.classList.toggle("on", x === p);
-      });
-      orderVal = p.getAttribute("data-order") || "random";
-    });
-  });
-
-  function updateStartButton() {
-    var types = [];
-    var names = [];
-    document.querySelectorAll("[data-qt].sel").forEach(function (c) {
-      types.push(c.getAttribute("data-qt"));
-      var nm = c.querySelector(".qs-qt-name");
-      if (nm) names.push(nm.textContent.trim());
-    });
-    var btn = document.getElementById("btn3");
-    btn.disabled = types.length === 0;
-    if (types.length === 0) {
-      btn.textContent = "Start quiz →";
-      document.getElementById("qt-hint").textContent = "Select at least one quiz type";
-    } else {
-      var label =
-        "Start — " +
-        names.slice(0, 2).join(" + ") +
-        (names.length > 2 ? " +" + (names.length - 2) : "") +
-        " →";
-      btn.textContent = label;
-      document.getElementById("qt-hint").textContent =
-        types.length + " type" + (types.length > 1 ? "s" : "") + " selected";
+  els.next.addEventListener("click", function () {
+    els.step2Err.hidden = true;
+    els.step3Err.hidden = true;
+    if (state.step === 1) {
+      if (!state.topic) return;
+      setStep(2);
+      fetchWords();
+      return;
     }
+    if (state.step === 2) {
+      if (state.wordIds.length < 3) {
+        els.step2Err.hidden = false;
+        return;
+      }
+      setStep(3);
+      return;
+    }
+    if (state.step === 3) {
+      if (!state.method) {
+        els.step3Err.hidden = false;
+        return;
+      }
+      setStep(4);
+    }
+  });
+
+  els.back.addEventListener("click", function () {
+    if (state.step <= 1) return;
+    setStep(state.step - 1);
+    if (state.step === 2 && state.topic) fetchWords();
+  });
+
+  els.tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      var n = parseInt(tab.getAttribute("data-step"), 10);
+      if (isNaN(n)) return;
+      if (n > state.maxStep) return;
+      if (n === 2 && state.topic) fetchWords();
+      setStep(n);
+    });
+  });
+
+  els.start.addEventListener("click", function () {
+    var params = new URLSearchParams();
+    params.set("topic", state.topic);
+    params.set("words", state.wordIds.join(","));
+    params.set("quiz_types", state.method);
+    params.set("quiz_limit", state.batch === "all" ? "all" : state.batch);
+    window.location.href = SESSION_URL + "?" + params.toString();
+  });
+
+  if (els.reset) {
+    els.reset.addEventListener("click", function () {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch (e) {}
+      state = { v: 1, step: 1, topic: "", wordIds: [], method: "", batch: "10", maxStep: 1, wordsMeta: [] };
+      if (els.wordGrid) els.wordGrid.innerHTML = "";
+      render();
+    });
   }
 
-  document.getElementById("btn3").addEventListener("click", function () {
-    var ids = [];
-    document.querySelectorAll("#wordlist .qs-word-row.sel").forEach(function (r) {
-      ids.push(r.getAttribute("data-id"));
-    });
-    var types = [];
-    document.querySelectorAll("[data-qt].sel").forEach(function (c) {
-      types.push(c.getAttribute("data-qt"));
-    });
-    if (ids.length < 4 || types.length === 0) return;
-    var baseSource = presetWords ? flashPickUrl : indexUrl;
-    var base = baseSource.split("#")[0].replace(/\?$/, "");
-    var sep = base.indexOf("?") >= 0 ? "&" : "?";
-    var q;
-    if (presetWords) {
-      q =
-        sep +
-        "words=" +
-        encodeURIComponent(ids.join(",")) +
-        "&panel=quiz" +
-        "&quiz_types=" +
-        encodeURIComponent(types.join(",")) +
-        "&quiz_order=" +
-        encodeURIComponent(orderVal);
-    } else {
-      q =
-        sep +
-        "topic=" +
-        encodeURIComponent(selTopic) +
-        (selDeckPk ? "&deck=" + encodeURIComponent(selDeckPk) : "") +
-        "&panel=quiz" +
-        "&quiz_words=" +
-        encodeURIComponent(ids.join(",")) +
-        "&quiz_types=" +
-        encodeURIComponent(types.join(",")) +
-        "&quiz_order=" +
-        encodeURIComponent(orderVal);
-    }
-    window.location.href = base + q + "#flashcard";
+  document.addEventListener("click", function (e) {
+    var d = document.querySelector(".qq-menu");
+    if (d && d.open && !d.contains(e.target)) d.open = false;
   });
 
-  if (presetWords) {
-    selTopic = "environment";
-    selDeckPk = "";
-    showStep(2);
-    loadWordsFromPreset(presetWords);
-  }
+  loadState();
+  if (state.topic && state.step >= 2) fetchWords().then(function () {
+    renderWordChips();
+    state.wordIds.forEach(function (id) {
+      var btn = els.wordGrid.querySelector('[data-id="' + id + '"]');
+      if (btn) btn.classList.add("is-on");
+    });
+    updateWordCount();
+  });
+  render();
 })();
 </script>
 {% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Task 1 Feedback{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  {% include "writing/_task1_topbar.html" %}
+  <section class="wt1-wrap">
+    <div class="wt1-fb-head">
+      <div>
+        <p class="wt1-label wt1-label--tight">{{ type_meta.name|upper }} · {{ question.title|upper }}</p>
+        <h1 class="wt1-title wt1-title--list">AI Feedback</h1>
+      </div>
+      <div class="wt1-actions wt1-actions--top">
+        <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task1_question_page' type_slug question.id %}">Try again</a>
+        <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">More questions</a>
+      </div>
+    </div>
+
+    <div class="wt1-score-card wt1-score-card--rich">
+      <p class="wt1-label wt1-label--tight">Estimated Band Score</p>
+      <div class="wt1-score">Band {{ feedback.band_score|default:6|floatformat:1 }}</div>
+      <div class="wt1-crit-tabs" id="wt1-crit-tabs">
+        {% for c in criteria %}
+        <button type="button" class="wt1-crit-tab{% if c.key == weakest_key %} is-active{% endif %}" data-criterion="{{ c.key }}">
+          <span class="dot" style="background:{{ c.color }}"></span>{{ c.label }}
+        </button>
+        {% endfor %}
+      </div>
+      <div class="wt1-crit-panel" id="wt1-crit-panel"></div>
+      <p class="wt1-score-summary">
+        Your weakest area is <strong class="wt1-amber">{{ weakest_label }} ({{ weakest_score|floatformat:1 }})</strong>.
+        Recommendations below are personalised to help you improve your vocabulary score.
+      </p>
+    </div>
+
+    <div class="wt1-card wt1-ann-card">
+      <p class="wt1-label wt1-label--tight">Your response — marked by AI</p>
+      <div class="wt1-ann-legend">
+        <span><i class="ann-good">Good</i> Well written</span>
+        <span><i class="ann-err">Error</i> Grammar mistake</span>
+        <span><i class="ann-imp">Improve</i> Stronger word available</span>
+      </div>
+      <div class="wt1-ann-text" id="wt1-annotated-text"></div>
+      <div class="wt1-corrections" id="wt1-corrections"></div>
+      <div class="wt1-meta-pills">
+        <span>{{ attempt.word_count }} words</span>
+        <span>{{ time_used_mmss }} min used</span>
+        <span class="is-red">{{ ann_error_count }} errors</span>
+        <span class="is-amber">{{ ann_improve_count }} improvements</span>
+      </div>
+    </div>
+
+    <div class="wt1-card">
+      <p class="wt1-label wt1-label--tight">Criteria breakdown — tap each to expand</p>
+      <div class="wt1-accordion" id="wt1-accordion">
+        {% for c in criteria %}
+        <div class="wt1-ac-row{% if c.key == weakest_key %} is-open{% endif %}" data-key="{{ c.key }}">
+          <button type="button" class="wt1-ac-head">
+            <span class="dot" style="background:{{ c.color }}"></span>
+            <strong>{{ c.label }}</strong>
+            {% if c.key == weakest_key %}<span class="wt1-weak-badge">Weakest ↓</span>{% endif %}
+            <span class="wt1-ac-score" style="color:{{ c.color }}">{{ c.score|floatformat:1 }}<small>{{ c.status }}</small></span>
+            <span class="wt1-ac-arrow">▾</span>
+          </button>
+          <div class="wt1-ac-body">
+            <div class="wt1-scoreline"><span class="fill" style="width:{% widthratio c.score 9 100 %}%;background:{{ c.color }}"></span></div>
+            <div class="wt1-band-labels"><span>Band 1</span><span>Band 9</span></div>
+            <p class="wt1-sub">{{ feedback.summary }}</p>
+            <div class="wt1-ann-text" data-excerpt="{{ c.key }}"></div>
+            {% if c.key == 'lexical_resource' %}
+            <div class="wt1-quickfixes">
+              {% for q in feedback.lexical_quickfixes %}
+              <span>{{ q }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div class="wt1-checks">
+              {% for chk in c.checks %}
+              <div class="wt1-check wt1-check--{{ chk.type }}">
+                <strong>{{ chk.title }}</strong>
+                <p>{{ chk.detail }}</p>
+              </div>
+              {% endfor %}
+            </div>
+            <p class="wt1-target" style="background:{{ c.tag_bg }}">{{ c.target }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="wt1-grid-2">
+      <div class="wt1-fb-card wt1-fb-card--good">
+        <h3>✓ What you did well</h3>
+        <ul>{% for item in feedback.did_well %}<li>{{ item }}</li>{% endfor %}</ul>
+      </div>
+      <div class="wt1-fb-card wt1-fb-card--improve">
+        <h3>⚠ What to improve</h3>
+        <ul>{% for item in feedback.improve %}<li>{{ item }}</li>{% endfor %}</ul>
+      </div>
+    </div>
+
+    <div class="wt1-fb-card wt1-fb-card--lang">
+      <h3>💬 Language suggestions</h3>
+      <ul>{% for item in feedback.language_suggestions %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+
+    <div class="wt1-model">
+      <p class="wt1-label wt1-label--tight">Model answer (Band 7)</p>
+      <p><em>{{ feedback.model_answer }}</em></p>
+    </div>
+
+    <div class="wt1-card wt1-next-card">
+      <div class="wt1-next-head">
+        <div class="icon">📚</div>
+        <div>
+          <h3>What to learn next</h3>
+          <p>Personalised to your weakest area: <strong class="wt1-amber">{{ weakest_label }} (Band {{ weakest_score|floatformat:1 }})</strong></p>
+        </div>
+      </div>
+      <div class="wt1-next-why">
+        <p>Your response needs more precision in {{ weakest_label|lower }} for Band 7.</p>
+        <ul>{% for q in feedback.lexical_quickfixes %}<li>↗ {{ q }}</li>{% endfor %}</ul>
+      </div>
+      <div class="wt1-tabs">
+        <button class="wt1-tab is-on" data-tab="vocab">Vocabulary</button>
+        <button class="wt1-tab" data-tab="phrases">Phrases</button>
+        <button class="wt1-tab" data-tab="resources">Resources</button>
+      </div>
+      <div class="wt1-tab-panels">
+        <div class="wt1-tab-panel is-on" data-panel="vocab">
+          <div id="wt1-next-vocab"></div>
+        </div>
+        <div class="wt1-tab-panel" data-panel="phrases">
+          <div class="wt1-phrase-grid">
+            <div>Overview: Overall, it is clear that...</div>
+            <div>Peak: The highest figure was recorded for...</div>
+            <div>Comparison: By contrast, ... was significantly higher than ...</div>
+            <div>Feature: A striking feature is that...</div>
+            <div>Reporting verbs: illustrates · indicates · reveals · demonstrates</div>
+          </div>
+        </div>
+        <div class="wt1-tab-panel" data-panel="resources">
+          <a href="/vocabulary/" class="wt1-resource-row"><span>📘</span><div><strong>Vocabulary flashcards</strong><p>Build precise Task 1 word families</p></div><b>Go →</b></a>
+          <a href="/vocabulary/type-it/" class="wt1-resource-row"><span>🎯</span><div><strong>Type it</strong><p>Practise active recall for academic vocabulary</p></div><b>Go →</b></a>
+          <a href="/reading/" class="wt1-resource-row"><span>📖</span><div><strong>Reading</strong><p>Improve data interpretation and summarising</p></div><b>Go →</b></a>
+          <a href="{% url 'writing:task1_question_page' type_slug question.id %}" class="wt1-resource-row"><span>✍️</span><div><strong>Try this question again</strong><p>Re-attempt with the feedback applied</p></div><b>Go →</b></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="wt1-actions">
+      <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task1_question_page' type_slug question.id %}">Try again</a>
+      <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1_question_list' type_slug %}">Next question →</a>
+    </div>
+  </section>
+</div>
+{{ feedback|json_script:"wt1-feedback-json" }}
+{{ criteria|json_script:"wt1-criteria-json" }}
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+{% endblock %}

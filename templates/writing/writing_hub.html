@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Writing{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  <section class="wt1-wrap">
+    <h1 class="wt1-title wt1-title--hero">Writing</h1>
+    <p class="wt1-sub">Task 1 and Task 2 practice with AI feedback. Build accuracy first — band scores follow.</p>
+
+    <div class="wr-grid-2">
+      <article class="wr-practice-card wr-practice-card--t1">
+        <span class="wr-badge">TASK 1</span>
+        <h3>Academic Task 1</h3>
+        <p>Summarise visual information clearly: overview + key features + comparisons.</p>
+        <div class="wr-meta">20 minutes · at least 150 words · 6 question types</div>
+        <div class="wr-bottom">
+          <div><small>Your best</small><strong>{% if task1_best %}Band {{ task1_best|floatformat:1 }}{% else %}Not started{% endif %}</strong></div>
+          <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">Start Task 1 →</a>
+        </div>
+      </article>
+      <article class="wr-practice-card wr-practice-card--t2">
+        <span class="wr-badge wr-badge--t2">TASK 2</span>
+        <h3>Academic Task 2</h3>
+        <p>Write a focused essay with a clear position, developed paragraphs, and precise language.</p>
+        <div class="wr-meta">40 minutes · at least 250 words · 5 essay types</div>
+        <div class="wr-bottom">
+          <div><small>Your best</small><strong>{% if task2_best %}Band {{ task2_best|floatformat:1 }}{% else %}Not started{% endif %}</strong></div>
+          <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task2' %}">Start Task 2 →</a>
+        </div>
+      </article>
+    </div>
+
+    <p class="wt1-label">Learn & improve</p>
+    <div class="wr-grid-2">
+      <a class="wr-learn-card" href="{% url 'writing:lessons_hub' %}">
+        <div class="wr-ic wr-ic--purple">📖</div>
+        <div class="wr-body"><h4>Writing Lessons</h4><p>How to write each question type</p></div>
+        <div class="wr-progress">{{ lesson_done }} / {{ lesson_total }} lessons done<div class="bar"><span style="width:{% widthratio lesson_done lesson_total 100 %}%"></span></div></div>
+      </a>
+      <a class="wr-learn-card" href="{% url 'writing:skills_hub' %}">
+        <div class="wr-ic wr-ic--green">✏️</div>
+        <div class="wr-body"><h4>Writing Skills</h4><p>Vocabulary · Grammar · Phrases · Practice</p></div>
+        <div class="wr-progress">{{ skill_done }} / {{ skill_total }} skills done<div class="bar"><span style="width:{% widthratio skill_done skill_total 100 %}%"></span></div></div>
+      </a>
+    </div>
+
+    <a class="wr-para-row" href="{% url 'writing:paraphrase' %}">
+      <span class="wr-ic wr-ic--dark">✍️</span>
+      <div><h4>Paraphrase practice</h4><p>Train lexical flexibility — the hidden engine behind high Writing and Reading scores.</p></div>
+      <span class="wt1-btn wt1-btn--green">Practice</span>
+    </a>
+
+    <p class="wt1-label">Recent history</p>
+    <div class="wr-history">
+      {% for r in recent_attempts %}
+      <div class="wr-h-row">
+        <div class="wr-band">{{ r.score|floatformat:1 }}</div>
+        <div class="wr-h-main">
+          <strong>{{ r.task }} · {{ r.title }} · {{ r.word_count }} words</strong>
+          <p>{{ r.when|date:"M j, Y · H:i" }}</p>
+        </div>
+        <a href="{{ r.feedback_url }}">View feedback</a>
+      </div>
+      {% empty %}
+      <div class="wr-h-row"><div class="wr-band">—</div><div class="wr-h-main"><strong>No attempts yet</strong><p>Complete a task to see your history.</p></div></div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

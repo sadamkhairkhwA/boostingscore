@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Flashcard session — Boosting Score{% endblock %}
+{% block body_class %}{% if not empty and not done %}bs-page-flashcard{% endif %}{% endblock %}
+{% block main_class %}{% if not empty and not done %}bs-main-flashcard{% endif %}{% endblock %}
+{% block content %}
+{% if empty %}
+<div class="bs-page">
+  <div class="bs-empty">
+    <div class="bs-empty-icon">📭</div>
+    <div class="bs-empty-title">No words in this deck</div>
+    <div class="bs-empty-sub">Pick another topic/level, or add words from the word bank.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <a class="bs-btn-primary" href="{% url 'vocabulary:index' %}">Back to topics</a>
+      {% if topic_href %}
+      <a class="bs-btn-dark" href="{{ topic_href }}">Open this topic</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="bs-fc-page">
+<div class="bs-fc-shell" id="fc-shell">
+  <header class="bs-fc-head">
+    <div class="bs-fc-head-top">
+      <span class="bs-fc-head-eyebrow">Study session</span>
+      <div class="bs-fc-meta">
+        <span class="bs-fc-meta-n" id="fc-meta-n">Progress 0 / {{ total }} · {{ total }} left</span>
+        <span class="bs-fc-meta-pct" id="fc-meta-pct">0%</span>
+      </div>
+    </div>
+    <div class="bs-fc-bar" aria-hidden="true"><div class="bs-fc-bar-fill" id="fc-bar-fill" style="width:0%;"></div></div>
+  </header>
+
+  <div class="bs-fc-desk">
+    <div class="bs-fc-card-wrap">
+      <div class="bs-fc-card" id="fcard" role="button" tabindex="0" aria-label="Flashcard. Space to flip.">
+      <div class="bs-fc-face bs-fc-front">
+        <div class="bs-fc-tags">
+          <span class="bs-fc-tag bs-fc-tag-pos" id="fc-tag-pos">word</span>
+          <span class="bs-fc-tag bs-fc-tag-lvl" id="fc-tag-lvl">Level</span>
+          <span class="bs-fc-tag bs-fc-tag-topic" id="fc-tag-topic">Topic</span>
+        </div>
+        <div class="bs-fc-word" id="fc-word"> </div>
+        <div class="bs-fc-phon" id="fc-phon"></div>
+        <div class="bs-fc-dots">
+          {% for _ in "12345" %}
+          <span class="bs-fc-dot"></span>
+          {% endfor %}
+        </div>
+        <div class="bs-fc-stage" id="fc-stage"> </div>
+        <div class="bs-fc-hint">Space or click to flip · ← Hard · → Easy · Enter next</div>
+      </div>
+      <div class="bs-fc-face bs-fc-back">
+        <div class="bs-fc-tags">
+          <span class="bs-fc-tag bs-fc-tag-pos">Definition</span>
+        </div>
+        <div class="bs-fc-def" id="fc-def"></div>
+        <div class="bs-fc-ex-lbl">Example</div>
+        <div class="bs-fc-ex" id="fc-ex"></div>
+        <div class="bs-fc-hint" style="margin-top:16px;">Click or Space to see the word again</div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="bs-fc-panel" aria-label="Rating and navigation">
+    <div class="bs-fc-toolbar">
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="bs-fc-icon-btn" id="fc-expand" title="Expand">⛶</button>
+        <button type="button" class="bs-fc-icon-btn" id="fc-shuffle" title="Shuffle deck order">🔀</button>
+      </div>
+      <button type="button" class="bs-fc-save" id="fc-save">✓ Save progress</button>
+      <a href="{% url 'vocabulary:index' %}" class="bs-fc-icon-btn" title="Deck settings">⚙</a>
+    </div>
+
+    {% csrf_token %}
+    <div class="bs-fc-actions">
+      <button type="button" class="bs-fc-btn-hard" id="fc-btn-hard">Hard — review again</button>
+      <button type="button" class="bs-fc-btn-flip" id="fc-flip-btn">Flip card</button>
+      <button type="button" class="bs-fc-btn-easy" id="fc-btn-easy">Easy — got it</button>
+    </div>
+
+    <p class="bs-fc-kb-hint">Shortcuts: <kbd>Space</kbd> flip · <kbd>←</kbd> Hard · <kbd>→</kbd> Easy · <kbd>Enter</kbd> next card</p>
+
+    <div class="bs-fc-stats">
+      <div class="bs-fc-stat bs-fc-stat-easy">
+        <div class="bs-fc-stat-k" id="stat-easy">0</div>
+        <div class="bs-fc-stat-l">Easy</div>
+      </div>
+      <div class="bs-fc-stat bs-fc-stat-hard">
+        <div class="bs-fc-stat-k" id="stat-hard">0</div>
+        <div class="bs-fc-stat-l">Hard</div>
+      </div>
+      <div class="bs-fc-stat bs-fc-stat-rev">
+        <div class="bs-fc-stat-k" id="stat-reviewed">0</div>
+        <div class="bs-fc-stat-l">Reviewed</div>
+      </div>
+      <div class="bs-fc-stat bs-fc-stat-acc">
+        <div class="bs-fc-stat-k" id="stat-acc">—</div>
+        <div class="bs-fc-stat-l">Accuracy</div>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
+
+<div id="fc-celebration" class="bs-fc-celebration" hidden>
+  <canvas id="fc-confetti-canvas" class="bs-fc-confetti-canvas" aria-hidden="true"></canvas>
+  <div class="bs-fc-celebration-card">
+    <div class="bs-fc-celebration-trophy" aria-hidden="true">🏆</div>
+    <h2 class="bs-fc-celebration-title">Session complete!</h2>
+    <p class="bs-fc-celebration-acc" id="fc-cele-acc"></p>
+    <div class="bs-fc-celebration-review">
+      <h3 class="bs-fc-celebration-sub">Words you marked Hard at least once</h3>
+      <ul class="bs-fc-celebration-list" id="fc-cele-review-list"></ul>
+    </div>
+    <a class="bs-btn-primary bs-fc-celebration-cta" id="fc-study-again" href="{{ study_again_url }}">Study again</a>
+    <a class="bs-fc-celebration-back" href="{% url 'vocabulary:home' %}">Back to vocabulary</a>
+  </div>
+</div>
+
+{{ deck_words|json_script:"fc-deck-data" }}
+{{ mastery_labels|json_script:"fc-mastery-data" }}
+<script>
+window.FC_SESSION = {
+  rateUrl: "{{ flashcard_rate_url|escapejs }}",
+  savePendingUrl: "{{ flashcard_save_pending_url|escapejs }}",
+  statKey: "{{ stat_storage_key|escapejs }}",
+  initialShuffle: {{ initial_shuffle|yesno:"true,false" }}
+};
+</script>
+<script src="{% static 'js/flashcard_session.js' %}"></script>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+{% endblock %}

@@ -1,174 +1,57 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
-{% block title %}Writing — BoostingScore{% endblock %}
-
+{% block title %}Writing — Boosting Score{% endblock %}
 {% block content %}
+<div class="bs-page">
+  <h1 class="bs-page-title">Writing</h1>
+  <p class="bs-page-sub">Task 1 and Task 2 practice with AI feedback. Build accuracy first — band scores follow.</p>
 
-<div class="bs-hero">
-  <div class="bs-hero-orb-1"></div>
-  <div class="bs-hero-orb-2"></div>
-  <div class="bs-hero-inner">
-    <div class="bs-hero-label">Writing</div>
-    <h1 class="bs-hero-title">
-      IELTS Writing Practice
-    </h1>
-    <p class="bs-hero-sub">
-      Real IELTS tasks · AI scores your writing ·
-      Pick question style and feedback level
-    </p>
-    <div class="bs-hero-stats">
-      <div class="bs-hero-stat">
-        <span class="bs-hero-stat-val">
-          {{ latest_band|default:"—" }}
-        </span>
-        <span class="bs-hero-stat-lbl">Latest band</span>
-      </div>
-      <div class="bs-hero-stat">
-        <span class="bs-hero-stat-val">
-          {{ essays_count|default:0 }}
-        </span>
-        <span class="bs-hero-stat-lbl">
-          Essays written
-        </span>
-      </div>
-      <div class="bs-hero-stat">
-        <span class="bs-hero-stat-val">
-          {{ streak|default:0 }}
-        </span>
-        <span class="bs-hero-stat-lbl">Day streak</span>
+  <div class="bs-tasks">
+    <a class="bs-task" href="{% url 'writing:task1' %}" style="border-top:4px solid #3B6D11;">
+      <span class="bs-task-tag" style="background:#EAF3DE;color:#27500A;">Task 1</span>
+      <div class="bs-task-title">Academic Task 1</div>
+      <div class="bs-task-desc">Summarise visual information clearly: overview + key features + comparisons.</div>
+      <div class="bs-task-meta">Recommended: 20 minutes · at least 150 words</div>
+      <span class="bs-btn-dark" style="display:inline-block;padding:8px 12px;font-size:12px;">Start Task 1 →</span>
+    </a>
+    <a class="bs-task" href="{% url 'writing:task2' %}" style="border-top:4px solid #111827;">
+      <span class="bs-task-tag" style="background:#F3F4F6;color:#111827;">Task 2</span>
+      <div class="bs-task-title">Academic Task 2</div>
+      <div class="bs-task-desc">Write a focused essay with a clear position, developed paragraphs, and precise language.</div>
+      <div class="bs-task-meta">Recommended: 40 minutes · at least 250 words</div>
+      <span class="bs-btn-dark" style="display:inline-block;padding:8px 12px;font-size:12px;">Start Task 2 →</span>
+    </a>
+  </div>
+
+  <a class="bs-para" href="{% url 'writing:paraphrase' %}">
+    <div class="bs-para-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    </div>
+    <div class="bs-para-body">
+      <div class="bs-para-title">Paraphrase practice</div>
+      <div class="bs-para-sub">Train lexical flexibility — the hidden engine behind high Writing and Reading scores.</div>
+    </div>
+    <span class="bs-para-btn">Practice</span>
+  </a>
+
+  <p class="bs-sec-lbl">History</p>
+  {% if essays %}
+    {% for e in essays %}
+    <div class="bs-hist" style="cursor:default;">
+      <div class="bs-hist-band" style="background:#3B6D11;">{{ e.band_score|default:"—" }}</div>
+      <div class="bs-hist-body">
+        <div class="bs-hist-title">Task {{ e.task_type }} · {{ e.word_count }} words</div>
+        <div class="bs-hist-meta">{{ e.created_at|date:"M j, Y · H:i" }}</div>
       </div>
     </div>
+    {% endfor %}
+  {% else %}
+  <div class="bs-empty">
+    <div class="bs-empty-icon">✍️</div>
+    <div class="bs-empty-title">No essays yet</div>
+    <div class="bs-empty-sub">Submit Task 1 or Task 2 to generate band estimates and structured feedback.</div>
+    <a class="bs-btn-primary" href="{% url 'writing:task2' %}">Start with Task 2</a>
   </div>
+  {% endif %}
 </div>
-
-<div class="bs-page-body">
-
-  <div class="bs-section-label">Choose Your Task</div>
-
-  <div class="bs-tasks-grid">
-
-    <a href="{% url 'writing:task1' %}"
-       class="bs-task-card">
-      <span class="bs-task-label"
-            style="color:#3B6D11">
-        Task 1 · Academic
-      </span>
-      <div class="bs-task-title"
-           style="color:#111827">
-        IELTS Writing Task 1
-      </div>
-      <div class="bs-task-desc"
-           style="color:#6B7280">
-        Summarise and describe visual information —
-        graph, table, chart, diagram, map, or process
-        — in your own words.
-      </div>
-      <span class="bs-task-meta"
-            style="color:#3B6D11">
-        At least 150 words · ~20 minutes
-      </span>
-      <span class="bs-task-btn"
-            style="background:#3B6D11;color:#fff">
-        Start Task 1 →
-      </span>
-    </a>
-
-    <a href="{% url 'writing:task2' %}"
-       class="bs-task-card dark">
-      <span class="bs-task-label"
-            style="color:#6B7280">
-        Task 2 · Essay
-      </span>
-      <div class="bs-task-title"
-           style="color:#fff">
-        IELTS Writing Task 2
-      </div>
-      <div class="bs-task-desc"
-           style="color:#9CA3AF">
-        Write a formal essay in response to a point
-        of view, argument, or problem. Scored on task
-        response, coherence, vocabulary, and grammar.
-      </div>
-      <span class="bs-task-meta"
-            style="color:#6B7280">
-        At least 250 words · ~40 minutes
-      </span>
-      <span class="bs-task-btn"
-            style="background:transparent;
-                   color:#fff;
-                   border:1.5px solid
-                   rgba(255,255,255,0.25)">
-        Start Task 2 →
-      </span>
-    </a>
-
-  </div>
-
-  <div class="bs-paraphrase-card">
-    <div class="bs-paraphrase-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24"
-      fill="none" stroke="#3B6D11" stroke-width="2">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14
-               a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3
-               L12 15l-4 1 1-4 9.5-9.5z"/>
-      </svg>
-    </div>
-    <div class="bs-paraphrase-body">
-      <div class="bs-paraphrase-title">
-        Paraphrase practice
-      </div>
-      <div class="bs-paraphrase-desc">
-        Shorter practice — rewrite an AI paragraph
-        in your own words with level-matched feedback.
-      </div>
-    </div>
-    <a href="{% url 'writing:paraphrase' %}"
-       class="bs-paraphrase-link">
-      Open →
-    </a>
-  </div>
-
-  <div class="bs-section-label">Writing History</div>
-
-  <div class="bs-card">
-    <div class="bs-card-header">
-      <span class="bs-card-header-title">
-        Recent essays
-      </span>
-      <a href="{% url 'writing:home' %}" class="bs-card-header-link">
-        See all →
-      </a>
-    </div>
-
-    {% if writing_history %}
-      {% for essay in writing_history %}
-      <div class="bs-history-row">
-        <div class="bs-band-circle">
-          {{ essay.band_score }}
-        </div>
-        <div class="bs-history-body">
-          <div class="bs-history-title">
-            {{ essay.task_type }} —
-            {{ essay.question_type }}
-          </div>
-          <div class="bs-history-meta">
-            Band {{ essay.band_score }} ·
-            {{ essay.created_at|date:"M j, Y" }} ·
-            {{ essay.drafts }} draft{% if essay.drafts != 1 %}s{% endif %}
-          </div>
-        </div>
-        <span class="bs-history-arrow">›</span>
-      </div>
-      {% endfor %}
-    {% else %}
-      <div class="bs-empty">
-        Write your first essay to see your
-        history here.
-      </div>
-    {% endif %}
-  </div>
-
-</div>
-
 {% endblock %}

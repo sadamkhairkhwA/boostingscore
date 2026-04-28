@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ skill.title }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  <section class="wt1-wrap">
+    <a class="wt1-back" href="{% url 'writing:skills_hub' %}">← All skills</a>
+    <div class="wt1-card">
+      <h1 class="wt1-title wt1-title--list">✏️ {{ skill.title }}</h1>
+      <p class="wt1-sub">{{ skill.desc }}</p>
+      {% if from_feedback %}
+      <div class="wr-rec"><strong>🔗 Linked from your feedback</strong><p>This skill is recommended for {{ criterion }} based on your recent submission.</p></div>
+      {% endif %}
+      <div class="wr-tabs"><button class="wt1-btn wt1-btn--dark" type="button" data-skill-tab="learn">Learn</button><button class="wt1-btn wt1-btn--outline" type="button" data-skill-tab="practice">Practise</button><button class="wt1-btn wt1-btn--outline" type="button" data-skill-tab="examples">Examples</button></div>
+      <div id="skill-learn"><p>Rules and explanations for {{ skill.title }}. Keep output concise and accurate.</p></div>
+      <div id="skill-practice" class="ti-hidden"><p>Gap fill, error correction, rewriting, and multiple choice interactions.</p><textarea class="wt1-textarea" placeholder="Rewrite the weak sentence..."></textarea></div>
+      <div id="skill-examples" class="ti-hidden"><p>Band 7 examples:</p><ul><li>Example 1 for this skill.</li><li>Example 2 with stronger lexical control.</li><li>Example 3 with clear coherence.</li></ul></div>
+      <form method="post">{% csrf_token %}<input type="hidden" name="mark_done" value="1"><button class="wt1-btn wt1-btn--green" type="submit">Mark skill done</button></form>
+      <div class="wt1-actions"><a class="wt1-btn wt1-btn--outline" href="{% url 'writing:skills_hub' %}">← All skills</a><a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">Practise in Task →</a></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+  const ids = ["learn","practice","examples"];
+  document.querySelectorAll("[data-skill-tab]").forEach(btn => btn.addEventListener("click", () => {
+    const tab = btn.dataset.skillTab;
+    ids.forEach(id => document.getElementById("skill-" + id).classList.toggle("ti-hidden", id !== tab));
+  }));
+})();
+</script>
+{% endblock %}

@@ -1,94 +1,63 @@
 from django.contrib import admin
 
-from .models import CustomCard, CustomDeck, VocabFavorite, VocabularyProgress, Word
+from .models import (
+    TypeItAttempt,
+    CustomCard,
+    CustomDeck,
+    CustomDeckWord,
+    TopicIELTSWordCache,
+    TypeItResult,
+    UserProfile,
+    VocabularyProgress,
+    Word,
+)
 
 
-@admin.register(CustomDeck)
-class CustomDeckAdmin(admin.ModelAdmin):
-    list_display = ("name", "student", "created_at", "card_count")
-    list_filter = ("created_at",)
-    search_fields = ("name", "student__username")
-    raw_id_fields = ("student",)
-    ordering = ("-created_at",)
-
-    @admin.display(description="Cards")
-    def card_count(self, obj: CustomDeck) -> int:
-        return obj.cards.count()
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "level", "streak", "best_streak", "placement_completed")
 
 
-@admin.register(CustomCard)
-class CustomCardAdmin(admin.ModelAdmin):
-    list_display = (
-        "word",
-        "student",
-        "deck",
-        "topic",
-        "level",
-        "part_of_speech",
-        "is_mastered",
-        "has_definition_image",
-        "review_count",
-        "next_review_at",
-        "created_at",
-    )
-    list_filter = ("topic", "level", "is_mastered")
-    search_fields = ("word", "definition", "student__username")
-    raw_id_fields = ("student", "deck")
-    ordering = ("-created_at",)
-
-    @admin.display(description="Image", boolean=True)
-    def has_definition_image(self, obj: CustomCard) -> bool:
-        return bool(obj.definition_image)
-
-
-@admin.register(VocabularyProgress)
-class VocabularyProgressAdmin(admin.ModelAdmin):
-    list_display = (
-        "student",
-        "word",
-        "custom_card",
-        "mastery_level",
-        "times_seen",
-        "times_correct",
-        "times_marked_hard",
-        "sessions_seen",
-        "last_session_date",
-    )
-    list_filter = ("mastery_level", "last_session_date")
-    raw_id_fields = ("student", "word", "custom_card")
-    search_fields = ("word__word", "custom_card__word", "student__username")
-    ordering = ("-last_reviewed",)
-
-
-@admin.register(VocabFavorite)
-class VocabFavoriteAdmin(admin.ModelAdmin):
-    list_display = ("user", "word", "custom_card", "created_at")
-    list_filter = ("created_at",)
-    raw_id_fields = ("user", "word", "custom_card")
-    ordering = ("-created_at",)
+@admin.register(TopicIELTSWordCache)
+class TopicIELTSWordCacheAdmin(admin.ModelAdmin):
+    list_display = ("topic", "status", "updated_at")
+    list_filter = ("status",)
 
 
 @admin.register(Word)
 class WordAdmin(admin.ModelAdmin):
-    list_display = (
-        "word",
-        "topic",
-        "level",
-        "part_of_speech",
-        "has_definition_image",
-        "definition_preview",
-    )
+    list_display = ("word", "topic", "level", "topic_pack_id")
     list_filter = ("topic", "level")
-    search_fields = ("word", "definition", "example_sentence", "part_of_speech")
-    ordering = ("topic", "level", "word")
+    search_fields = ("word", "definition")
 
-    @admin.display(description="Image", boolean=True)
-    def has_definition_image(self, obj: Word) -> bool:
-        return bool(obj.definition_image)
 
-    @admin.display(description="Definition")
-    def definition_preview(self, obj: Word) -> str:
-        text = (obj.definition or "").strip()
-        if len(text) > 60:
-            return text[:57] + "…"
-        return text or "—"
+@admin.register(VocabularyProgress)
+class VocabularyProgressAdmin(admin.ModelAdmin):
+    list_display = ("student", "word", "mastery_level", "next_review", "is_favored")
+    list_filter = ("mastery_level", "is_favored")
+
+
+@admin.register(TypeItResult)
+class TypeItResultAdmin(admin.ModelAdmin):
+    list_display = ("student", "band_score", "created_at")
+
+
+@admin.register(TypeItAttempt)
+class TypeItAttemptAdmin(admin.ModelAdmin):
+    list_display = ("student", "word", "deck_slug", "mode", "total_score", "assisted", "created_at")
+    list_filter = ("deck_slug", "assisted")
+
+
+@admin.register(CustomDeck)
+class CustomDeckAdmin(admin.ModelAdmin):
+    list_display = ("name", "student", "created_at")
+
+
+@admin.register(CustomCard)
+class CustomCardAdmin(admin.ModelAdmin):
+    list_display = ("word", "deck", "student")
+
+
+@admin.register(CustomDeckWord)
+class CustomDeckWordAdmin(admin.ModelAdmin):
+    list_display = ("word", "deck", "created_at")

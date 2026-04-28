@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Type it session — {{ session_payload.deck.title }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vocabulary/css/type_it_full.css' %}?v=5">
+{% endblock %}
+{% block content %}
+<div id="ti-session-app" class="bs-page ti-full ti-session-flow">
+  <div id="ti-session-nav">
+    <header class="ti-s-head">
+      <a class="ti-back-link ti-back-link--muted" id="ti-change-words" href="{{ session_payload.deck.words_url }}">← Change words</a>
+      <a class="ti-back-link ti-back-link--muted" href="{{ session_payload.deck.decks_url }}">← Back to decks</a>
+    </header>
+    <div class="ti-steps2" id="ti-steps-bar" aria-label="Session progress"></div>
+    <p class="ti-word-counter" id="ti-word-counter"></p>
+    <div class="ti-pills-wrap" id="ti-pills-wrap">
+      <div class="ti-pills-scroll" id="ti-pills" role="tablist" aria-label="Words in session"></div>
+    </div>
+  </div>
+
+  <section id="ti-stage-study"></section>
+  <section id="ti-stage-test" class="ti-hidden"></section>
+  <section id="ti-stage-feedback" class="ti-hidden"></section>
+  <section id="ti-stage-summary" class="ti-hidden"></section>
+</div>
+
+{{ session_payload|json_script:"ti-session-payload" }}
+<script src="{% static 'vocabulary/js/type_it_session_flow.js' %}?v=9" defer></script>
+{% endblock %}

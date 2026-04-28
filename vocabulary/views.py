@@ -1,2824 +1,1917 @@
-import base64
-import binascii
+import hashlib
+import httpx
 import json
 import logging
-import math
-import uuid
+import os
+import random
+import re
 from datetime import timedelta
-from typing import Set, Tuple
-from urllib.parse import quote
+from urllib.parse import urlencode
 
-from django.contrib import messages
-from django.core.files.base import ContentFile
+from django.conf import settings
+from django.db.models import Count, Q
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
-from django.db.models import Avg, Q
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_POST
+from openai import OpenAI
 
-from boostingscore.context_processors import study_streak
-from boostingscore.models import UserProfile
+from boostingscore.openai_key import resolve_openai_api_key
 
-from writing.models import WordBankEntry
-
-from .ai_deck import MAX_CARDS, generate_flashcard_set
-from .ai_fill import (
-    check_type_practice,
-    evaluate_type_it_session,
-    generate_definition_and_example,
+from .ielts_topic_ai import sync_tier_words_to_db
+from .topic_words import TOPIC_WORDS
+from .models import (
+    CustomCard,
+    CustomDeck,
+    CustomDeckWord,
+    TopicIELTSWordCache,
+    TypeItAttempt,
+    TypeItResult,
+    VocabularyProgress,
+    Word,
 )
-from .ai_image import generate_illustration_png_bytes
-from .forms import CustomCardForm
-from .models import CustomCard, CustomDeck, TypeItResult, VocabFavorite, VocabularyProgress, Word
-from .progress_service import (
-    build_struggling_deck_payload,
-    custom_decks_for_studio,
-    end_session_for_keys,
-    get_struggling_banner,
-    mastery_map_for_student,
-    record_flashcard_rating,
-    record_type_example_success,
-    times_marked_hard_map_for_student,
-    topic_decks_for_studio,
-    TOPIC_DECK_EMOJI,
-    word_is_due_for_flash_review,
+from .type_it_enrichment import (
+    deck_title,
+    enrich_word,
+    ordered_words_for_deck,
+    parse_deck_slug,
 )
+from .streak_utils import bump_streak_for_user
 
 logger = logging.getLogger(__name__)
 
-SR_INTERVALS = [1, 3, 7, 14, 30]
 
-_REVIEW_EASY_DAYS_ALLOWED = frozenset({3, 5, 7, 14, 30})
-_REVIEW_HARD_DAYS_ALLOWED = frozenset({1, 2, 3, 5})
-_REVIEW_SESSION_SIZE_ALLOWED = frozenset({0, 10, 20, 30})
-
-
-def _flash_review_prefs(user) -> dict[str, int]:
-    if not user.is_authenticated:
-        return {"easy_days": 7, "hard_days": 1, "session_size": 20}
-    row = UserProfile.objects.filter(user=user).values(
-        "review_easy_days", "review_hard_days", "review_session_size"
-    ).first()
-    if not row:
-        return {"easy_days": 7, "hard_days": 1, "session_size": 20}
-    ss = row["review_session_size"]
-    return {
-        "easy_days": int(row["review_easy_days"] or 7),
-        "hard_days": int(row["review_hard_days"] or 1),
-        "session_size": 20 if ss is None else int(ss),
-    }
+def _streak_ctx(request):
+    streak = getattr(getattr(request.user, "profile", None), "streak", 0) or 0
+    return {"streak": streak}
 
 
-def _apply_review_session_cap(user, words: list) -> list:
-    if not user.is_authenticated or not words:
-        return words
-    row = UserProfile.objects.filter(user=user).values_list(
-        "review_session_size", flat=True
-    ).first()
-    cap = 20 if row is None else int(row)
-    if cap <= 0:
-        return words
-    return words[:cap]
+def _type_it_passes(mode: str, total: int) -> bool:
+    m = (mode or TypeItAttempt.MODE_BOTH).strip()
+    if m == TypeItAttempt.MODE_BOTH:
+        return total >= 7
+    if m in (TypeItAttempt.MODE_DEFINITION, TypeItAttempt.MODE_SENTENCE):
+        return total >= 4
+    return total >= 7
 
 
-def _assign_custom_deck(
-    user, card: CustomCard, *, deck: CustomDeck | None
-) -> None:
-    """Attach personal card to a named deck, or clear when not personal."""
-    if card.topic == CustomCard.TOPIC_OTHER and deck is not None:
-        card.deck = deck
+def _type_it_meta_from_attempts(attempts):
+    """Return display meta for one word from its attempts (may be empty)."""
+    if not attempts:
+        return {"total": 0, "out_of": 10, "passed": False, "mode": None}
+    passing = [a for a in attempts if _type_it_passes(getattr(a, "mode", None) or "both", a.total_score)]
+    if passing:
+        best = max(passing, key=lambda x: x.total_score)
+        passed = True
     else:
-        card.deck = None
+        best = max(attempts, key=lambda x: x.total_score)
+        passed = False
+    m = getattr(best, "mode", None) or TypeItAttempt.MODE_BOTH
+    out_of = 10 if m == TypeItAttempt.MODE_BOTH else 5
+    return {"total": best.total_score, "out_of": out_of, "passed": passed, "mode": m}
 
 
-def _topic_choices_full():
-    return list(Word.TOPIC_CHOICES) + [
-        next(c for c in CustomCard.TOPIC_CHOICES if c[0] == CustomCard.TOPIC_OTHER),
-    ]
-
-
-def _valid_topic(code: str) -> bool:
-    return code in {t[0] for t in _topic_choices_full()}
-
-
-_CUSTOM_FORM_LEVEL_CARDS = [
-    (1, "Beginner", "Everyday words"),
-    (2, "Standard", "IELTS-style"),
-    (3, "Advanced", "Academic"),
-]
-
-_STUDY_PANEL_IDS = frozenset(
-    {"flashcards", "list", "quiz", "type", "favorites", "browse", "guide"}
-)
-_STUDY_PANEL_LABELS = {
-    "flashcards": "Flashcards",
-    "list": "Word list",
-    "quiz": "Quiz",
-    "type": "Type it",
-    "favorites": "Favored",
-    "browse": "Browse",
-    "guide": "Guide",
-}
-
-
-def _parse_study_panel(request: HttpRequest) -> str:
-    raw = (request.GET.get("panel") or "flashcards").strip().lower()
-    return raw if raw in _STUDY_PANEL_IDS else "flashcards"
-
-
-def _absolute_media_url(request: HttpRequest, file_field) -> str:
-    if not file_field or not getattr(file_field, "name", ""):
-        return ""
-    try:
-        path = file_field.url
-    except ValueError:
-        return ""
-    return request.build_absolute_uri(path)
-
-
-def _normalize_str_list(raw) -> list[str]:
-    if not raw:
-        return []
-    if isinstance(raw, list):
-        return [str(x).strip() for x in raw if str(x).strip()]
-    return []
-
-
-def _lexical_word_fields(w: Word) -> dict:
-    phonetic = (
-        getattr(w, "phonetic", None)
-        or getattr(w, "ipa", None)
-        or getattr(w, "pronunciation", None)
-        or ""
-    )
-    return {
-        "part_of_speech": (w.part_of_speech or "").strip(),
-        "phonetic": str(phonetic).strip(),
-        "synonyms": _normalize_str_list(w.synonyms),
-        "antonyms": _normalize_str_list(w.antonyms),
-        "collocations": _normalize_str_list(w.collocations),
+def _type_it_word_bests_payload(user, words_payload):
+    result = {
+        w["item_id"]: {"total": 0, "out_of": 10, "passed": False, "mode": None} for w in words_payload
     }
+    wids = [w["word_id"] for w in words_payload if w.get("word_id")]
+    cwids = [w["custom_word_id"] for w in words_payload if w.get("custom_word_id")]
+    if not wids and not cwids:
+        return result
+    q = None
+    if wids:
+        q = Q(word_id__in=wids)
+    if cwids:
+        q = Q(custom_word_id__in=cwids) if q is None else (q | Q(custom_word_id__in=cwids))
+    qs = TypeItAttempt.objects.filter(student=user).filter(q)
+    groups = {}
+    for a in qs:
+        if a.word_id:
+            key = f"w-{a.word_id}"
+        elif a.custom_word_id:
+            key = f"cw-{a.custom_word_id}"
+        else:
+            continue
+        groups.setdefault(key, []).append(a)
+    for item_id, att_list in groups.items():
+        if item_id in result:
+            result[item_id] = _type_it_meta_from_attempts(att_list)
+    return result
 
 
-def _lexical_card_fields(c: CustomCard) -> dict:
-    phonetic = (
-        getattr(c, "phonetic", None)
-        or getattr(c, "ipa", None)
-        or getattr(c, "pronunciation", None)
-        or ""
-    )
-    return {
-        "part_of_speech": (c.part_of_speech or "").strip(),
-        "phonetic": str(phonetic).strip(),
-        "synonyms": _normalize_str_list(c.synonyms),
-        "antonyms": _normalize_str_list(c.antonyms),
-        "collocations": _normalize_str_list(c.collocations),
-    }
-
-
-def _favorite_pair_set(user) -> Set[Tuple[str, int]]:
-    if not user.is_authenticated:
-        return set()
-    pairs: Set[Tuple[str, int]] = set()
-    for wid, cid in VocabFavorite.objects.filter(user=user).values_list(
-        "word_id", "custom_card_id"
-    ):
-        if wid:
-            pairs.add(("w", wid))
-        if cid:
-            pairs.add(("c", cid))
-    return pairs
-
-
-def _full_word_list_for_topic(
-    topic: str,
-    user,
-    request: HttpRequest,
-    fav_pairs: Set[Tuple[str, int]],
-    mastery_map: dict[str, int] | None = None,
-    level_filter: int | None = None,
-    hard_map: dict[str, int] | None = None,
-):
-    """All global + all user's custom cards in topic (full reference list for Word list)."""
-    mastery_map = mastery_map or {}
-    hard_map = hard_map or {}
-    items = []
-    wq = Word.objects.filter(topic=topic)
-    if level_filter is not None:
-        wq = wq.filter(level=level_filter)
-    for w in wq.order_by("level", "word"):
-        wk = f"w:{w.pk}"
-        row = {
-            "word": w.word,
-            "definition": w.definition or "",
-            "example": w.example_sentence or "",
-            "level": w.level,
-            "is_custom": False,
-            "custom_id": None,
-            "word_id": w.pk,
-            "image_url": _absolute_media_url(request, w.definition_image),
-            "favorited": ("w", w.pk) in fav_pairs,
-            "mastery_level": mastery_map.get(wk, 0),
-            "times_marked_hard": hard_map.get(wk, 0),
-            "is_mastered_card": False,
-        }
-        row.update(_lexical_word_fields(w))
-        items.append(row)
-    if user.is_authenticated:
-        cq = CustomCard.objects.filter(student=user, topic=topic)
-        if level_filter is not None:
-            cq = cq.filter(level=level_filter)
-        for c in cq.order_by("level", "word"):
-            ck = f"c:{c.pk}"
-            row = {
-                "word": c.word,
-                "definition": c.definition or "",
-                "example": c.example_sentence or "",
-                "level": c.level,
-                "is_custom": True,
-                "custom_id": c.pk,
-                "word_id": None,
-                "image_url": _absolute_media_url(request, c.definition_image),
-                "favorited": ("c", c.pk) in fav_pairs,
-                "mastery_level": mastery_map.get(ck, 0),
-                "times_marked_hard": hard_map.get(ck, 0),
-                "is_mastered_card": bool(c.is_mastered),
-            }
-            row.update(_lexical_card_fields(c))
-            items.append(row)
-    items.sort(key=lambda x: (x["level"], x["word"].lower()))
-    return items
-
-
-def _favorites_payload(user, request: HttpRequest, topic_labels: dict) -> list[dict]:
-    if not user.is_authenticated:
-        return []
-    out = []
-    qs = (
-        VocabFavorite.objects.filter(user=user)
-        .select_related("word", "custom_card")
-        .order_by("-created_at")
-    )
-    for f in qs:
-        if f.word_id and f.word:
-            w = f.word
-            out.append(
-                {
-                    "word": w.word,
-                    "definition": w.definition or "",
-                    "example": w.example_sentence or "",
-                    "level": w.level,
-                    "is_custom": False,
-                    "custom_id": None,
-                    "word_id": w.pk,
-                    "kind": "word",
-                    "topic": w.topic,
-                    "topic_label": topic_labels.get(w.topic, w.topic),
-                    "image_url": _absolute_media_url(request, w.definition_image),
-                    "favorited": True,
-                }
-            )
-        elif f.custom_card_id and f.custom_card:
-            c = f.custom_card
-            out.append(
-                {
-                    "word": c.word,
-                    "definition": c.definition or "",
-                    "example": c.example_sentence or "",
-                    "level": c.level,
-                    "is_custom": True,
-                    "custom_id": c.pk,
-                    "word_id": None,
-                    "kind": "custom",
-                    "topic": c.topic,
-                    "topic_label": topic_labels.get(c.topic, c.topic),
-                    "image_url": _absolute_media_url(request, c.definition_image),
-                    "favorited": True,
-                }
-            )
-    return out
-
-
-def _merged_deck(
-    topic: str,
-    user,
-    now,
-    request: HttpRequest,
-    level_filter: int | None = None,
-    mastery_map: dict[str, int] | None = None,
-):
-    """Global words + user's custom cards (not mastered, due for spaced review)."""
-    mastery_map = mastery_map or {}
-    items = []
-    wq = Word.objects.filter(topic=topic)
-    if level_filter is not None:
-        wq = wq.filter(level=level_filter)
-    word_rows = list(wq.order_by("level", "word"))
-    wpks = [w.pk for w in word_rows]
-    prog_by_wid: dict = {}
-    if user.is_authenticated and wpks:
-        for p in VocabularyProgress.objects.filter(
-            student=user, word_id__in=wpks
-        ).only("word_id", "next_review", "last_reviewed"):
-            prog_by_wid[p.word_id] = p
-    for w in word_rows:
-        prog_w = prog_by_wid.get(w.pk) if user.is_authenticated else None
-        row = {
-            "word": w.word,
-            "definition": w.definition or "",
-            "example": w.example_sentence or "",
-            "level": w.level,
-            "is_custom": False,
-            "custom_id": None,
-            "word_id": w.pk,
-            "image_url": _absolute_media_url(request, w.definition_image),
-            "due": word_is_due_for_flash_review(
-                user, now, w.pk, prog_w, mastery_map
-            ),
-            "last_reviewed": (
-                prog_w.last_reviewed.isoformat()
-                if prog_w and prog_w.last_reviewed
-                else None
-            ),
-        }
-        row.update(_lexical_word_fields(w))
-        items.append(row)
-    if user.is_authenticated:
-        custom_qs = CustomCard.objects.filter(
-            student=user,
-            topic=topic,
-            is_mastered=False,
-        ).filter(Q(next_review_at__isnull=True) | Q(next_review_at__lte=now))
-        if level_filter is not None:
-            custom_qs = custom_qs.filter(level=level_filter)
-        custom_rows = list(custom_qs.order_by("level", "word"))
-        cids = [c.pk for c in custom_rows]
-        prog_by_cid: dict = {}
-        if cids:
-            for p in VocabularyProgress.objects.filter(
-                student=user, custom_card_id__in=cids
-            ).only("custom_card_id", "last_reviewed"):
-                prog_by_cid[p.custom_card_id] = p
-        for c in custom_rows:
-            prog_c = prog_by_cid.get(c.pk)
-            row = {
-                "word": c.word,
-                "definition": c.definition or "",
-                "example": c.example_sentence or "",
-                "level": c.level,
-                "is_custom": True,
-                "custom_id": c.pk,
-                "word_id": None,
-                "image_url": _absolute_media_url(request, c.definition_image),
-                "due": True,
-                "last_reviewed": (
-                    prog_c.last_reviewed.isoformat()
-                    if prog_c and prog_c.last_reviewed
-                    else None
-                ),
-            }
-            row.update(_lexical_card_fields(c))
-            items.append(row)
-    items.sort(key=lambda x: (x["level"], x["word"].lower()))
-    return items
-
-
-def _merged_custom_deck(
-    deck: CustomDeck,
-    user,
-    now,
-    request: HttpRequest,
-    level_filter: int | None = None,
-):
-    """Due custom cards in one named deck only."""
-    items = []
-    custom_qs = CustomCard.objects.filter(
-        student=user,
-        deck=deck,
-        topic=CustomCard.TOPIC_OTHER,
-        is_mastered=False,
-    ).filter(Q(next_review_at__isnull=True) | Q(next_review_at__lte=now))
-    if level_filter is not None:
-        custom_qs = custom_qs.filter(level=level_filter)
-    custom_rows = list(custom_qs.order_by("level", "word"))
-    cids = [c.pk for c in custom_rows]
-    prog_by_cid: dict = {}
-    if user.is_authenticated and cids:
-        for p in VocabularyProgress.objects.filter(
-            student=user, custom_card_id__in=cids
-        ).only("custom_card_id", "last_reviewed"):
-            prog_by_cid[p.custom_card_id] = p
-    for c in custom_rows:
-        prog_c = prog_by_cid.get(c.pk)
-        row = {
-            "word": c.word,
-            "definition": c.definition or "",
-            "example": c.example_sentence or "",
-            "level": c.level,
-            "is_custom": True,
-            "custom_id": c.pk,
-            "word_id": None,
-            "image_url": _absolute_media_url(request, c.definition_image),
-            "due": True,
-            "last_reviewed": (
-                prog_c.last_reviewed.isoformat()
-                if prog_c and prog_c.last_reviewed
-                else None
-            ),
-        }
-        row.update(_lexical_card_fields(c))
-        items.append(row)
-    items.sort(key=lambda x: (x["level"], x["word"].lower()))
-    return items
-
-
-def _full_word_list_custom_deck(
-    deck: CustomDeck,
-    user,
-    request: HttpRequest,
-    fav_pairs: Set[Tuple[str, int]],
-    mastery_map: dict[str, int] | None = None,
-    level_filter: int | None = None,
-    hard_map: dict[str, int] | None = None,
-):
-    mastery_map = mastery_map or {}
-    hard_map = hard_map or {}
-    items = []
-    cq = CustomCard.objects.filter(student=user, deck=deck, topic=CustomCard.TOPIC_OTHER)
-    if level_filter is not None:
-        cq = cq.filter(level=level_filter)
-    for c in cq.order_by("level", "word"):
-        ck = f"c:{c.pk}"
-        row = {
-            "word": c.word,
-            "definition": c.definition or "",
-            "example": c.example_sentence or "",
-            "level": c.level,
-            "is_custom": True,
-            "custom_id": c.pk,
-            "word_id": None,
-            "image_url": _absolute_media_url(request, c.definition_image),
-            "favorited": ("c", c.pk) in fav_pairs,
-            "mastery_level": mastery_map.get(ck, 0),
-            "times_marked_hard": hard_map.get(ck, 0),
-            "is_mastered_card": bool(c.is_mastered),
-        }
-        row.update(_lexical_card_fields(c))
-        items.append(row)
-    return items
-
-
-def _full_word_list_all(
-    user,
-    request: HttpRequest,
-    fav_pairs: Set[Tuple[str, int]],
-    topic_labels: dict[str, str],
-    mastery_map: dict[str, int] | None = None,
-    level_filter: int | None = None,
-    hard_map: dict[str, int] | None = None,
-):
-    """Every global word and every custom card for the student, filtered by level (studio-wide list)."""
-    mastery_map = mastery_map or {}
-    hard_map = hard_map or {}
-    items: list[dict] = []
-    wq = Word.objects.all()
-    if level_filter is not None:
-        wq = wq.filter(level=level_filter)
-    for w in wq.order_by("topic", "word"):
-        wk = f"w:{w.pk}"
-        row = {
-            "word": w.word,
-            "definition": w.definition or "",
-            "example": w.example_sentence or "",
-            "level": w.level,
-            "is_custom": False,
-            "custom_id": None,
-            "word_id": w.pk,
-            "image_url": _absolute_media_url(request, w.definition_image),
-            "favorited": ("w", w.pk) in fav_pairs,
-            "mastery_level": mastery_map.get(wk, 0),
-            "times_marked_hard": hard_map.get(wk, 0),
-            "is_mastered_card": False,
-            "practice_topic_code": w.topic,
-            "practice_deck_pk": None,
-            "source_label": topic_labels.get(w.topic, w.topic),
-        }
-        row.update(_lexical_word_fields(w))
-        items.append(row)
-    if user.is_authenticated:
-        cq = CustomCard.objects.filter(student=user).select_related("deck")
-        if level_filter is not None:
-            cq = cq.filter(level=level_filter)
-        for c in cq.order_by("topic", "word"):
-            ck = f"c:{c.pk}"
-            if c.topic == CustomCard.TOPIC_OTHER:
-                src = c.deck.name if c.deck_id else "My vocabulary"
-            else:
-                src = topic_labels.get(c.topic, c.topic)
-            row = {
-                "word": c.word,
-                "definition": c.definition or "",
-                "example": c.example_sentence or "",
-                "level": c.level,
-                "is_custom": True,
-                "custom_id": c.pk,
-                "word_id": None,
-                "image_url": _absolute_media_url(request, c.definition_image),
-                "favorited": ("c", c.pk) in fav_pairs,
-                "mastery_level": mastery_map.get(ck, 0),
-                "times_marked_hard": hard_map.get(ck, 0),
-                "is_mastered_card": bool(c.is_mastered),
-                "practice_topic_code": CustomCard.TOPIC_OTHER
-                if c.topic == CustomCard.TOPIC_OTHER
-                else c.topic,
-                "practice_deck_pk": c.deck_id
-                if c.topic == CustomCard.TOPIC_OTHER and c.deck_id
-                else None,
-                "source_label": src,
-            }
-            row.update(_lexical_card_fields(c))
-            items.append(row)
-    items.sort(key=lambda x: (x["word"].lower(), x.get("source_label") or ""))
-    return items
-
-
-def _sync_new_card_to_word_bank(user, card: CustomCard) -> None:
-    phrase = f"{card.word} — {(card.definition or '').strip()[:450]}".strip()
-    if len(phrase) < 2:
-        phrase = card.word
-    WordBankEntry.objects.create(user=user, phrase=phrase[:500], essay=None)
-
-
-def _vocab_level_for_request(request: HttpRequest) -> int | None:
-    if not request.user.is_authenticated:
+def _coerce_session_card_limit(raw, upper: int):
+    """Max cards in this session; None means use the full deck (upper may be 0)."""
+    if raw is None:
         return None
-    row = UserProfile.objects.filter(user=request.user).values_list(
-        "level", flat=True
-    ).first()
-    return int(row) if row is not None else 2
+    s = str(raw).strip().lower()
+    if s in ("", "all", "0", "none"):
+        return None
+    try:
+        n = int(s)
+    except ValueError:
+        return None
+    if n <= 0:
+        return None
+    return min(n, upper)
 
 
-def _profile_vocab_level_int(user) -> int:
-    row = UserProfile.objects.filter(user=user).values_list("level", flat=True).first()
-    return int(row) if row is not None else 2
+def _session_limit_option_values(word_count: int):
+    """Preset sizes for session picker (always includes full deck count when > 0)."""
+    if word_count <= 0:
+        return []
+    presets = [5, 10, 15, 20, 25, 30, 40, 50]
+    out = [p for p in presets if p <= word_count]
+    if word_count not in out:
+        out.append(word_count)
+    return sorted(set(out))
 
 
-def _row_progress_key(row: dict) -> str:
-    if row.get("is_custom") and row.get("custom_id") is not None:
-        return f"c:{int(row['custom_id'])}"
-    if row.get("word_id") is not None:
-        return f"w:{int(row['word_id'])}"
+def _default_session_limit_str(word_count: int) -> str:
+    if word_count <= 0:
+        return ""
+    if word_count >= 10:
+        return "10"
+    if word_count >= 5:
+        return "5"
     return ""
 
 
-def _parse_words_param_list(request: HttpRequest) -> list[str] | None:
-    """Parse ``?words=`` — comma tokens: ``12`` / ``w:12`` / ``c:3`` (order preserved, deduped)."""
-    raw = (request.GET.get("words") or "").strip()
-    if not raw:
-        return None
-    out: list[str] = []
-    seen: set[str] = set()
-    for part in raw.split(","):
-        t = part.strip()
-        if not t:
-            continue
-        key: str | None = None
-        if ":" in t:
-            kind, _, rest = t.partition(":")
-            kind_l = kind.strip().lower()
-            rest = rest.strip()
-            if not rest.isdigit():
-                continue
-            pk = int(rest)
-            if kind_l in ("w", "word"):
-                key = f"w:{pk}"
-            elif kind_l in ("c", "custom"):
-                key = f"c:{pk}"
-        elif t.isdigit():
-            key = f"w:{int(t)}"
-        if key and key not in seen:
-            seen.add(key)
-            out.append(key)
-    return out or None
+def _next_review_delta(profile, hard: bool):
+    from datetime import timedelta
+
+    days = profile.review_hard_days if hard else profile.review_easy_days
+    return timezone.now() + timedelta(days=days)
 
 
-def _flash_rows_for_progress_keys(
-    user,
-    request: HttpRequest,
-    now,
-    keys: list[str],
-    mastery_map: dict[str, int],
-) -> list[dict]:
-    """Build flashcard ``words_payload`` rows for arbitrary word/custom IDs (any topic)."""
-    mastery_map = mastery_map or {}
-    items: list[dict] = []
-    for key in keys:
-        if key.startswith("w:"):
-            pk = int(key[2:])
-            w = Word.objects.filter(pk=pk).first()
-            if not w:
-                continue
-            wk = f"w:{w.pk}"
-            prog_w = None
-            if user.is_authenticated:
-                prog_w = (
-                    VocabularyProgress.objects.filter(student=user, word_id=w.pk)
-                    .only("word_id", "next_review", "last_reviewed")
-                    .first()
-                )
-            row = {
-                "word": w.word,
-                "definition": w.definition or "",
-                "example": w.example_sentence or "",
-                "level": w.level,
-                "is_custom": False,
-                "custom_id": None,
-                "word_id": w.pk,
-                "image_url": _absolute_media_url(request, w.definition_image),
-                "due": word_is_due_for_flash_review(
-                    user, now, w.pk, prog_w, mastery_map
-                ),
-                "last_reviewed": (
-                    prog_w.last_reviewed.isoformat()
-                    if prog_w and prog_w.last_reviewed
-                    else None
-                ),
-            }
-            row.update(_lexical_word_fields(w))
-            items.append(row)
-        elif key.startswith("c:"):
-            pk = int(key[2:])
-            c = CustomCard.objects.filter(pk=pk, student=user).first()
-            if not c:
-                continue
-            prog_c = None
-            if user.is_authenticated:
-                prog_c = (
-                    VocabularyProgress.objects.filter(student=user, custom_card_id=c.pk)
-                    .only("custom_card_id", "last_reviewed")
-                    .first()
-                )
-            row = {
-                "word": c.word,
-                "definition": c.definition or "",
-                "example": c.example_sentence or "",
-                "level": c.level,
-                "is_custom": True,
-                "custom_id": c.pk,
-                "word_id": None,
-                "image_url": _absolute_media_url(request, c.definition_image),
-                "due": True,
-                "last_reviewed": (
-                    prog_c.last_reviewed.isoformat()
-                    if prog_c and prog_c.last_reviewed
-                    else None
-                ),
-            }
-            row.update(_lexical_card_fields(c))
-            items.append(row)
-    return items
+def _ensure_progress(user, word):
+    prog, _ = VocabularyProgress.objects.get_or_create(
+        student=user,
+        word=word,
+        defaults={"next_review": timezone.now()},
+    )
+    return prog
 
 
-def _type_it_rows_for_progress_keys(
-    user,
-    request: HttpRequest,
-    keys: list[str],
-    study_level: int | None,
-    fav_pairs: Set[Tuple[str, int]],
-    mastery_map: dict[str, int],
-    hard_map: dict[str, int],
-) -> list[dict]:
-    """Rows compatible with ``_type_it_load_rows`` / ``_row_progress_key`` for ad-hoc word picks."""
-    rows: list[dict] = []
-    for key in keys:
-        if key.startswith("w:"):
-            pk = int(key[2:])
-            w = Word.objects.filter(pk=pk).first()
-            if not w:
-                continue
-            wk = f"w:{w.pk}"
-            row = {
-                "word": w.word,
-                "definition": w.definition or "",
-                "example": w.example_sentence or "",
-                "level": w.level,
-                "is_custom": False,
-                "custom_id": None,
-                "word_id": w.pk,
-                "image_url": _absolute_media_url(request, w.definition_image),
-                "favorited": ("w", w.pk) in fav_pairs,
-                "mastery_level": mastery_map.get(wk, 0),
-                "times_marked_hard": hard_map.get(wk, 0),
-                "is_mastered_card": False,
-            }
-            row.update(_lexical_word_fields(w))
-            rows.append(row)
-        elif key.startswith("c:"):
-            pk = int(key[2:])
-            c = CustomCard.objects.filter(pk=pk, student=user).first()
-            if not c:
-                continue
-            ck = f"c:{c.pk}"
-            row = {
-                "word": c.word,
-                "definition": c.definition or "",
-                "example": c.example_sentence or "",
-                "level": c.level,
-                "is_custom": True,
-                "custom_id": c.pk,
-                "word_id": None,
-                "image_url": _absolute_media_url(request, c.definition_image),
-                "favorited": ("c", c.pk) in fav_pairs,
-                "mastery_level": mastery_map.get(ck, 0),
-                "times_marked_hard": hard_map.get(ck, 0),
-                "is_mastered_card": bool(c.is_mastered),
-            }
-            row.update(_lexical_card_fields(c))
-            rows.append(row)
-    return rows
+MASTERY_STAGE_LABEL = {
+    1: "New",
+    2: "Recognizing",
+    3: "Learning",
+    4: "Confident",
+    5: "Mastered",
+}
 
 
-def _word_list_pos_badge(raw: str) -> str:
-    t = (raw or "").strip().lower().rstrip(".")
-    m = {
-        "n": "noun",
-        "noun": "noun",
-        "v": "verb",
-        "verb": "verb",
-        "adj": "adj",
-        "adjective": "adj",
-        "adv": "adverb",
-        "adverb": "adverb",
+def _mastery_for_word_id(user, word_id):
+    if not word_id:
+        return 1
+    try:
+        return VocabularyProgress.objects.get(student=user, word_id=word_id).mastery_level
+    except VocabularyProgress.DoesNotExist:
+        return 1
+
+
+def _word_card_from_model(user, w: Word) -> dict:
+    return {
+        "id": w.id,
+        "word": w.word,
+        "definition": w.definition,
+        "example_sentence": w.example_sentence,
+        "topic": w.topic,
+        "topic_key": w.topic,
+        "is_custom": False,
+        "card_id": None,
+        "part_of_speech": (w.part_of_speech or "word").strip() or "word",
+        "phonetic": (w.phonetic or "").strip(),
+        "level": w.level,
+        "level_label": w.get_level_display(),
+        "topic_label": w.get_topic_display(),
+        "mastery_level": _mastery_for_word_id(user, w.id),
     }
-    return m.get(t, "")
+
+
+def _word_quiz_deck_item(user, w: Word) -> dict:
+    """Shape expected by static/js/quiz_runner.js (matches vocab index quiz deck items)."""
+    c = _word_card_from_model(user, w)
+    c["word_id"] = w.id
+    c["example"] = (w.example_sentence or "").strip()
+    c["synonyms"] = []
+    c["times_marked_hard"] = 0
+    return c
+
+
+_QUIZ_METHOD_KEYS = frozenset({"mc", "truefalse", "fillblank", "match", "type", "listen"})
+
+
+def _flashcard_query_url(hidden: dict, offset: int) -> str:
+    q = {"offset": str(offset)}
+    for key, val in hidden.items():
+        if val:
+            q[key] = val
+    return f"{reverse('vocabulary:flashcard_deck')}?{urlencode(q)}"
+
+
+def _apply_flashcard_rating(user, profile, word_id, card_id, rating: str) -> None:
+    """Apply one Easy/Hard rating (Word progress or custom card streak)."""
+    if rating not in ("easy", "hard"):
+        raise ValueError("bad rating")
+    hard = rating == "hard"
+    wid = (str(word_id).strip() if word_id is not None else "") or ""
+    cid = (str(card_id).strip() if card_id is not None else "") or ""
+    if wid:
+        word = get_object_or_404(Word, pk=wid)
+        prog = _ensure_progress(user, word)
+        if hard:
+            prog.times_wrong += 1
+            prog.mastery_level = max(1, prog.mastery_level - 1)
+        else:
+            prog.times_correct += 1
+            prog.mastery_level = min(5, prog.mastery_level + 1)
+            prog.easy_chip_master_count = min(3, (prog.easy_chip_master_count or 0) + 1)
+        prog.last_reviewed = timezone.now()
+        prog.next_review = _next_review_delta(profile, hard=hard)
+        prog.status = "reviewing" if prog.mastery_level < 5 else "mastered"
+        prog.save()
+        bump_streak_for_user(user)
+    elif cid:
+        bump_streak_for_user(user)
+    else:
+        raise ValueError("no target")
 
 
 @login_required
-def word_list_page(request: HttpRequest) -> HttpResponse:
-    """Full word list for a topic, a named deck, or all vocabulary (``?all=1``)."""
-    study_level = _profile_vocab_level_int(request.user)
-    level_label_by_num = {n: label for n, label, _ in _CUSTOM_FORM_LEVEL_CARDS}
-    user_level_label = f"Level {study_level} — {level_label_by_num.get(study_level, '')}"
+@require_POST
+def flashcard_rate_api(request):
+    """JSON: rate one card (typically Easy immediately)."""
+    user = request.user
+    profile = user.profile
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "invalid json"}, status=400)
+    rating = data.get("rating")
+    word_id = data.get("word_id")
+    card_id = data.get("card_id")
+    try:
+        _apply_flashcard_rating(user, profile, word_id, card_id, rating)
+    except ValueError as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    except Http404:
+        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+    return JsonResponse({"ok": True})
 
-    topic_labels = dict(_topic_choices_full())
-    all_raw = (request.GET.get("all") or "").strip().lower()
-    word_list_all = all_raw in ("1", "true", "yes", "all")
 
-    topic_raw = (request.GET.get("topic") or "").strip().lower()
-    if not word_list_all:
-        if not topic_raw or not _valid_topic(topic_raw):
-            messages.info(request, "Pick a vocabulary topic from the studio.")
-            return redirect(reverse("vocabulary:index"))
+@login_required
+@require_POST
+def flashcard_save_pending_api(request):
+    """Apply queued Hard ratings (saved when user clicks Save progress)."""
+    user = request.user
+    profile = user.profile
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "invalid json"}, status=400)
+    items = data.get("items") or []
+    if not isinstance(items, list):
+        return JsonResponse({"ok": False, "error": "items must be a list"}, status=400)
+    applied = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            _apply_flashcard_rating(
+                user,
+                profile,
+                item.get("word_id"),
+                item.get("card_id"),
+                "hard",
+            )
+            applied += 1
+        except ValueError:
+            continue
+        except Http404:
+            continue
+    return JsonResponse({"ok": True, "applied": applied})
 
-    active_deck: CustomDeck | None = None
-    dr = (request.GET.get("deck") or "").strip()
-    if not word_list_all and dr.isdigit():
-        active_deck = CustomDeck.objects.filter(
-            pk=int(dr), student=request.user
-        ).first()
-        if active_deck:
-            topic_raw = CustomCard.TOPIC_OTHER
 
-    if word_list_all:
-        topic_name = "All vocabulary"
-        topic_code = topic_raw or Word.TOPIC_CHOICES[0][0]
-    elif active_deck:
-        topic_name = active_deck.name
-        topic_code = CustomCard.TOPIC_OTHER
-    else:
-        topic_name = topic_labels.get(topic_raw, topic_raw.replace("_", " ").title())
-        topic_code = topic_raw
+def _flashcard_session_api_urls():
+    return {
+        "flashcard_rate_url": reverse("vocabulary:flashcard_rate"),
+        "flashcard_save_pending_url": reverse("vocabulary:flashcard_save_pending"),
+    }
 
-    fav_pairs = _favorite_pair_set(request.user)
-    mastery_map = mastery_map_for_student(request.user)
-    hard_map = times_marked_hard_map_for_student(request.user)
 
-    if word_list_all:
-        rows = _full_word_list_all(
-            request.user,
-            request,
-            fav_pairs,
-            topic_labels,
-            mastery_map,
-            study_level,
-            hard_map,
+@login_required
+def deck_create(request):
+    """Create a custom flashcard deck (name + cards + optional AI generation)."""
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    profile = user.profile
+    topic_choices = list(Word.TOPIC_CHOICES) + [("other", "Personal vocabulary")]
+    return render(
+        request,
+        "vocabulary/deck_create.html",
+        {
+            "streak": streak,
+            "topic_choices": topic_choices,
+            "user_vocab_level": int(profile.level),
+            "initial_topic": "environment",
+            "max_cards": 30,
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+@require_POST
+def deck_create_save(request):
+    """JSON: create CustomDeck + CustomCards; optional redirect to study session."""
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+    name = (data.get("name") or "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "error": "Deck name is required."}, status=400)
+    description = (data.get("description") or "").strip()
+    cards_in = data.get("cards") or []
+    if not isinstance(cards_in, list) or len(cards_in) == 0:
+        return JsonResponse({"ok": False, "error": "Add at least one card."}, status=400)
+
+    deck = CustomDeck.objects.create(
+        student=request.user,
+        name=name[:100],
+        description=description[:4000] if description else "",
+    )
+    n = 0
+    for c in cards_in:
+        if not isinstance(c, dict):
+            continue
+        w = (c.get("word") or "").strip()
+        d = (c.get("definition") or "").strip()
+        if not w or not d:
+            continue
+        ex = (c.get("example_sentence") or "").strip()
+        CustomCard.objects.create(
+            student=request.user,
+            deck=deck,
+            word=w[:200],
+            definition=d,
+            example_sentence=ex[:2000],
         )
-    elif active_deck:
-        rows = _full_word_list_custom_deck(
-            active_deck,
-            request.user,
-            request,
-            fav_pairs,
-            mastery_map,
-            study_level,
-            hard_map,
-        )
-    else:
-        rows = _full_word_list_for_topic(
-            topic_raw,
-            request.user,
-            request,
-            fav_pairs,
-            mastery_map,
-            study_level,
-            hard_map,
-        )
+        n += 1
+    if n == 0:
+        deck.delete()
+        return JsonResponse({"ok": False, "error": "No valid cards to save."}, status=400)
 
-    wl_items: list[dict] = []
-    for row in rows:
-        ml = int(row.get("mastery_level") or 0)
-        if row.get("is_mastered_card"):
-            ml = max(ml, 5)
-        is_mastered = ml >= 5
-        th = int(row.get("times_marked_hard") or 0)
-        is_struggling = th >= 2 and not is_mastered
-        pos_badge = _word_list_pos_badge(row.get("part_of_speech") or "")
+    q = urlencode({"deck_id": deck.pk})
+    redirect_url = f"{reverse('vocabulary:flashcard_deck')}?{q}"
+    return JsonResponse({"ok": True, "deck_id": deck.pk, "redirect_url": redirect_url})
 
-        if row.get("is_custom"):
-            rid = f"c-{row['custom_id']}"
-            kind = "custom"
-            word_pk = None
-            custom_pk = int(row["custom_id"])
+
+@login_required
+@require_POST
+def flashcard_set_generate(request):
+    """AI: generate flashcard rows from a free-form prompt (JSON cards list)."""
+    if not settings.OPENAI_API_KEY:
+        return JsonResponse({"ok": False, "error": "OpenAI API key is not configured."}, status=503)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        return JsonResponse({"ok": False, "error": "Enter a prompt."}, status=400)
+    try:
+        count = int(payload.get("count") or 10)
+    except (TypeError, ValueError):
+        count = 10
+    count = max(1, min(30, count))
+    try:
+        level = int(payload.get("level") or 2)
+    except (TypeError, ValueError):
+        level = 2
+    level = max(1, min(3, level))
+    topic = (payload.get("topic") or "environment").strip()
+    valid_topics = {k for k, _ in Word.TOPIC_CHOICES} | {"other"}
+    if topic not in valid_topics:
+        topic = "environment"
+    topic_label = (
+        "Personal / mixed"
+        if topic == "other"
+        else _topic_label(topic)
+    )
+    band = _band_for_level(level)
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    system_msg = "You are an IELTS vocabulary expert. Return only valid JSON."
+    user_msg = (
+        f"User request:\n{prompt}\n\n"
+        f"Topic context: {topic_label}\n"
+        f"Difficulty band: {band}\n\n"
+        f"Generate exactly {count} vocabulary flashcards.\n"
+        'Return JSON with this exact shape:\n'
+        '{"cards": [\n'
+        '  {"word": string, "definition": string, "example_sentence": string}\n'
+        "]}\n"
+        "Rules: short definitions; one IELTS-style example sentence per word; no duplicates."
+    )
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.5,
+        )
+        raw = completion.choices[0].message.content or ""
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+
+    parsed = _extract_json_object(raw)
+    if not isinstance(parsed, dict):
+        return JsonResponse({"ok": False, "error": "Could not parse AI response."}, status=502)
+    cards_raw = parsed.get("cards")
+    if not isinstance(cards_raw, list):
+        return JsonResponse({"ok": False, "error": "Invalid AI response shape."}, status=502)
+    cards_out = []
+    for item in cards_raw[:count]:
+        if not isinstance(item, dict):
+            continue
+        w = (item.get("word") or "").strip()
+        d = (item.get("definition") or "").strip()
+        if not w or not d:
+            continue
+        ex = (item.get("example_sentence") or "").strip()
+        cards_out.append(
+            {
+                "word": w[:200],
+                "definition": d,
+                "example_sentence": ex[:2000],
+            }
+        )
+    if not cards_out:
+        return JsonResponse({"ok": False, "error": "No cards in AI response."}, status=502)
+    return JsonResponse({"ok": True, "cards": cards_out})
+
+
+@login_required
+@require_POST
+def custom_ai_image_preview(request):
+    """Placeholder for per-card illustration generation (optional)."""
+    return JsonResponse(
+        {
+            "ok": False,
+            "error": "AI illustrations are not available in this build. Save your deck without images.",
+        },
+        status=501,
+    )
+
+
+@login_required
+def vocabulary_home(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    words_learned = due_count = mastered_count = mastered_pct = 0
+    continue_href = ""
+    continue_pct = 0
+    try:
+        now = timezone.now()
+        all_prog = VocabularyProgress.objects.filter(student=user)
+        words_learned = all_prog.count()
+        mastered_count = all_prog.filter(mastery_level=5).count()
+        mastered_pct = round(mastered_count / words_learned * 100) if words_learned else 0
+        due_qs = all_prog.filter(next_review__lte=now).select_related("word")
+        due_count = due_qs.count()
+        first = due_qs.first()
+        if first:
+            params = {"mode": "due", "limit": "12"}
+            continue_href = f"{reverse('vocabulary:flashcard_deck')}?{urlencode(params)}"
+            continue_pct = min(100, int(round((words_learned - due_count) / max(words_learned, 1) * 100)))
         else:
-            rid = f"w-{row['word_id']}"
-            kind = "word"
-            word_pk = int(row["word_id"])
-            custom_pk = None
+            params = {"topic": "environment", "level": "1"}
+            continue_href = reverse("vocabulary:flashcard_topic", kwargs={"topic": "environment"})
+            continue_pct = mastered_pct
+    except Exception:
+        continue_href = reverse("vocabulary:index")
+        continue_pct = 0
 
-        item = {
-            "row_id": rid,
-            "progress_key": _row_progress_key(row),
-            "kind": kind,
-            "word_id": word_pk,
-            "custom_id": custom_pk,
-            "word_text": row["word"],
-            "part_of_speech": pos_badge,
-            "definition": (row.get("definition") or "").strip(),
-            "example": (row.get("example") or "").strip(),
-            "synonyms": row.get("synonyms") or [],
-            "antonyms": row.get("antonyms") or [],
-            "collocations": row.get("collocations") or [],
-            "mastery_level": min(5, ml),
-            "favorited": bool(row.get("favorited")),
-            "is_struggling": is_struggling,
-            "is_mastered": is_mastered,
+    method_stats = {
+        "flashcard": words_learned,
+        "quiz": min(words_learned, 40),
+        "type_it": TypeItResult.objects.filter(student=user).count(),
+    }
+
+    return render(
+        request,
+        "vocabulary/vocabulary_home.html",
+        {
+            "streak": streak,
+            "words_learned": words_learned,
+            "due_count": due_count,
+            "mastered_count": mastered_count,
+            "mastered_pct": mastered_pct,
+            "continue_href": continue_href,
+            "continue_pct": continue_pct,
+            "method_stats": method_stats,
+            **_streak_ctx(request),
+        },
+    )
+
+
+_FLASHCARD_TOPIC_ICONS = {
+    "environment": "🌿",
+    "health": "🩺",
+    "technology": "💻",
+    "education": "🎓",
+    "society": "🏛️",
+    "travel": "✈️",
+    "science": "🔬",
+    "business": "💼",
+}
+
+
+@login_required
+def flashcard_deck(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    now = timezone.now()
+    due_count = VocabularyProgress.objects.filter(student=user, next_review__lte=now).count()
+    topic_counts = {
+        row["topic"]: row["n"]
+        for row in Word.objects.values("topic").annotate(n=Count("id"))
+    }
+    topic_rows = [
+        {
+            "key": k,
+            "label": label,
+            "count": topic_counts.get(k, 0),
+            "icon": _FLASHCARD_TOPIC_ICONS.get(k, "📇"),
         }
-        if word_list_all:
-            item["practice_topic"] = row.get("practice_topic_code") or topic_code
-            item["practice_deck_pk"] = row.get("practice_deck_pk")
-            item["source_label"] = row.get("source_label") or ""
-        wl_items.append(item)
+        for k, label in Word.TOPIC_CHOICES
+    ]
+    custom_decks = (
+        CustomDeck.objects.filter(student=user)
+        .annotate(card_count=Count("customcard"))
+        .order_by("-created_at")[:20]
+    )
+    for d in custom_decks:
+        n = d.card_count or 0
+        d.session_limit_options = _session_limit_option_values(n)
+        d.default_session_limit = _default_session_limit_str(n)
+    return render(
+        request,
+        "vocabulary/flashcard_deck.html",
+        {
+            "streak": streak,
+            "due_count": due_count,
+            "due_limit_options": _session_limit_option_values(due_count),
+            "due_default_limit": _default_session_limit_str(due_count),
+            "topic_rows": topic_rows,
+            "custom_decks": custom_decks,
+            **_streak_ctx(request),
+        },
+    )
 
-    total_words = len(wl_items)
-    mastered_count = sum(1 for x in wl_items if x["is_mastered"])
-    struggling_count = sum(1 for x in wl_items if x["is_struggling"])
-    favored_count = sum(1 for x in wl_items if x["favorited"])
 
-    toggle_url = reverse("vocabulary:vocab_toggle_favorite")
-    word_bank_url = reverse("vocabulary:word_bank_add_vocab")
-    deck_create_save_url = reverse("vocabulary:deck_create_save")
-    url_flashcard_pick = reverse("vocabulary:flashcard")
-    url_quiz_setup = reverse("vocabulary:quiz_setup")
-    url_type_it_session = reverse("vocabulary:type_it_session")
+def _topic_label(topic_key: str) -> str:
+    for k, v in Word.TOPIC_CHOICES:
+        if k == topic_key:
+            return v
+    return topic_key
+
+
+def _band_for_level(level: int) -> str:
+    return {1: "IELTS Band 4–5", 2: "IELTS Band 5.5–6.5", 3: "IELTS Band 7–9"}.get(level, "IELTS Band 4–5")
+
+
+_TOPIC_LEVEL_BLURBS = {
+    1: (
+        "Simple everyday vocabulary for this topic — common nouns, verbs, and phrases "
+        "a Band 5 learner would recognise and use."
+    ),
+    2: (
+        "IELTS-ready vocabulary — collocations, academic phrases, and topic-specific "
+        "expressions for Writing Task 2 and Speaking (Band 6–7)."
+    ),
+    3: (
+        "Band 7+ vocabulary — nuanced terms, sophisticated collocations, and precise "
+        "academic language."
+    ),
+}
+
+
+def _chip_mastered_from_prog(prog):
+    if not prog:
+        return False
+    return (prog.easy_chip_master_count or 0) >= 3
+
+
+def _topic_word_goals(topic: str) -> dict[int, int]:
+    tw = TOPIC_WORDS.get(topic)
+    if not tw:
+        return {1: 65, 2: 68, 3: 62}
+    return {
+        1: len(tw["beginner"]),
+        2: len(tw["standard"]),
+        3: len(tw["advanced"]),
+    }
+
+
+def _topic_hub_levels_payload(user, topic: str):
+    goals = _topic_word_goals(topic)
+    titles = {1: "Beginner", 2: "Standard", 3: "Advanced"}
+    pack = TopicIELTSWordCache.objects.filter(
+        topic=topic, status=TopicIELTSWordCache.STATUS_READY
+    ).first()
+    out = {}
+    for lvl in (1, 2, 3):
+        base = (
+            Word.objects.filter(topic=topic, topic_pack=pack)
+            if pack
+            else Word.objects.none()
+        )
+        wlist = list(base.filter(level=lvl).order_by("word"))
+        wids = [w.id for w in wlist]
+        pmap = {
+            p.word_id: p
+            for p in VocabularyProgress.objects.filter(student=user, word_id__in=wids)
+        }
+        words_payload = []
+        mastered_n = 0
+        for w in wlist:
+            p = pmap.get(w.id)
+            m = _chip_mastered_from_prog(p)
+            if m:
+                mastered_n += 1
+            words_payload.append({"id": w.id, "text": w.word, "mastered": m})
+        out[str(lvl)] = {
+            "level": lvl,
+            "title": titles[lvl],
+            "description": _TOPIC_LEVEL_BLURBS[lvl],
+            "word_goal": goals[lvl],
+            "word_count": len(words_payload),
+            "mastered_in_level": mastered_n,
+            "words": words_payload,
+        }
+    return out
+
+
+def _ensure_topic_ielts_words(user, topic: str, *, force: bool = False):
+    """Populate TopicIELTSWordCache + Word rows from ``TOPIC_WORDS``; return status dict."""
+    _ = user  # reserved for future per-user behaviour
+    tiers = TOPIC_WORDS.get(topic)
+    if not tiers:
+        return {
+            "ok": False,
+            "status": TopicIELTSWordCache.STATUS_ERROR,
+            "message": "Unknown topic",
+            "error_code": "bad_topic",
+        }
+
+    if force:
+        TopicIELTSWordCache.objects.filter(topic=topic).delete()
+        Word.objects.filter(topic=topic, topic_pack__isnull=True).delete()
+
+    obj, _ = TopicIELTSWordCache.objects.update_or_create(
+        topic=topic,
+        defaults={
+            "status": TopicIELTSWordCache.STATUS_READY,
+            "error_message": "",
+            "beginner": list(tiers["beginner"]),
+            "standard": list(tiers["standard"]),
+            "advanced": list(tiers["advanced"]),
+        },
+    )
+    sync_tier_words_to_db(topic, tiers, obj)
+    allowed = {w.strip().lower() for ws in tiers.values() for w in ws if (w or "").strip()}
+    for w in Word.objects.filter(topic_pack=obj):
+        if w.word.strip().lower() not in allowed:
+            w.delete()
+    return {"ok": True, "status": TopicIELTSWordCache.STATUS_READY}
+
+
+@login_required
+def api_topic_ielts(request, topic: str):
+    valid = {k for k, _ in Word.TOPIC_CHOICES}
+    if topic not in valid:
+        return JsonResponse({"ok": False, "error": "bad_topic"}, status=400)
+    force = request.GET.get("force") == "1"
+    ensure = _ensure_topic_ielts_words(request.user, topic, force=force)
+    if ensure.get("status") == TopicIELTSWordCache.STATUS_GENERATING:
+        return JsonResponse(ensure)
+    if not ensure.get("ok"):
+        return JsonResponse(ensure, status=503)
+
+    levels = _topic_hub_levels_payload(request.user, topic)
+    total = sum(len(levels[str(i)]["words"]) for i in (1, 2, 3))
+    mastered_total = sum(
+        1 for i in (1, 2, 3) for w in levels[str(i)]["words"] if w.get("mastered")
+    )
+    pct = round(100 * mastered_total / total) if total else 0
+    return JsonResponse(
+        {
+            "ok": True,
+            "status": TopicIELTSWordCache.STATUS_READY,
+            "topic": topic,
+            "topic_label": _topic_label(topic),
+            "total_words": total,
+            "mastered_total": mastered_total,
+            "overall_pct": pct,
+            "levels": levels,
+        }
+    )
+
+
+@login_required
+def flashcard_topic(request, topic: str):
+    valid = {k for k, _ in Word.TOPIC_CHOICES}
+    if topic not in valid:
+        raise Http404("Unknown topic")
+    streak = getattr(getattr(request.user, "profile", None), "streak", 0) or 0
+    return render(
+        request,
+        "vocabulary/topic_ielts_hub.html",
+        {
+            "streak": streak,
+            "topic": topic,
+            "topic_label": _topic_label(topic),
+            "api_url": reverse("vocabulary:api_topic_ielts", kwargs={"topic": topic}),
+            "flashcard_session_url": reverse("vocabulary:flashcard_deck"),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+@require_POST
+def generate_ielts_vocab_api(request):
+    if not settings.OPENAI_API_KEY:
+        return JsonResponse({"ok": False, "error": "OpenAI API key is not configured."}, status=503)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON body."}, status=400)
+
+    topic = (payload.get("topic") or "").strip()
+    level_raw = payload.get("level")
+    valid_topics = {k for k, _ in Word.TOPIC_CHOICES}
+    if topic not in valid_topics:
+        return JsonResponse({"ok": False, "error": "Invalid topic."}, status=400)
+    try:
+        level = int(level_raw)
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Invalid level."}, status=400)
+    if level not in (1, 2, 3):
+        return JsonResponse({"ok": False, "error": "Level must be 1, 2, or 3."}, status=400)
+
+    topic_label = _topic_label(topic)
+    band = _band_for_level(level)
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    system_msg = "You are an IELTS Academic vocabulary expert. Return only valid JSON."
+    user_msg = (
+        f'Topic area: {topic_label}\n'
+        f"Target difficulty: {band}\n\n"
+        "Return JSON with this exact shape:\n"
+        '{"words": [\n'
+        '  {"word": string, "definition": string, "example_sentence": string, '
+        '"collocations": [string], "part_of_speech": string, "phonetic": string}\n'
+        "]}\n\n"
+        "Rules:\n"
+        "- Generate exactly 12 words.\n"
+        "- Words must be useful for IELTS Writing Task 2 and Academic Reading.\n"
+        "- Collocations: 2–4 natural phrases per word.\n"
+        "- Example sentences: one clear IELTS-style sentence each.\n"
+        "- No duplicate words in the list.\n"
+    )
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.45,
+            max_tokens=3500,
+        )
+        raw = completion.choices[0].message.content or ""
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+
+    data = _extract_json_object(raw)
+    if not isinstance(data, dict):
+        return JsonResponse({"ok": False, "error": "Could not parse AI response."}, status=502)
+
+    words = data.get("words")
+    if not isinstance(words, list):
+        return JsonResponse({"ok": False, "error": "Invalid words array."}, status=502)
+
+    created = 0
+    skipped = 0
+    for item in words:
+        if not isinstance(item, dict):
+            skipped += 1
+            continue
+        w = (item.get("word") or "").strip()
+        if not w:
+            skipped += 1
+            continue
+        definition = (item.get("definition") or "").strip() or "—"
+        example = (item.get("example_sentence") or "").strip() or "—"
+        collocs = item.get("collocations")
+        if not isinstance(collocs, list):
+            collocs = []
+        collocs = [str(x).strip() for x in collocs if str(x).strip()][:12]
+        pos = (item.get("part_of_speech") or "").strip()
+        phon = (item.get("phonetic") or "").strip()
+
+        exists = Word.objects.filter(topic=topic, level=level, word__iexact=w).exists()
+        if exists:
+            skipped += 1
+            continue
+        Word.objects.create(
+            word=w[:100],
+            topic=topic,
+            level=level,
+            definition=definition,
+            example_sentence=example,
+            collocations=collocs,
+            part_of_speech=pos[:50],
+            phonetic=phon[:100],
+        )
+        created += 1
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "created": created,
+            "skipped": skipped,
+        }
+    )
+
+
+@login_required
+def flashcard_session(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    profile = user.profile
+
+    if request.method == "POST":
+        word_id = request.POST.get("word_id")
+        card_id = request.POST.get("card_id")
+        rating = request.POST.get("rating")
+        topic = request.POST.get("topic") or ""
+        level = request.POST.get("level") or ""
+        mode = request.POST.get("mode") or ""
+        deck_id = request.POST.get("deck_id") or ""
+        offset = int(request.POST.get("offset") or "0")
+        limit_post = (request.POST.get("limit") or "").strip()
+        words_post = (request.POST.get("words") or "").strip()
+
+        if rating in ("easy", "hard"):
+            try:
+                _apply_flashcard_rating(user, profile, word_id, card_id, rating)
+            except ValueError:
+                pass
+
+        offset = offset + 1
+        q = {"offset": str(offset)}
+        if topic:
+            q["topic"] = topic
+        if level:
+            q["level"] = level
+        if mode:
+            q["mode"] = mode
+        if deck_id:
+            q["deck_id"] = deck_id
+        if limit_post:
+            q["limit"] = limit_post
+        if words_post:
+            q["words"] = words_post
+        return redirect(f"{reverse('vocabulary:flashcard_deck')}?{urlencode(q)}")
+
+    topic = request.GET.get("topic")
+    level = request.GET.get("level")
+    mode = request.GET.get("mode")
+    deck_id = request.GET.get("deck_id")
+    words_q = (request.GET.get("words") or "").strip()
+    selected_word_ids = []
+    if words_q:
+        seen = set()
+        for raw in words_q.split(","):
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                wid = int(raw)
+            except ValueError:
+                continue
+            if wid not in seen:
+                seen.add(wid)
+                selected_word_ids.append(wid)
+
+    words = []
+    if deck_id:
+        deck = get_object_or_404(CustomDeck, pk=deck_id, student=user)
+        cards = list(CustomCard.objects.filter(deck=deck).order_by("id"))
+        for c in cards:
+            words.append(
+                {
+                    "id": None,
+                    "word": c.word,
+                    "definition": c.definition,
+                    "example_sentence": c.example_sentence,
+                    "topic": "custom",
+                    "is_custom": True,
+                    "card_id": c.id,
+                    "part_of_speech": "phrase",
+                    "phonetic": "",
+                    "level": 1,
+                    "level_label": "Custom",
+                    "topic_label": "Custom deck",
+                    "topic_key": "custom",
+                    "mastery_level": 1,
+                }
+            )
+    elif mode == "due":
+        now = timezone.now()
+        due = (
+            VocabularyProgress.objects.filter(student=user, next_review__lte=now)
+            .select_related("word")
+            .order_by("next_review")
+        )
+        for p in due:
+            card = _word_card_from_model(user, p.word)
+            card["mastery_level"] = p.mastery_level
+            words.append(card)
+    else:
+        qs = Word.objects.all()
+        if topic:
+            qs = qs.filter(topic=topic)
+            pack = TopicIELTSWordCache.objects.filter(
+                topic=topic, status=TopicIELTSWordCache.STATUS_READY
+            ).first()
+            if pack:
+                qs = qs.filter(topic_pack=pack)
+        if level:
+            qs = qs.filter(level=int(level))
+        qs = qs.order_by("topic", "word")
+        words = [_word_card_from_model(user, w) for w in qs]
+
+    if request.GET.get("shuffle") == "1" and words:
+        random.shuffle(words)
+    initial_shuffle = request.GET.get("shuffle") == "1"
+
+    if selected_word_ids:
+        selected_set = set(selected_word_ids)
+        words = [w for w in words if w.get("id") in selected_set]
+        order_map = {wid: i for i, wid in enumerate(selected_word_ids)}
+        words.sort(key=lambda w: order_map.get(w.get("id"), 10**9))
+
+    full_deck_total = len(words)
+    limit_requested = _coerce_session_card_limit(request.GET.get("limit"), full_deck_total)
+    if limit_requested is not None:
+        words = words[:limit_requested]
+
+    hidden = {}
+    if topic:
+        hidden["topic"] = topic
+    if level:
+        hidden["level"] = level
+    if mode:
+        hidden["mode"] = mode
+    if deck_id:
+        hidden["deck_id"] = deck_id
+    if selected_word_ids:
+        hidden["words"] = ",".join(str(wid) for wid in selected_word_ids)
+    if limit_requested is not None:
+        hidden["limit"] = str(limit_requested)
+
+    total = len(words)
+    if total == 0:
+        topic_href = ""
+        if topic:
+            try:
+                topic_href = reverse("vocabulary:flashcard_topic", kwargs={"topic": topic})
+            except Exception:
+                topic_href = ""
+        return render(
+            request,
+            "vocabulary/flashcard_session.html",
+            {
+                "streak": streak,
+                "empty": True,
+                "done": False,
+                "deck_words": [],
+                "current": None,
+                "offset": 0,
+                "total": 0,
+                "progress_pct": 0,
+                "hidden_fields": hidden,
+                "querystring": "",
+                "topic_for_empty": topic or "",
+                "topic_href": topic_href,
+                **_streak_ctx(request),
+            },
+        )
+
+    limit_key = str(limit_requested) if limit_requested is not None else "all"
+    stat_storage_key = hashlib.sha256(
+        f"{topic}_{level}_{mode}_{deck_id}_{','.join(map(str, selected_word_ids))}_{full_deck_total}_{limit_key}_{initial_shuffle}".encode(
+            "utf-8"
+        )
+    ).hexdigest()[:20]
+    study_q = {k: v for k, v in hidden.items() if v}
+    study_again_url = f"{reverse('vocabulary:flashcard_deck')}?{urlencode(study_q)}"
+
+    return render(
+        request,
+        "vocabulary/flashcard_session.html",
+        {
+            "streak": streak,
+            "empty": False,
+            "done": False,
+            "deck_words": words,
+            "total": total,
+            "progress_pct": 0,
+            "hidden_fields": hidden,
+            "hidden_fields_json": json.dumps(hidden),
+            "stat_storage_key": stat_storage_key,
+            "initial_shuffle": initial_shuffle,
+            "mastery_labels": MASTERY_STAGE_LABEL,
+            "study_again_url": study_again_url,
+            **_flashcard_session_api_urls(),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def word_list(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        wid = request.POST.get("word_id")
+        if action == "toggle_favorite" and wid:
+            word = get_object_or_404(Word, pk=wid)
+            prog, _ = VocabularyProgress.objects.get_or_create(
+                student=user,
+                word=word,
+                defaults={"next_review": timezone.now()},
+            )
+            prog.is_favored = not prog.is_favored
+            prog.save()
+
+    topic = request.GET.get("topic") or ""
+    level = request.GET.get("level") or ""
+
+    qs = Word.objects.all().order_by("topic", "word")
+    if topic:
+        qs = qs.filter(topic=topic)
+    if level:
+        qs = qs.filter(level=int(level))
+
+    rows = []
+    for w in qs:
+        prog = None
+        try:
+            prog = VocabularyProgress.objects.get(student=user, word=w)
+        except VocabularyProgress.DoesNotExist:
+            pass
+        rows.append(
+            {
+                "word": w,
+                "progress": prog,
+                "mastery": prog.mastery_level if prog else 0,
+                "favored": prog.is_favored if prog else False,
+            }
+        )
 
     return render(
         request,
         "vocabulary/word_list.html",
         {
-            "topic_name": topic_name,
-            "topic_code": topic_code,
-            "active_deck": None if word_list_all else active_deck,
-            "word_list_all": word_list_all,
-            "user_level_label": user_level_label,
-            "study_level": study_level,
-            "total_words": total_words,
-            "mastered_count": mastered_count,
-            "struggling_count": struggling_count,
-            "favored_count": favored_count,
-            "wl_items": wl_items,
-            "toggle_url": toggle_url,
-            "word_bank_url": word_bank_url,
-            "deck_create_save_url": deck_create_save_url,
-            "url_flashcard_pick": url_flashcard_pick,
-            "url_quiz_setup": url_quiz_setup,
-            "url_type_it_session": url_type_it_session,
+            "streak": streak,
+            "rows": rows,
+            "topics": Word.TOPIC_CHOICES,
+            "levels": Word.LEVEL_CHOICES,
+            "filter_topic": topic,
+            "filter_level": level,
+            **_streak_ctx(request),
         },
     )
 
 
 @login_required
-def quiz_setup_page(request: HttpRequest) -> HttpResponse:
-    """Three-step quiz wizard: pick deck, words, and question types."""
-    now = timezone.now()
-    study_level = _vocab_level_for_request(request)
-    topic_decks = topic_decks_for_studio(request.user, now, vocab_level=study_level)
-    topic_decks = topic_decks + custom_decks_for_studio(
-        request.user, now, vocab_level=study_level
+def quiz_topic_words_api(request, topic: str):
+    valid = {k for k, _ in Word.TOPIC_CHOICES}
+    if topic not in valid:
+        raise Http404("Unknown topic")
+    words = list(Word.objects.filter(topic=topic).order_by("word").values("id", "word"))
+    return JsonResponse({"words": words})
+
+
+@login_required
+def quiz_session(request):
+    """Run interactive quiz (MC, T/F, etc.) from query params produced by quiz setup."""
+    user = request.user
+    raw_ids = request.GET.get("words") or ""
+    topic_key = (request.GET.get("topic") or "").strip()
+    method_raw = (request.GET.get("quiz_types") or "mc").strip().lower().split(",")[0].strip()
+    limit_raw = (request.GET.get("quiz_limit") or "all").strip().lower()
+
+    id_parts = [x.strip() for x in raw_ids.split(",") if x.strip().isdigit()]
+    ids = [int(x) for x in id_parts][:800]
+    if len(ids) < 3:
+        return redirect(f"{reverse('vocabulary:quiz_setup')}?error=minwords")
+
+    qs = Word.objects.filter(pk__in=ids)
+    if topic_key:
+        valid_topics = {k for k, _ in Word.TOPIC_CHOICES}
+        if topic_key in valid_topics:
+            qs = qs.filter(topic=topic_key)
+    by_id = {w.id: w for w in qs}
+    ordered_models = [by_id[i] for i in ids if i in by_id]
+    if len(ordered_models) < 3:
+        return redirect(f"{reverse('vocabulary:quiz_setup')}?error=minwords")
+
+    deck = [_word_quiz_deck_item(user, w) for w in ordered_models]
+    random.shuffle(deck)
+    if limit_raw in ("5", "10", "20"):
+        n = int(limit_raw)
+        deck = deck[: min(n, len(deck))]
+
+    quiz_method = method_raw if method_raw in _QUIZ_METHOD_KEYS else "mc"
+    topic_label = _topic_label(topic_key) if topic_key else "Mixed"
+
+    quiz_config = {
+        "deck": deck,
+        "quizMethod": quiz_method,
+        "topicLabel": topic_label,
+        "setupUrl": reverse("vocabulary:quiz_setup"),
+    }
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    return render(
+        request,
+        "vocabulary/quiz_session.html",
+        {
+            "streak": streak,
+            "quiz_config": quiz_config,
+            **_streak_ctx(request),
+        },
     )
-    words_api_url = reverse("vocabulary:quiz_setup_words")
-    index_url = reverse("vocabulary:index")
-    flashcard_pick_url = reverse("vocabulary:flashcard")
+
+
+@login_required
+def quiz_setup(request):
+    streak = getattr(getattr(request.user, "profile", None), "streak", 0) or 0
+    quiz_topic_words_url = reverse(
+        "vocabulary:quiz_topic_words", kwargs={"topic": "__topic__"}
+    )
     return render(
         request,
         "vocabulary/quiz_setup.html",
         {
-            "topic_decks": topic_decks,
-            "words_api_url": words_api_url,
-            "index_url": index_url,
-            "flashcard_pick_url": flashcard_pick_url,
-            "preset_words": (request.GET.get("words") or "").strip(),
+            "streak": streak,
+            "topics": Word.TOPIC_CHOICES,
+            "quiz_topic_words_url": quiz_topic_words_url,
+            "quiz_session_url": reverse("vocabulary:quiz_session"),
+            **_streak_ctx(request),
         },
     )
 
 
+TYPE_IT_TOPIC_EMOJI = {
+    "environment": "🌿",
+    "health": "🩺",
+    "technology": "💻",
+    "education": "📚",
+    "society": "🏙️",
+    "travel": "✈️",
+    "science": "🔬",
+    "business": "💼",
+}
+TYPE_IT_LEVEL_SLUG = {1: "beginner", 2: "standard", 3: "advanced"}
+TYPE_IT_LEVEL_CARD = {
+    1: {
+        "tier_title": "Easy",
+        "icon_emoji": "📗",
+        "ielts": "Beginner",
+        "desc": (
+            "Core everyday vocabulary — simple definitions and common phrases."
+        ),
+        "badge": "easy",
+    },
+    2: {
+        "tier_title": "Medium",
+        "icon_emoji": "📘",
+        "ielts": "Standard",
+        "desc": (
+            "IELTS-ready vocabulary — collocations, academic phrases, "
+            "and topic-specific expressions."
+        ),
+        "badge": "medium",
+    },
+    3: {
+        "tier_title": "Hard",
+        "icon_emoji": "📙",
+        "ielts": "Advanced",
+        "desc": (
+            "Band 7+ vocabulary — complex academic language and sophisticated collocations."
+        ),
+        "badge": "hard",
+    },
+}
+
+
+def _type_it_level_progress(user, topic_key: str, level: int):
+    words = list(Word.objects.filter(topic=topic_key, level=level).order_by("word"))
+    total = len(words)
+    if not total:
+        return 0, 0, 0
+    wids = [w.id for w in words]
+    passed_map = {wid: False for wid in wids}
+    for a in TypeItAttempt.objects.filter(student=user, word_id__in=wids).only(
+        "word_id", "total_score", "mode"
+    ):
+        if a.word_id and _type_it_passes(getattr(a, "mode", None) or "both", a.total_score):
+            passed_map[a.word_id] = True
+    done = sum(1 for v in passed_map.values() if v)
+    pct = int(round((100 * done) / total)) if total else 0
+    return total, done, pct
+
+
 @login_required
-@require_http_methods(["GET"])
-def quiz_setup_words(request: HttpRequest) -> JsonResponse:
-    """JSON list of words in a deck for quiz setup step 2."""
-    pick = _parse_words_param_list(request)
-    if pick:
-        study_level = _profile_vocab_level_int(request.user)
-        fav_pairs = _favorite_pair_set(request.user)
-        mastery_map = mastery_map_for_student(request.user)
-        hard_map = times_marked_hard_map_for_student(request.user)
-        rows = _type_it_rows_for_progress_keys(
-            request.user,
-            request,
-            pick,
-            study_level,
-            fav_pairs,
-            mastery_map,
-            hard_map,
-        )
-        out = []
-        for row in rows:
-            k = _row_progress_key(row)
-            if not k:
+def type_it_deck(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    type_it_topics = []
+    for topic_key, topic_label in Word.TOPIC_CHOICES:
+        levels_payload = []
+        topic_total = 0
+        topic_done = 0
+        for lvl, _lvl_label in Word.LEVEL_CHOICES:
+            meta = TYPE_IT_LEVEL_CARD.get(int(lvl))
+            slug = TYPE_IT_LEVEL_SLUG.get(int(lvl))
+            if not meta or not slug:
                 continue
-            ml = int(row.get("mastery_level") or 0)
-            if row.get("is_mastered_card"):
-                ml = max(ml, 5)
-            is_mastered = ml >= 5
-            th = int(row.get("times_marked_hard") or 0)
-            struggling = th >= 2 and not is_mastered
-            pos = _word_list_pos_badge(row.get("part_of_speech") or "")
-            out.append(
+            total, done, pct = _type_it_level_progress(user, topic_key, int(lvl))
+            topic_total += total
+            topic_done += done
+            words_url = reverse(
+                "vocabulary:type_it_words_topic_level",
+                kwargs={"topic": topic_key, "level_slug": slug},
+            )
+            levels_payload.append(
                 {
-                    "id": k,
-                    "word": row["word"],
-                    "pos": pos,
-                    "mastery": min(5, ml),
-                    "favored": bool(row.get("favorited")),
-                    "struggling": struggling,
+                    "slug": slug,
+                    "tier_title": meta["tier_title"],
+                    "icon_emoji": meta["icon_emoji"],
+                    "ielts": meta["ielts"],
+                    "desc": meta["desc"],
+                    "badge": meta["badge"],
+                    "count": total,
+                    "done": done,
+                    "pct": pct,
+                    "words_url": words_url,
                 }
             )
-        return JsonResponse({"ok": True, "words": out})
-
-    topic_raw = (request.GET.get("topic") or "").strip().lower()
-    dr = (request.GET.get("deck") or "").strip()
-    if not topic_raw or not _valid_topic(topic_raw):
-        return JsonResponse({"ok": False, "error": "Invalid topic."}, status=400)
-
-    study_level = _profile_vocab_level_int(request.user)
-    fav_pairs = _favorite_pair_set(request.user)
-    mastery_map = mastery_map_for_student(request.user)
-    hard_map = times_marked_hard_map_for_student(request.user)
-
-    active_deck: CustomDeck | None = None
-    if dr.isdigit():
-        active_deck = CustomDeck.objects.filter(
-            pk=int(dr), student=request.user
-        ).first()
-        if active_deck:
-            topic_raw = CustomCard.TOPIC_OTHER
-
-    if active_deck:
-        rows = _full_word_list_custom_deck(
-            active_deck,
-            request.user,
-            request,
-            fav_pairs,
-            mastery_map,
-            study_level,
-            hard_map,
-        )
-    else:
-        rows = _full_word_list_for_topic(
-            topic_raw,
-            request.user,
-            request,
-            fav_pairs,
-            mastery_map,
-            study_level,
-            hard_map,
-        )
-
-    out = []
-    for row in rows:
-        k = _row_progress_key(row)
-        if not k:
-            continue
-        ml = int(row.get("mastery_level") or 0)
-        if row.get("is_mastered_card"):
-            ml = max(ml, 5)
-        is_mastered = ml >= 5
-        th = int(row.get("times_marked_hard") or 0)
-        struggling = th >= 2 and not is_mastered
-        pos = _word_list_pos_badge(row.get("part_of_speech") or "")
-        out.append(
+        topic_pct = int(round((100 * topic_done) / topic_total)) if topic_total else 0
+        type_it_topics.append(
             {
-                "id": k,
-                "word": row["word"],
-                "pos": pos,
-                "mastery": min(5, ml),
-                "favored": bool(row.get("favorited")),
-                "struggling": struggling,
+                "topic": topic_key,
+                "name": topic_label,
+                "emoji": TYPE_IT_TOPIC_EMOJI.get(topic_key, "📖"),
+                "total_words": topic_total,
+                "done": topic_done,
+                "pct": topic_pct,
+                "levels": levels_payload,
             }
         )
-    return JsonResponse({"ok": True, "words": out})
 
-
-def _type_it_row_with_name(row: dict) -> dict:
-    out = dict(row)
-    out["name"] = (row.get("label") or row.get("slug") or "").strip()
-    return out
-
-
-def type_it_deck_select(request: HttpRequest) -> HttpResponse:
-    """Dedicated Type it deck picker (same counts as studio; links to type-it session)."""
-    now = timezone.now()
-    study_level = _vocab_level_for_request(request)
-    theme_and_other = topic_decks_for_studio(
-        request.user, now, vocab_level=study_level
-    )
-    custom_list = custom_decks_for_studio(
-        request.user, now, vocab_level=study_level
-    )
-    merged = theme_and_other + custom_list
-
-    topic_decks = [
-        _type_it_row_with_name(d)
-        for d in theme_and_other
-        if d["slug"] != CustomCard.TOPIC_OTHER
-    ]
-    my_src = next(
-        (d for d in theme_and_other if d["slug"] == CustomCard.TOPIC_OTHER),
-        None,
-    )
-    if my_src:
-        my_vocab = _type_it_row_with_name(my_src)
-    else:
-        my_vocab = {
-            "name": "My vocabulary",
-            "label": "My vocabulary",
-            "slug": CustomCard.TOPIC_OTHER,
-            "emoji": TOPIC_DECK_EMOJI.get(CustomCard.TOPIC_OTHER, "⭐"),
-            "word_count": 0,
-            "mastered_count": 0,
-            "due_count": 0,
-            "progress_pct": 0,
-            "last_studied": None,
-        }
-    custom_decks = [_type_it_row_with_name(d) for d in custom_list]
-
-    total_words = sum(d["word_count"] for d in merged)
-    total_mastered = sum(d["mastered_count"] for d in merged)
-    total_due = (
-        sum(d["due_count"] for d in merged) if request.user.is_authenticated else 0
-    )
-    streak = study_streak(request.user)
+    custom = []
+    for d in CustomDeck.objects.filter(student=user).order_by("-created_at"):
+        cwords = list(d.words.all().order_by("id"))
+        cids = [w.id for w in cwords]
+        passed_map = {cid: False for cid in cids}
+        for a in TypeItAttempt.objects.filter(student=user, custom_word_id__in=cids).only(
+            "custom_word_id", "total_score", "mode"
+        ):
+            if a.custom_word_id and _type_it_passes(getattr(a, "mode", None) or "both", a.total_score):
+                passed_map[a.custom_word_id] = True
+        done = sum(1 for v in passed_map.values() if v)
+        total = len(cwords)
+        custom.append(
+            {
+                "id": f"custom-{d.id}",
+                "emoji": d.emoji or "📖",
+                "name": d.name,
+                "colour": d.colour or "navy",
+                "count": total,
+                "done": done,
+                "pct": int(round((100 * done) / total)) if total else 0,
+                "url": reverse("vocabulary:type_it_words", kwargs={"deck_id": f"custom-{d.id}"}),
+            }
+        )
 
     return render(
         request,
-        "vocabulary/type_it_deck_select.html",
+        "vocabulary/type_it_deck.html",
         {
-            "topic_decks": topic_decks,
-            "my_vocab": my_vocab,
-            "custom_decks": custom_decks,
-            "total_words": total_words,
-            "total_mastered": total_mastered,
-            "total_due": total_due,
             "streak": streak,
-            "type_it_session_url": reverse("vocabulary:type_it_session"),
+            "type_it_topics": type_it_topics,
+            "custom_decks": custom,
+            "create_url": reverse("vocabulary:type_it_custom_deck_create"),
+            **_streak_ctx(request),
         },
     )
 
 
-_TYPE_IT_MASTERY_STAGES = (
-    "New",
-    "Recognizing",
-    "Learning",
-    "Practicing",
-    "Near mastery",
-    "Mastered",
-)
-
-
-def _type_it_mastery_label(level: int) -> str:
-    n = max(0, min(5, int(level)))
-    return _TYPE_IT_MASTERY_STAGES[n]
-
-
-def _type_it_topic_badge_label(
-    row: dict, topic_param: str, topic_labels: dict[str, str]
-) -> str:
-    if row.get("is_custom") and row.get("custom_id"):
-        t = (
-            CustomCard.objects.filter(pk=int(row["custom_id"]))
-            .values_list("topic", flat=True)
-            .first()
-        )
-        return topic_labels.get(t or CustomCard.TOPIC_OTHER, t or "")
-    if row.get("word_id"):
-        t = (
-            Word.objects.filter(pk=int(row["word_id"]))
-            .values_list("topic", flat=True)
-            .first()
-        )
-        return topic_labels.get(t or topic_param, topic_param)
-    return topic_labels.get(topic_param, topic_param)
-
-
-def _type_it_load_rows(
-    *,
-    request: HttpRequest,
-    user,
-    topic_param: str,
-    active_deck: CustomDeck | None,
-    study_level: int | None,
-    fav_pairs: Set[Tuple[str, int]],
-    mastery_map: dict[str, int],
-    hard_map: dict[str, int],
-):
-    if active_deck:
-        return _full_word_list_custom_deck(
-            active_deck,
-            user,
-            request,
-            fav_pairs,
-            mastery_map,
-            study_level,
-            hard_map,
-        )
-    return _full_word_list_for_topic(
-        topic_param,
-        user,
-        request,
-        fav_pairs,
-        mastery_map,
-        study_level,
-        hard_map,
-    )
-
-
-@ensure_csrf_cookie
 @login_required
-def type_it_session(request: HttpRequest) -> HttpResponse:
-    """Dedicated Type it practice page (word-by-word) for a topic or named deck."""
-    if request.GET.get("skip") == "1":
-        request.session["type_it_skipped"] = int(
-            request.session.get("type_it_skipped", 0)
-        ) + 1
-        request.session.modified = True
+def type_it_session(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
 
-    study_level = _vocab_level_for_request(request)
-    fav_pairs = _favorite_pair_set(request.user)
-    mastery_map = mastery_map_for_student(request.user)
-    hard_map = times_marked_hard_map_for_student(request.user)
+    topic = request.GET.get("topic")
+    level = request.GET.get("level")
+    word_id = request.GET.get("word_id")
 
-    words_q_raw = (request.GET.get("words") or "").strip()
-    words_pick_keys = _parse_words_param_list(request) or []
-    pick_mode = bool(words_pick_keys)
-
-    active_deck: CustomDeck | None = None
-    topic_param: str
-    if pick_mode:
-        rows = _type_it_rows_for_progress_keys(
-            request.user,
-            request,
-            words_pick_keys,
-            study_level,
-            fav_pairs,
-            mastery_map,
-            hard_map,
-        )
-        topic_param = CustomCard.TOPIC_OTHER
+    word_obj = None
+    if word_id:
+        word_obj = get_object_or_404(Word, pk=word_id)
     else:
-        custom_raw = (request.GET.get("custom_deck") or "").strip()
-        topic_raw = (request.GET.get("topic") or "").strip().lower()
-        if custom_raw.isdigit():
-            active_deck = CustomDeck.objects.filter(
-                pk=int(custom_raw), student=request.user
-            ).first()
-            if not active_deck:
-                return redirect("vocabulary:type_it_deck_select")
-            topic_param = CustomCard.TOPIC_OTHER
-        elif topic_raw and _valid_topic(topic_raw):
-            topic_param = topic_raw
-        else:
-            return redirect("vocabulary:type_it_deck_select")
-
-        rows = _type_it_load_rows(
-            request=request,
-            user=request.user,
-            topic_param=topic_param,
-            active_deck=active_deck,
-            study_level=study_level,
-            fav_pairs=fav_pairs,
-            mastery_map=mastery_map,
-            hard_map=hard_map,
-        )
-
-    total_words = len(rows)
-    if total_words == 0:
-        return redirect("vocabulary:type_it_deck_select")
-
-    if pick_mode:
-        scope = "pick:" + ",".join(words_pick_keys)
-        if request.session.get("type_it_scope") != scope:
-            request.session["type_it_scope"] = scope
-            request.session["type_it_topic"] = topic_param
-            request.session["type_it_deck_pk"] = None
-            request.session["type_it_pick_keys"] = list(words_pick_keys)
-            request.session["type_it_pick_query"] = words_q_raw
-            request.session["type_it_bands"] = []
-            request.session["type_it_history"] = []
-            request.session["type_it_done"] = 0
-            request.session["type_it_skipped"] = 0
-            request.session.modified = True
-    else:
-        scope = f"{topic_param}:{active_deck.pk if active_deck else ''}"
-        if request.session.get("type_it_scope") != scope:
-            request.session["type_it_scope"] = scope
-            request.session["type_it_topic"] = topic_param
-            request.session["type_it_deck_pk"] = active_deck.pk if active_deck else None
-            request.session.pop("type_it_pick_keys", None)
-            request.session.pop("type_it_pick_query", None)
-            request.session["type_it_bands"] = []
-            request.session["type_it_history"] = []
-            request.session["type_it_done"] = 0
-            request.session["type_it_skipped"] = 0
-            request.session.modified = True
-
-    try:
-        idx_one = int((request.GET.get("index") or "1").strip())
-    except ValueError:
-        idx_one = 1
-    if idx_one > total_words:
-        return redirect("vocabulary:type_it_session_result")
-    current_index = max(1, min(idx_one, total_words))
-    row = rows[current_index - 1]
-
-    topic_labels = dict(_topic_choices_full())
-    topic_badge = _type_it_topic_badge_label(row, topic_param, topic_labels)
-
-    ml = int(row.get("mastery_level") or 0)
-    if row.get("is_mastered_card"):
-        ml = max(ml, 5)
-    ml = min(5, max(0, ml))
-
-    word_display = {
-        "key": _row_progress_key(row),
-        "word": row["word"],
-        "part_of_speech": (row.get("part_of_speech") or "").strip(),
-        "level": row.get("level"),
-        "topic": topic_badge,
-        "phonetic": (row.get("phonetic") or "").strip(),
-        "definition": (row.get("definition") or "").strip(),
-    }
-    progress = {
-        "mastery_level": ml,
-        "mastery_label": _type_it_mastery_label(ml),
-    }
-
-    bands = request.session.get("type_it_bands") or []
-    session_done = int(request.session.get("type_it_done", 0))
-    session_skipped = int(request.session.get("type_it_skipped", 0))
-    session_avg_band = round(sum(bands) / len(bands), 1) if bands else None
-    session_remaining = max(0, total_words - current_index)
-
-    progress_pct = (
-        int(round((current_index - 1) * 100 / total_words)) if total_words else 0
-    )
-    past_index = total_words + 1
-    result_url = reverse("vocabulary:type_it_session_result")
-    base = reverse("vocabulary:type_it_session")
-    if pick_mode:
-        wq = quote(request.session.get("type_it_pick_query") or words_q_raw or "")
-        if current_index >= total_words:
-            next_url_done = result_url
-            next_url_skip = f"{base}?words={wq}&index={past_index}&skip=1"
-        else:
-            next_idx = current_index + 1
-            q = f"?words={wq}&index={next_idx}"
-            next_url_done = f"{base}{q}"
-            next_url_skip = f"{base}{q}&skip=1"
-    elif active_deck:
-        if current_index >= total_words:
-            next_url_done = result_url
-            next_url_skip = (
-                f"{base}?custom_deck={active_deck.pk}&index={past_index}&skip=1"
-            )
-        else:
-            next_idx = current_index + 1
-            q = f"?custom_deck={active_deck.pk}&index={next_idx}"
-            next_url_done = f"{base}{q}"
-            next_url_skip = f"{base}{q}&skip=1"
-    else:
-        if current_index >= total_words:
-            next_url_done = result_url
-            next_url_skip = (
-                f"{base}?topic={quote(topic_param)}&index={past_index}&skip=1"
-            )
-        else:
-            next_idx = current_index + 1
-            q = f"?topic={quote(topic_param)}&index={next_idx}"
-            next_url_done = f"{base}{q}"
-            next_url_skip = f"{base}{q}&skip=1"
-
-    next_index = past_index if current_index >= total_words else current_index + 1
+        qs = Word.objects.all()
+        if topic:
+            qs = qs.filter(topic=topic)
+        if level:
+            qs = qs.filter(level=int(level))
+        word_obj = qs.order_by("?").first()
 
     return render(
         request,
         "vocabulary/type_it_session.html",
         {
-            "word": word_display,
-            "progress": progress,
-            "topic": topic_param,
-            "current_index": current_index,
-            "total_words": total_words,
-            "next_index": next_index,
-            "progress_pct": progress_pct,
-            "session_done": session_done,
-            "session_remaining": session_remaining,
-            "session_avg_band": session_avg_band,
-            "session_skipped": session_skipped,
-            "type_it_check_api_url": reverse("vocabulary:type_it_check_api"),
-            "next_url_skip": next_url_skip,
-            "next_url_done": next_url_done,
-            "type_it_is_last_word": current_index >= total_words,
+            "streak": streak,
+            "word_obj": word_obj,
+            "topic": topic or "",
+            "level": level or "",
+            **_streak_ctx(request),
         },
     )
 
 
 @login_required
-@require_POST
-def type_it_check_api(request: HttpRequest) -> JsonResponse:
-    """AI evaluation for Type it session; persists TypeItResult and updates session stats."""
-    try:
+def favored(request):
+    user = request.user
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    qs = (
+        VocabularyProgress.objects.filter(student=user, is_favored=True)
+        .select_related("word")
+        .order_by("-last_reviewed")
+    )
+    return render(
+        request,
+        "vocabulary/favored.html",
+        {
+            "streak": streak,
+            "items": qs,
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def vocabulary_guide(request):
+    streak = getattr(getattr(request.user, "profile", None), "streak", 0) or 0
+    return render(
+        request,
+        "vocabulary/guide.html",
+        {
+            "streak": streak,
+            **_streak_ctx(request),
+        },
+    )
+
+
+def _extract_json_object(text: str):
+    """Parse first JSON object from model text; tolerate ```json fences."""
+    text = (text or "").strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        if lines and lines[0].lstrip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    if text.startswith("{") and text.endswith("}"):
         try:
-            data = json.loads(request.body.decode("utf-8"))
+            return json.loads(text)
         except json.JSONDecodeError:
-            return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+            pass
+    m = re.search(r"\{[\s\S]*\}", text)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group())
+    except json.JSONDecodeError:
+        return None
 
-        word_key = (data.get("word_key") or data.get("word_id") or "").strip()
-        student_text = (data.get("student_text") or "").strip()
-        mode = (data.get("mode") or "sentence").strip().lower()
-        if mode not in ("sentence", "definition"):
-            mode = "sentence"
 
-        raw_ielts = data.get("ielts_mode")
-        if isinstance(raw_ielts, str):
-            ielts_mode = raw_ielts.strip().lower() in ("1", "true", "yes", "on")
-        else:
-            ielts_mode = bool(raw_ielts) if raw_ielts is not None else True
+@login_required
+@require_POST
+def type_it_check_api(request):
+    if not settings.OPENAI_API_KEY:
+        return JsonResponse({"ok": False, "error": "OpenAI API key is not configured."}, status=503)
 
-        if not word_key or not student_text:
-            return JsonResponse(
-                {"ok": False, "error": "word_key and student_text are required."},
-                status=400,
-            )
-        if len(student_text) > 4000:
-            return JsonResponse({"ok": False, "error": "Text is too long."}, status=400)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON body."}, status=400)
 
-        topic_param = request.session.get("type_it_topic")
-        deck_pk = request.session.get("type_it_deck_pk")
-        if not topic_param:
-            return JsonResponse(
-                {
-                    "ok": False,
-                    "error": "Session expired. Open Type it from the deck list.",
-                },
-                status=400,
-            )
+    word_text = (payload.get("word") or "").strip()
+    student_text = (payload.get("student_text") or "").strip()
+    word_id = payload.get("word_id")
 
-        study_level = _vocab_level_for_request(request)
-        fav_pairs = _favorite_pair_set(request.user)
-        mastery_map = mastery_map_for_student(request.user)
-        hard_map = times_marked_hard_map_for_student(request.user)
+    if not word_text or not student_text:
+        return JsonResponse({"ok": False, "error": "word and student_text are required."}, status=400)
 
-        pick_keys = request.session.get("type_it_pick_keys")
-        active_deck = None
-        if pick_keys:
-            rows = _type_it_rows_for_progress_keys(
-                request.user,
-                request,
-                list(pick_keys),
-                study_level,
-                fav_pairs,
-                mastery_map,
-                hard_map,
-            )
-        else:
-            if deck_pk:
-                active_deck = CustomDeck.objects.filter(
-                    pk=int(deck_pk), student=request.user
-                ).first()
-                if not active_deck:
-                    return JsonResponse({"ok": False, "error": "Invalid deck."}, status=400)
+    profile = request.user.profile
+    level_label = profile.level_label
 
-            rows = _type_it_load_rows(
-                request=request,
-                user=request.user,
-                topic_param=str(topic_param),
-                active_deck=active_deck,
-                study_level=study_level,
-                fav_pairs=fav_pairs,
-                mastery_map=mastery_map,
-                hard_map=hard_map,
-            )
-        allowed = {_row_progress_key(r) for r in rows}
-        if word_key not in allowed:
-            return JsonResponse(
-                {"ok": False, "error": "Unknown word for this session."},
-                status=400,
-            )
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    system_msg = "You are an IELTS examiner scoring student sentences. Return only valid JSON."
+    user_msg = (
+        f"Student level: {level_label}\n"
+        f"Word to use: {word_text}\n"
+        f"Student sentence: {student_text}\n\n"
+        "Return JSON: {band: float 1-9, title: string, subtitle: string, improved: string, "
+        "strengths: [strings], improvements: [strings], errors: [strings], ielts_tip: string, "
+        "understanding_check: string}"
+    )
 
-        row = None
-        for r in rows:
-            if _row_progress_key(r) == word_key:
-                row = r
-                break
-        if row is None:
-            return JsonResponse(
-                {"ok": False, "error": "Unknown word for this session."},
-                status=400,
-            )
-        word_text = (row.get("word") or "").strip()
-        definition = (row.get("definition") or "").strip()
-        pos = (row.get("part_of_speech") or "").strip()
-        topic_labels = dict(_topic_choices_full())
-        topic_display = _type_it_topic_badge_label(
-            row, str(topic_param), topic_labels
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.3,
         )
-        level = _profile_vocab_level_int(request.user)
+        raw = completion.choices[0].message.content or ""
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
 
+    data = _extract_json_object(raw)
+    if not isinstance(data, dict):
+        return JsonResponse({"ok": False, "error": "Could not parse model response."}, status=502)
+
+    band = data.get("band")
+    try:
+        band_f = float(band) if band is not None else None
+    except (TypeError, ValueError):
+        band_f = None
+
+    word_obj = None
+    if word_id:
         try:
-            out = evaluate_type_it_session(
-                word=word_text,
-                definition=definition,
-                part_of_speech=pos,
-                topic_label=topic_display,
-                student_text=student_text,
-                mode=mode,
-                ielts_mode=ielts_mode,
-                level=level,
-            )
-        except (RuntimeError, json.JSONDecodeError, ValueError, TypeError, KeyError) as exc:
-            return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+            word_obj = Word.objects.get(pk=int(word_id))
+        except (Word.DoesNotExist, ValueError, TypeError):
+            word_obj = None
 
-        word_obj = None
-        custom_obj = None
-        if row.get("is_custom") and row.get("custom_id"):
-            custom_obj = CustomCard.objects.filter(
-                pk=int(row["custom_id"]), student=request.user
-            ).first()
-        elif row.get("word_id"):
-            word_obj = Word.objects.filter(pk=int(row["word_id"])).first()
+    TypeItResult.objects.create(
+        student=request.user,
+        word=word_obj,
+        student_text=student_text,
+        mode="word",
+        band_score=band_f,
+        improved_text=str(data.get("improved") or ""),
+        ielts_mode=True,
+    )
+    bump_streak_for_user(request.user)
 
-        if not word_obj and not custom_obj:
-            return JsonResponse({"ok": False, "error": "Word not found."}, status=400)
+    return JsonResponse({"ok": True, "result": data})
 
-        TypeItResult.objects.create(
+
+@login_required
+def type_it_practice(request, deck_id: str):
+    # Backward-compatible alias to new words selector URL.
+    return redirect("vocabulary:type_it_words", deck_id=deck_id)
+
+
+@login_required
+@require_POST
+def type_it_feedback(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON body."}, status=400)
+
+    item_id = (payload.get("item_id") or "").strip()
+    word_id = payload.get("word_id")
+    deck_slug = (payload.get("deck_slug") or "").strip().lower()
+    definition_text = (payload.get("definition_text") or "").strip()
+    sentence_text = (payload.get("sentence_text") or "").strip()
+    assisted = bool(payload.get("assisted"))
+
+    word_obj = None
+    custom_word = None
+    enriched = None
+    if item_id.startswith("cw-"):
+        try:
+            cwid = int(item_id.split("-", 1)[1])
+        except (TypeError, ValueError):
+            return JsonResponse({"ok": False, "error": "invalid item id"}, status=400)
+        custom_word = get_object_or_404(CustomDeckWord, pk=cwid, deck__student=request.user)
+        enriched = {
+            "id": custom_word.id,
+            "word": custom_word.word,
+            "definition": "No saved definition for this custom word yet.",
+            "example": f"In IELTS essays, use '{custom_word.word}' in a clear topic sentence.",
+            "collocations": [],
+            "ielts_note": "Because this is a custom word, focus on clarity and accurate meaning in context.",
+            "pos": "word",
+        }
+    else:
+        if not word_id:
+            word_id = item_id.split("-", 1)[1] if item_id.startswith("w-") else word_id
+        try:
+            wid = int(word_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"ok": False, "error": "word_id required."}, status=400)
+        word_obj = get_object_or_404(Word, pk=wid)
+        enriched = enrich_word(word_obj)
+
+    if not definition_text and not sentence_text:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "empty_submission",
+                "message": "Write a definition, a sentence, or both — then request feedback.",
+            },
+            status=400,
+        )
+
+    if definition_text and sentence_text:
+        mode = TypeItAttempt.MODE_BOTH
+    elif definition_text:
+        mode = TypeItAttempt.MODE_DEFINITION
+    else:
+        mode = TypeItAttempt.MODE_SENTENCE
+
+    api_key = (getattr(settings, "OPENAI_API_KEY", None) or resolve_openai_api_key() or "").strip()
+    if not api_key:
+        return JsonResponse(
+            {"ok": False, "error": "OpenAI API key is not configured.", "message": "Something went wrong — try again."},
+            status=503,
+        )
+
+    common = (
+        "You are an IELTS vocabulary examiner.\n\n"
+        f'Target word: "{enriched["word"]}"\n'
+        f'Correct definition: "{enriched["definition"]}"\n'
+        f'IELTS example sentence: "{enriched["example"]}"\n\n'
+    )
+    if mode == TypeItAttempt.MODE_BOTH:
+        prompt = (
+            common
+            + "Student wrote:\n"
+            + f'Definition: "{definition_text}"\n'
+            + f'Sentence: "{sentence_text}"\n\n'
+            + "Score both definition and sentence.\n"
+            + "Return ONLY this JSON. No explanation, no markdown, no backticks:\n"
+            + "{\n"
+            + '  "definition_score": number from 1 to 5,\n'
+            + '  "definition_good": "what they got right in 1-2 sentences",\n'
+            + '  "definition_missing": "what was wrong or missing — empty string if score is 4 or above",\n'
+            + '  "sentence_score": number from 1 to 5,\n'
+            + '  "sentence_good": "what was good about the sentence",\n'
+            + '  "sentence_improve": "what to improve — empty string if score is 4 or above",\n'
+            + '  "better_sentence": "a stronger IELTS-style sentence using the word",\n'
+            + '  "band_tip": "one sentence on what band level this shows and one tip to improve"\n'
+            + "}\n"
+        )
+    elif mode == TypeItAttempt.MODE_DEFINITION:
+        prompt = (
+            common
+            + "The student submitted ONLY a definition (no sentence).\n"
+            + f'Student definition: "{definition_text}"\n\n'
+            + "Score the definition only.\n"
+            + "Return ONLY this JSON. No explanation, no markdown, no backticks:\n"
+            + "{\n"
+            + '  "definition_score": number from 1 to 5,\n'
+            + '  "definition_good": "what they got right in 1-2 sentences",\n'
+            + '  "definition_missing": "what was wrong or missing — empty string if score is 4 or above",\n'
+            + '  "band_tip": "one sentence on vocabulary level shown and one tip to improve"\n'
+            + "}\n"
+        )
+    else:
+        prompt = (
+            common
+            + "The student submitted ONLY a sentence (no definition).\n"
+            + f'Student sentence: "{sentence_text}"\n\n'
+            + "Score the sentence only.\n"
+            + "Return ONLY this JSON. No explanation, no markdown, no backticks:\n"
+            + "{\n"
+            + '  "sentence_score": number from 1 to 5,\n'
+            + '  "sentence_good": "what was good about the sentence",\n'
+            + '  "sentence_improve": "what to improve — empty string if score is 4 or above",\n'
+            + '  "better_sentence": "a stronger IELTS-style sentence using the word",\n'
+            + '  "band_tip": "one sentence on vocabulary level shown and one tip to improve"\n'
+            + "}\n"
+        )
+
+    model = (os.environ.get("OPENAI_TYPE_IT_FEEDBACK_MODEL") or "").strip() or "gpt-4o-mini"
+    try:
+        # Ignore shell/OS proxy env vars for this request path; a local proxy can block api.openai.com.
+        client = OpenAI(api_key=api_key, http_client=httpx.Client(trust_env=False))
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an IELTS vocabulary examiner. Return only valid JSON as instructed. No markdown fences.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            max_tokens=2048,
+        )
+        raw_text = (completion.choices[0].message.content or "").strip()
+        if not raw_text:
+            raise RuntimeError("OpenAI returned empty content")
+    except Exception:
+        logger.exception("type_it_feedback: OpenAI call failed (model=%s)", model)
+        return JsonResponse(
+            {
+                "ok": False,
+                "success": False,
+                "error": "ai_request_failed",
+                "message": (
+                    "AI feedback could not be completed. Check your internet connection, "
+                    "confirm your OpenAI API key is set, then try again."
+                ),
+            },
+            status=502,
+        )
+
+    parsed = _extract_json_object(raw_text)
+    if not isinstance(parsed, dict):
+        logger.warning("type_it_feedback: parse_failed raw=%s", (raw_text or "")[:800])
+        return JsonResponse(
+            {
+                "ok": False,
+                "success": False,
+                "error": "Invalid JSON from AI (parse_failed).",
+                "message": "Something went wrong — try again.",
+            },
+            status=502,
+        )
+
+    def _clamp_int(v, lo, hi, default):
+        try:
+            n = int(v)
+            return max(lo, min(hi, n))
+        except (TypeError, ValueError):
+            return default
+
+    if mode == TypeItAttempt.MODE_BOTH:
+        ds = _clamp_int(parsed.get("definition_score"), 1, 5, 3)
+        ss = _clamp_int(parsed.get("sentence_score"), 1, 5, 3)
+        total = ds + ss
+        feedback_json = parsed
+    elif mode == TypeItAttempt.MODE_DEFINITION:
+        ds = _clamp_int(parsed.get("definition_score"), 1, 5, 3)
+        ss = None
+        total = ds
+        feedback_json = {
+            **parsed,
+            "sentence_score": None,
+            "sentence_good": "",
+            "sentence_improve": "",
+            "better_sentence": "",
+        }
+    else:
+        ds = None
+        ss = _clamp_int(parsed.get("sentence_score"), 1, 5, 3)
+        total = ss
+        feedback_json = {
+            **parsed,
+            "definition_score": None,
+            "definition_good": "",
+            "definition_missing": "",
+        }
+
+    try:
+        attempt = TypeItAttempt.objects.create(
             student=request.user,
             word=word_obj,
-            custom_card=custom_obj,
-            student_text=student_text,
+            custom_word=custom_word,
+            deck_slug=deck_slug or "unknown",
             mode=mode,
-            band_score=float(out["band"]),
-            improved_text=out.get("improved") or "",
-            ielts_mode=ielts_mode,
-            response_json=out,
+            definition_score=ds,
+            sentence_score=ss,
+            total_score=total,
+            assisted=assisted,
+            student_definition=definition_text if mode != TypeItAttempt.MODE_SENTENCE else "",
+            student_sentence=sentence_text if mode != TypeItAttempt.MODE_DEFINITION else "",
+            feedback_json=feedback_json,
         )
-
-        bands = list(request.session.get("type_it_bands") or [])
-        bands.append(float(out["band"]))
-        request.session["type_it_bands"] = bands
-        hist = list(request.session.get("type_it_history") or [])
-        hist.append(
+        bump_streak_for_user(request.user)
+    except Exception:
+        logger.exception("type_it_feedback: failed to save TypeItAttempt")
+        return JsonResponse(
             {
-                "word": word_text,
-                "band": float(out["band"]),
-                "sentence": student_text[:500],
-            }
+                "ok": False,
+                "error": "save_failed",
+                "message": "Something went wrong — try again.",
+            },
+            status=500,
         )
-        request.session["type_it_history"] = hist
-        request.session["type_it_done"] = int(request.session.get("type_it_done", 0)) + 1
-        request.session.modified = True
-
-        is_sentence = mode == "sentence"
-        is_ok = float(out["band"]) >= 6.0
-        if is_sentence and is_ok:
-            topic_for_record = str(topic_param)
-            if word_obj and getattr(word_obj, "topic", None):
-                topic_for_record = str(word_obj.topic)
-            elif custom_obj and getattr(custom_obj, "topic", None):
-                topic_for_record = str(custom_obj.topic)
-            record_type_example_success(request.user, word_text, topic_for_record)
-
-        return JsonResponse({"ok": True, **out})
-    except Exception as exc:
-        logger.exception("type_it_check_api failed")
-        return JsonResponse({"ok": False, "error": str(exc)}, status=500)
-
-
-@login_required
-def type_it_session_result(request: HttpRequest) -> HttpResponse:
-    """End-of-session summary after the last word or when index runs past the deck."""
-    history = list(request.session.get("type_it_history") or [])
-    bands_flat = list(request.session.get("type_it_bands") or [])
-    if not history and bands_flat:
-        history = [
-            {"word": "", "band": float(b), "sentence": ""} for b in bands_flat
-        ]
-    if not history:
-        return redirect("vocabulary:type_it_deck_select")
-
-    rows: list[dict] = []
-    for item in history:
-        b = float(item.get("band") or 0)
-        rows.append(
-            {
-                "word": str(item.get("word") or ""),
-                "band": b,
-                "sentence": str(item.get("sentence") or ""),
-                "band_pct": min(100, max(0, int(round(b / 9.0 * 100)))),
-            }
-        )
-
-    total = len(rows)
-    avg_band = round(sum(r["band"] for r in rows) / total, 1) if total else 0.0
-    best = max(rows, key=lambda r: r["band"]) if rows else None
-    worst = min(rows, key=lambda r: r["band"]) if rows else None
-
-    request.session["type_it_history"] = []
-    request.session["type_it_bands"] = []
-    request.session.modified = True
-
-    return render(
-        request,
-        "vocabulary/type_it_result.html",
-        {
-            "items": rows,
-            "total": total,
-            "avg_band": avg_band,
-            "best": best,
-            "worst": worst,
-        },
-    )
-
-
-@login_required
-def vocabulary_home(request: HttpRequest) -> HttpResponse:
-    """Compact vocabulary dashboard: stats, continue card, and study method shortcuts."""
-    user = request.user
-    now = timezone.now()
-    topic_labels = dict(_topic_choices_full())
-    default_topic = Word.TOPIC_CHOICES[0][0]
-
-    all_progress = VocabularyProgress.objects.filter(student=user)
-    words_learned = all_progress.count()
-    mastered_count = all_progress.filter(mastery_level=5).count()
-    mastered_pct = round((mastered_count / words_learned * 100) if words_learned else 0)
-    due_count = all_progress.filter(
-        next_review__isnull=False, next_review__lte=now
-    ).count()
-    favored_count = VocabFavorite.objects.filter(user=user).count()
-
-    try:
-        streak = int(getattr(user.profile, "streak", 0) or 0)
-    except Exception:
-        streak = study_streak(user)
-
-    week_ago = now - timedelta(days=7)
-    words_this_week = all_progress.filter(last_reviewed__gte=week_ago).count()
-
-    last_progress = (
-        all_progress.filter(last_reviewed__isnull=False)
-        .order_by("-last_reviewed")
-        .select_related("word", "custom_card")
-        .first()
-    )
-    latest_type_it = (
-        TypeItResult.objects.filter(student=user)
-        .order_by("-created_at")
-        .select_related("word", "custom_card")
-        .first()
-    )
-
-    last_session = None
-    if latest_type_it and (
-        not last_progress
-        or latest_type_it.created_at > last_progress.last_reviewed
-    ):
-        delta = now - latest_type_it.created_at
-        if delta.days == 0:
-            ago_label = "Today"
-        elif delta.days == 1:
-            ago_label = "Yesterday"
-        else:
-            ago_label = f"{delta.days} days ago"
-
-        topic_label = "My vocabulary"
-        if latest_type_it.word_id and latest_type_it.word:
-            t = latest_type_it.word.topic
-            topic_label = topic_labels.get(t, t)
-        elif latest_type_it.custom_card_id and latest_type_it.custom_card:
-            t = latest_type_it.custom_card.topic
-            topic_label = topic_labels.get(t, t or "My vocabulary")
-
-        topic_slug = None
-        if latest_type_it.word_id and latest_type_it.word:
-            topic_slug = latest_type_it.word.topic
-        elif latest_type_it.custom_card_id and latest_type_it.custom_card:
-            topic_slug = latest_type_it.custom_card.topic
-
-        topic_total = 0
-        topic_done = 0
-        if topic_slug:
-            topic_total = all_progress.filter(
-                Q(word__topic=topic_slug) | Q(custom_card__topic=topic_slug)
-            ).count()
-            topic_done = all_progress.filter(
-                Q(word__topic=topic_slug) | Q(custom_card__topic=topic_slug),
-                mastery_level__gte=3,
-            ).count()
-            session_pct = round((topic_done / topic_total * 100) if topic_total else 0)
-        else:
-            session_pct = 0
-
-        topic_done_num = topic_done if topic_slug else 0
-        topic_total_num = topic_total if topic_slug else 0
-        last_session = {
-            "method": "Type it",
-            "topic": topic_label,
-            "ago": ago_label,
-            "session_pct": session_pct,
-            "pct": session_pct,
-            "done": topic_done_num,
-            "total": topic_total_num,
-            "url": reverse("vocabulary:type_it_deck_select"),
-        }
-    elif last_progress:
-        delta = now - last_progress.last_reviewed
-        if delta.days == 0:
-            ago_label = "Today"
-        elif delta.days == 1:
-            ago_label = "Yesterday"
-        else:
-            ago_label = f"{delta.days} days ago"
-
-        topic_slug = None
-        topic_label = "My vocabulary"
-        if last_progress.word_id and last_progress.word:
-            topic_slug = last_progress.word.topic
-            topic_label = topic_labels.get(topic_slug, topic_slug)
-        elif last_progress.custom_card_id and last_progress.custom_card:
-            topic_slug = last_progress.custom_card.topic
-            topic_label = topic_labels.get(topic_slug, topic_slug or "My vocabulary")
-
-        topic_total = 0
-        topic_done = 0
-        if topic_slug:
-            topic_total = all_progress.filter(
-                Q(word__topic=topic_slug) | Q(custom_card__topic=topic_slug)
-            ).count()
-            topic_done = all_progress.filter(
-                Q(word__topic=topic_slug) | Q(custom_card__topic=topic_slug),
-                mastery_level__gte=3,
-            ).count()
-            session_pct = round((topic_done / topic_total * 100) if topic_total else 0)
-        else:
-            session_pct = 0
-
-        flash_url = reverse("vocabulary:index")
-        if topic_slug:
-            flash_url = (
-                f"{reverse('vocabulary:index')}?topic={quote(topic_slug)}"
-                "&panel=flashcards#flashcard"
-            )
-
-        topic_done_num = topic_done if topic_slug else 0
-        topic_total_num = topic_total if topic_slug else 0
-        last_session = {
-            "method": "Flashcards",
-            "topic": topic_label,
-            "ago": ago_label,
-            "session_pct": session_pct,
-            "pct": session_pct,
-            "done": topic_done_num,
-            "total": topic_total_num,
-            "url": flash_url,
-        }
-
-    agg = TypeItResult.objects.filter(student=user).aggregate(avg=Avg("band_score"))
-    avg_band = (
-        round(agg["avg"], 1) if agg["avg"] is not None else None
-    )
-
-    profile = UserProfile.objects.filter(user=user).first()
-    level = int(profile.level) if profile else 2
-
-    try:
-        due_today = all_progress.filter(
-            next_review__isnull=False,
-            next_review__date=now.date(),
-        ).count()
-    except Exception:
-        due_today = 0
-
-    try:
-        type_it_count = TypeItResult.objects.filter(student=user).count()
-    except Exception:
-        type_it_count = 0
-
-    context = {
-        "words_learned": words_learned,
-        "words_tracked": words_learned,
-        "words_this_week": words_this_week,
-        "streak": streak,
-        "mastered_count": mastered_count,
-        "mastered": mastered_count,
-        "mastered_pct": mastered_pct,
-        "due_count": due_count,
-        "due_review": due_count,
-        "due_today": due_today,
-        "favored_count": favored_count,
-        "favorites": favored_count,
-        "type_it_count": type_it_count,
-        "avg_band": avg_band,
-        "last_session": last_session,
-        "level": level,
-        "level_label": {1: "Beginner", 2: "Standard", 3: "Advanced"}.get(
-            level, "Beginner"
-        ),
-        "band_range": {1: "4–5", 2: "5–6.5", 3: "6.5+"}.get(level, "4–5"),
-        "default_topic": default_topic,
-    }
-    return render(request, "vocabulary/vocabulary_home.html", context)
-
-
-@login_required
-def favored_redirect(request: HttpRequest) -> HttpResponse:
-    """Alias URL: ``/vocabulary/favored/`` → flashcards index with favorites panel."""
-    return redirect(reverse("vocabulary:index") + "?panel=favorites")
-
-
-@login_required
-def vocabulary_guide(request: HttpRequest) -> HttpResponse:
-    """Standalone IELTS vocabulary guide (methods, tips, bands, study plan)."""
-    return render(request, "vocabulary/guide.html")
-
-
-def flashcards(request: HttpRequest) -> HttpResponse:
-    topic_labels = dict(_topic_choices_full())
-    topic_raw = (request.GET.get("topic") or "").strip().lower()
-    study_level = _vocab_level_for_request(request)
-
-    active_deck: CustomDeck | None = None
-    if request.user.is_authenticated:
-        dr = (request.GET.get("deck") or "").strip()
-        if dr.isdigit():
-            active_deck = CustomDeck.objects.filter(
-                pk=int(dr), student=request.user
-            ).first()
-            if active_deck:
-                topic_raw = CustomCard.TOPIC_OTHER
-
-    words_keys_list = _parse_words_param_list(request) or []
-    from_words_param = bool(request.user.is_authenticated and words_keys_list)
-    if from_words_param:
-        active_deck = None
-        topic_raw = Word.TOPIC_ENVIRONMENT
-
-    study_mode = bool(topic_raw and _valid_topic(topic_raw))
-
-    now = timezone.now()
-    fav_pairs = _favorite_pair_set(request.user)
-    mastery_map: dict[str, int] = {}
-    struggling_preview: list[str] = []
-    struggling_count = 0
-    struggling_more = 0
-    hard_map: dict[str, int] = {}
-    if request.user.is_authenticated:
-        mastery_map = mastery_map_for_student(request.user)
-        hard_map = times_marked_hard_map_for_student(request.user)
-        struggling_preview, struggling_count = get_struggling_banner(
-            request.user, limit=3, vocab_level=study_level
-        )
-        struggling_more = max(0, struggling_count - len(struggling_preview))
-
-    guest_type_ai_left = 0
-    if not request.user.is_authenticated:
-        guest_type_ai_left = 0 if request.session.get("vocab_type_free_used") else 1
-
-    topic_decks = topic_decks_for_studio(request.user, now, vocab_level=study_level)
-    topic_decks = topic_decks + custom_decks_for_studio(
-        request.user, now, vocab_level=study_level
-    )
-    topic_decks_summary = {
-        "total_words": sum(d["word_count"] for d in topic_decks),
-        "total_mastered": sum(d["mastered_count"] for d in topic_decks),
-        "total_due": (
-            sum(d["due_count"] for d in topic_decks)
-            if request.user.is_authenticated
-            else 0
-        ),
-    }
-
-    study_panel = _parse_study_panel(request) if study_mode else "flashcards"
-    study_panel_label = _STUDY_PANEL_LABELS.get(study_panel, "Study")
-    level_label_by_num = {n: label for n, label, _ in _CUSTOM_FORM_LEVEL_CARDS}
-    level_labels_json = json.dumps(
-        {str(k): v for k, v in level_label_by_num.items()}, separators=(",", ":")
-    )
-    study_level_segment = "All levels"
-    if request.user.is_authenticated:
-        vl = study_level if study_level is not None else 2
-        study_level_segment = (
-            f"Level {vl} — {level_label_by_num.get(vl, '')}"
-        )
-    flash_review_mode = (
-        request.user.is_authenticated
-        and (request.GET.get("review") or "").strip().lower() in ("1", "true", "yes")
-    )
-    flash_due_count = 0
-    flash_cards_count = 0
-    flash_theme_slug = "environment"
-    flash_review_cta = False
-    flash_deck_emoji = "📖"
-
-    if from_words_param:
-        topic_param = Word.TOPIC_ENVIRONMENT
-        words_payload = _flash_rows_for_progress_keys(
-            request.user, request, now, words_keys_list, mastery_map
-        )
-        words_list_payload: list[dict] = []
-        word_count = len(words_payload)
-        flash_due_count = sum(1 for w in words_payload if w.get("due"))
-        flash_cards_count = len(words_payload)
-        flash_theme_slug = "pick"
-        flash_deck_emoji = "✨"
-        flash_review_cta = False
-        topic_total_words = max(1, word_count)
-        topic_progress_pct = 100 if word_count else 0
-        ring_r = 16
-        ring_c = 2 * math.pi * ring_r
-        ring_dash = f"{(topic_progress_pct / 100.0) * ring_c:.2f} {ring_c:.2f}"
-        current_topic_label = "Your selection"
-    elif study_mode:
-        topic_param = topic_raw
-        if active_deck:
-            words_payload_full = _merged_custom_deck(
-                active_deck, request.user, now, request, study_level
-            )
-            words_payload = words_payload_full
-            if flash_review_mode and request.user.is_authenticated:
-                words_payload = _apply_review_session_cap(request.user, words_payload)
-            word_count = len(words_payload_full)
-            flash_due_count = word_count
-            flash_cards_count = len(words_payload)
-            flash_theme_slug = "named"
-            flash_deck_emoji = "📚"
-            flash_review_cta = False
-            gq_base = CustomCard.objects.filter(
-                student=request.user,
-                deck=active_deck,
-                topic=CustomCard.TOPIC_OTHER,
-            )
-            if study_level is not None:
-                gq_base = gq_base.filter(level=study_level)
-            topic_total_words = gq_base.count()
-            global_n = 0
-            custom_n = topic_total_words
-            topic_progress_pct = (
-                100
-                if topic_total_words == 0
-                else min(100, round(word_count / topic_total_words * 100))
-            )
-            ring_r = 16
-            ring_c = 2 * math.pi * ring_r
-            ring_dash = f"{(topic_progress_pct / 100.0) * ring_c:.2f} {ring_c:.2f}"
-            current_topic_label = active_deck.name
-            words_list_payload = _full_word_list_custom_deck(
-                active_deck,
-                request.user,
-                request,
-                fav_pairs,
-                mastery_map,
-                study_level,
-                hard_map,
-            )
-        else:
-            words_payload_full = _merged_deck(
-                topic_param,
-                request.user,
-                now,
-                request,
-                study_level,
-                mastery_map,
-            )
-            word_count = len(words_payload_full)
-            flash_due_count = sum(1 for w in words_payload_full if w.get("due"))
-            flash_review_cta = bool(
-                request.user.is_authenticated and flash_due_count > 0
-            )
-            if flash_review_mode and request.user.is_authenticated:
-                words_payload = [w for w in words_payload_full if w.get("due")]
-                words_payload = _apply_review_session_cap(request.user, words_payload)
-            else:
-                words_payload = words_payload_full
-            flash_cards_count = len(words_payload)
-            flash_theme_slug = topic_param
-            flash_deck_emoji = TOPIC_DECK_EMOJI.get(topic_param, "📖")
-            gq = Word.objects.filter(topic=topic_param)
-            if study_level is not None:
-                gq = gq.filter(level=study_level)
-            global_n = gq.count()
-            custom_n = 0
-            if request.user.is_authenticated:
-                cq = CustomCard.objects.filter(student=request.user, topic=topic_param)
-                if study_level is not None:
-                    cq = cq.filter(level=study_level)
-                custom_n = cq.count()
-            topic_total_words = global_n + custom_n
-            topic_progress_pct = (
-                100
-                if topic_total_words == 0
-                else min(100, round(word_count / topic_total_words * 100))
-            )
-            ring_r = 16
-            ring_c = 2 * math.pi * ring_r
-            ring_dash = f"{(topic_progress_pct / 100.0) * ring_c:.2f} {ring_c:.2f}"
-            current_topic_label = topic_labels.get(
-                topic_param, topic_param.replace("_", " ").title()
-            )
-            if topic_param == CustomCard.TOPIC_OTHER:
-                current_topic_label = "Personal vocabulary"
-
-            words_list_payload = _full_word_list_for_topic(
-                topic_param,
-                request.user,
-                request,
-                fav_pairs,
-                mastery_map,
-                study_level,
-                hard_map,
-            )
-        filter_q = (request.GET.get("words") or request.GET.get("quiz_words") or "").strip()
-        if (
-            study_panel in ("quiz", "flashcards", "type")
-            and filter_q
-            and request.user.is_authenticated
-        ):
-            sel = {x.strip() for x in filter_q.split(",") if x.strip()}
-            if active_deck:
-                full_rows = _full_word_list_custom_deck(
-                    active_deck,
-                    request.user,
-                    request,
-                    fav_pairs,
-                    mastery_map,
-                    study_level,
-                    hard_map,
-                )
-            else:
-                full_rows = _full_word_list_for_topic(
-                    topic_param,
-                    request.user,
-                    request,
-                    fav_pairs,
-                    mastery_map,
-                    study_level,
-                    hard_map,
-                )
-            words_payload = [r for r in full_rows if _row_progress_key(r) in sel]
-            word_count = len(words_payload)
-            flash_cards_count = len(words_payload)
-    else:
-        topic_param = Word.TOPIC_CHOICES[0][0]
-        words_payload = []
-        words_list_payload = []
-        word_count = 0
-        topic_total_words = 0
-        topic_progress_pct = 0
-        ring_r = 16
-        ring_c = 2 * math.pi * ring_r
-        ring_dash = f"0 {ring_c:.2f}"
-        current_topic_label = topic_labels.get(topic_param, "")
-
-    deck_q = f"&deck={active_deck.pk}" if active_deck else ""
-    flash_study_all_url = (
-        f"{reverse('vocabulary:index')}?topic={quote(topic_param)}&panel=flashcards{deck_q}#flashcard"
-        if study_mode
-        else ""
-    )
-    flash_review_due_url = (
-        f"{reverse('vocabulary:index')}?topic={quote(topic_param)}&panel=flashcards&review=1{deck_q}#flashcard"
-        if study_mode
-        else ""
-    )
-    flash_urls_json = json.dumps(
-        {
-            "studyAll": flash_study_all_url,
-            "reviewDue": flash_review_due_url,
-            "changeDeck": reverse("vocabulary:index"),
-            "caughtUp": flash_study_all_url,
-        },
-        separators=(",", ":"),
-    )
-
-    flash_review_prefs = _flash_review_prefs(request.user)
-    flash_review_prefs_json = json.dumps(flash_review_prefs, separators=(",", ":"))
-
-    favorites_payload = _favorites_payload(request.user, request, topic_labels)
-
-    return render(
-        request,
-        "vocabulary/index.html",
-        {
-            "current_topic": topic_param,
-            "current_topic_label": current_topic_label,
-            "topic_choices": _topic_choices_full(),
-            "topic_decks": topic_decks,
-            "topic_decks_summary": topic_decks_summary,
-            "words_payload": words_payload,
-            "words_list_payload": words_list_payload,
-            "favorites_payload": favorites_payload,
-            "struggling_preview": struggling_preview,
-            "struggling_count": struggling_count,
-            "struggling_more": struggling_more,
-            "word_count": word_count,
-            "topic_total_words": topic_total_words,
-            "topic_progress_pct": topic_progress_pct,
-            "topic_ring_dasharray": ring_dash,
-            "guest_type_ai_left": guest_type_ai_left,
-            "study_mode": study_mode,
-            "study_level": study_level,
-            "study_panel": study_panel,
-            "study_panel_label": study_panel_label,
-            "study_level_segment": study_level_segment,
-            "level_label_by_num": level_label_by_num,
-            "active_deck": active_deck,
-            "flash_review_mode": flash_review_mode,
-            "flash_due_count": flash_due_count,
-            "flash_cards_count": flash_cards_count,
-            "flash_theme_slug": flash_theme_slug,
-            "flash_review_cta": flash_review_cta,
-            "flash_deck_emoji": flash_deck_emoji,
-            "level_labels_json": level_labels_json,
-            "flash_urls_json": flash_urls_json,
-            "flash_review_prefs_json": flash_review_prefs_json,
-        },
-    )
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def custom_create(request: HttpRequest) -> HttpResponse:
-    back_topic = Word.TOPIC_ENVIRONMENT
-    if request.method == "POST":
-        form = CustomCardForm(request.POST, request.FILES, user=request.user)
-        t = (request.POST.get("topic") or "").strip().lower()
-        if _valid_topic(t):
-            back_topic = t
-        if form.is_valid():
-            card = form.save(commit=False)
-            card.student = request.user
-            card.next_review_at = None
-            _assign_custom_deck(
-                request.user, card, deck=form.cleaned_data.get("deck")
-            )
-            try:
-                card.save()
-            except IntegrityError:
-                form.add_error(
-                    "word",
-                    "You already have a card with this word in this topic.",
-                )
-            else:
-                _sync_new_card_to_word_bank(request.user, card)
-                messages.success(request, "Flashcard saved.")
-                url = reverse("vocabulary:index") + f"?topic={card.topic}"
-                if card.deck_id:
-                    url += f"&deck={card.deck_id}"
-                url += "#flashcard"
-                return redirect(url)
-    else:
-        t = (request.GET.get("topic") or "").strip().lower()
-        initial_topic = t if _valid_topic(t) else Word.TOPIC_ENVIRONMENT
-        back_topic = initial_topic
-        initial = {"topic": initial_topic}
-        d_raw = (request.GET.get("deck") or "").strip()
-        if d_raw.isdigit():
-            dk = CustomDeck.objects.filter(
-                pk=int(d_raw), student=request.user
-            ).first()
-            if dk:
-                initial["topic"] = CustomCard.TOPIC_OTHER
-                initial["deck"] = dk.pk
-        form = CustomCardForm(initial=initial, user=request.user)
-
-    ctx = {
-        "form": form,
-        "title": "Create flashcard",
-        "submit_label": "Save flashcard",
-        "back_topic": back_topic,
-        "topic_choices": CustomCard.TOPIC_CHOICES,
-        "user_vocab_level": _profile_vocab_level_int(request.user),
-    }
-    return render(request, "vocabulary/custom_form.html", ctx)
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def custom_edit(request: HttpRequest, pk: int) -> HttpResponse:
-    card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-    if request.method == "POST":
-        form = CustomCardForm(request.POST, request.FILES, instance=card, user=request.user)
-        if form.is_valid():
-            card = form.save(commit=False)
-            _assign_custom_deck(
-                request.user, card, deck=form.cleaned_data.get("deck")
-            )
-            try:
-                card.save()
-            except IntegrityError:
-                form.add_error(
-                    "word",
-                    "You already have a card with this word in this topic.",
-                )
-            else:
-                messages.success(request, "Flashcard updated.")
-                red = reverse("vocabulary:index") + f"?topic={card.topic}"
-                if card.deck_id:
-                    red += f"&deck={card.deck_id}"
-                return redirect(red + "#flashcard")
-    else:
-        form = CustomCardForm(instance=card, user=request.user)
-
-    ctx = {
-        "form": form,
-        "title": "Edit flashcard",
-        "submit_label": "Save changes",
-        "card": card,
-        "back_topic": card.topic,
-        "topic_choices": CustomCard.TOPIC_CHOICES,
-        "user_vocab_level": _profile_vocab_level_int(request.user),
-    }
-    return render(request, "vocabulary/custom_form.html", ctx)
-
-
-@login_required
-@require_POST
-def custom_delete(request: HttpRequest, pk: int) -> HttpResponse:
-    card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-    topic = card.topic
-    card.delete()
-    messages.success(request, "Flashcard deleted.")
-    return redirect(reverse("vocabulary:index") + f"?topic={topic}#flashcard")
-
-
-@login_required
-@require_POST
-def custom_master(request: HttpRequest, pk: int) -> HttpResponse:
-    card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-    card.is_mastered = True
-    card.save(update_fields=["is_mastered"])
-    messages.success(request, "Marked as mastered — removed from review deck.")
-    return redirect(reverse("vocabulary:index") + f"?topic={card.topic}#flashcard")
-
-
-@login_required
-@require_POST
-def custom_reviewed(request: HttpRequest, pk: int) -> HttpResponse:
-    """Spaced repetition: schedule next appearance."""
-    card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-    idx = min(card.review_count, len(SR_INTERVALS) - 1)
-    days = SR_INTERVALS[idx]
-    card.review_count += 1
-    card.next_review_at = timezone.now() + timedelta(days=days)
-    card.save(update_fields=["review_count", "next_review_at"])
-    messages.info(request, f"Next review in {days} day(s).")
-    return redirect(reverse("vocabulary:index") + f"?topic={card.topic}#flashcard")
-
-
-@login_required
-@require_POST
-def custom_ai_fill(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    word = (data.get("word") or "").strip()
-    topic = (data.get("topic") or "general").strip().lower()
-    level = _profile_vocab_level_int(request.user)
-
-    if not word:
-        return JsonResponse({"ok": False, "error": "Word is required."}, status=400)
-
-    try:
-        out = generate_definition_and_example(word=word, topic=topic, level=level)
-    except (RuntimeError, json.JSONDecodeError, KeyError, ValueError) as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-
-    return JsonResponse({"ok": True, **out})
-
-
-@login_required
-@require_POST
-def custom_ai_image_preview(request: HttpRequest) -> JsonResponse:
-    """Return base64 PNG for the create/edit form (user attaches file via JS)."""
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    word = (data.get("word") or "").strip()
-    definition = (data.get("definition") or "").strip()
-    topic = (data.get("topic") or "general").strip().lower()
-    level = _profile_vocab_level_int(request.user)
-
-    if not word:
-        return JsonResponse({"ok": False, "error": "Word is required."}, status=400)
-
-    try:
-        png = generate_illustration_png_bytes(
-            word=word, definition=definition, topic=topic, level=level
-        )
-    except RuntimeError as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-    except Exception as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
 
     return JsonResponse(
         {
             "ok": True,
-            "image_base64": base64.standard_b64encode(png).decode("ascii"),
+            "success": True,
+            "attempt_id": attempt.id,
+            "mode": mode,
+            "total_score": total,
+            "definition_score": ds,
+            "sentence_score": ss,
+            "feedback": feedback_json,
+            "word": enriched,
         }
     )
 
 
-@login_required
-@require_POST
-def custom_ai_image_save(request: HttpRequest, pk: int) -> JsonResponse:
-    """Generate illustration and save onto an existing custom card (e.g. from flashcards)."""
-    card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-    try:
-        png = generate_illustration_png_bytes(
-            word=card.word,
-            definition=(card.definition or "").strip(),
-            topic=card.topic,
-            level=card.level,
-        )
-    except RuntimeError as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-    except Exception as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-
-    fname = f"vocab_ai_{card.pk}_{uuid.uuid4().hex[:10]}.png"
-    card.definition_image.save(fname, ContentFile(png), save=True)
-    image_url = _absolute_media_url(request, card.definition_image)
-    return JsonResponse({"ok": True, "image_url": image_url})
+# Backward-compatible name for imports/tests
+type_it_feedback_api = type_it_feedback
 
 
-@require_POST
-def type_check_sentence(request: HttpRequest) -> JsonResponse:
-    """AI: judge example sentence or student definition; guests get one free check per session."""
-    if not request.user.is_authenticated and request.session.get("vocab_type_free_used"):
-        return JsonResponse(
-            {
-                "ok": False,
-                "error": "You've used your free AI check. Log in for unlimited practice.",
-                "need_login": True,
-            },
-            status=403,
-        )
-
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    word = (data.get("word") or "").strip()
-    topic = (data.get("topic") or "general").strip().lower()
-    sentence = (data.get("sentence") or "").strip()
-    deck_definition = (data.get("deck_definition") or "").strip()
-    deck_example = (data.get("deck_example") or "").strip()
-    mode = (data.get("mode") or "example").strip().lower()
-    if mode not in ("example", "definition"):
-        mode = "example"
-
-    raw_ielts = data.get("ielts_mode")
-    if isinstance(raw_ielts, str):
-        ielts_mode = raw_ielts.strip().lower() in ("1", "true", "yes", "on")
-    else:
-        ielts_mode = bool(raw_ielts) if raw_ielts is not None else True
-
-    if request.user.is_authenticated:
-        level = _profile_vocab_level_int(request.user)
-    else:
+def _resolve_deck_for_user(user, deck_id: str):
+    slug = (deck_id or "").strip().lower()
+    if slug.startswith("custom-"):
         try:
-            level = int(data.get("level") or 2)
+            deck_pk = int(slug.split("-", 1)[1])
         except (TypeError, ValueError):
-            level = 2
-        level = level if level in (1, 2, 3) else 2
-
-    if not word:
-        return JsonResponse({"ok": False, "error": "Word is required."}, status=400)
-    if not sentence:
-        err = "Write a definition first." if mode == "definition" else "Write a sentence first."
-        return JsonResponse({"ok": False, "error": err}, status=400)
-    if len(sentence) > 2500:
-        return JsonResponse({"ok": False, "error": "Text is too long."}, status=400)
-
-    try:
-        out = check_type_practice(
-            word=word,
-            topic=topic,
-            level=level,
-            student_text=sentence,
-            deck_definition=deck_definition,
-            deck_example=deck_example,
-            mode=mode,
-            ielts_mode=ielts_mode,
-        )
-    except (RuntimeError, json.JSONDecodeError, KeyError, ValueError) as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-
-    is_ok = bool(out.get("is_correct", out.get("correct")))
-    if request.user.is_authenticated and is_ok and mode == "example":
-        record_type_example_success(request.user, word, topic)
-
-    if not request.user.is_authenticated:
-        request.session["vocab_type_free_used"] = True
-        request.session.modified = True
-
-    return JsonResponse({"ok": True, **out})
-
-
-@login_required
-@require_http_methods(["GET"])
-def deck_create(request: HttpRequest) -> HttpResponse:
-    t = (request.GET.get("topic") or "").strip().lower()
-    initial_topic = t if _valid_topic(t) else Word.TOPIC_ENVIRONMENT
-    return render(
-        request,
-        "vocabulary/deck_create.html",
-        {
-            "max_cards": MAX_CARDS,
-            "user_vocab_level": _profile_vocab_level_int(request.user),
-            "topic_choices": _topic_choices_full(),
-            "initial_topic": initial_topic,
-        },
-    )
-
-
-@login_required
-@require_POST
-def deck_create_save(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    name = str(data.get("name") or "").strip()[:120]
-    if not name:
-        return JsonResponse({"ok": False, "error": "Deck name is required."}, status=400)
-
-    description = str(data.get("description") or "").strip()[:4000]
-
-    level = _profile_vocab_level_int(request.user)
-
-    raw_cards = data.get("cards")
-    if not isinstance(raw_cards, list):
-        return JsonResponse({"ok": False, "error": "Expected a cards array."}, status=400)
-    if len(raw_cards) > MAX_CARDS * 3:
-        return JsonResponse({"ok": False, "error": "Too many rows."}, status=400)
-
-    practice = bool(data.get("practice"))
-
-    try:
-        deck = CustomDeck.objects.create(
-            student=request.user,
-            name=name,
-            description=description,
-        )
-    except IntegrityError:
-        return JsonResponse(
-            {
-                "ok": False,
-                "error": "You already have a deck with this name. Choose another name.",
-            },
-            status=400,
-        )
-
-    created = 0
-    skipped: list[str] = []
-    for item in raw_cards:
-        if not isinstance(item, dict):
-            continue
-        w = str(item.get("word") or "").strip()[:255]
-        if not w:
-            continue
-        definition = str(item.get("definition") or "").strip()[:4000]
-        png_bytes: bytes | None = None
-        img_b64 = item.get("image_base64")
-        if img_b64 and isinstance(img_b64, str):
-            raw_b64 = img_b64.strip()
-            if raw_b64:
-                try:
-                    png_bytes = base64.standard_b64decode(raw_b64)
-                except (binascii.Error, ValueError):
-                    png_bytes = None
-                if png_bytes and len(png_bytes) > 2 * 1024 * 1024:
-                    png_bytes = None
-        card = CustomCard(
-            student=request.user,
-            deck=deck,
-            word=w,
-            definition=definition,
-            example_sentence="",
-            topic=CustomCard.TOPIC_OTHER,
-            level=level,
-            next_review_at=None,
-        )
-        try:
-            card.save()
-        except IntegrityError:
-            skipped.append(w)
-        else:
-            if png_bytes:
-                fname = f"vocab_deck_{uuid.uuid4().hex[:12]}.png"
-                card.definition_image.save(fname, ContentFile(png_bytes), save=True)
-            _sync_new_card_to_word_bank(request.user, card)
-            created += 1
-
-    if created == 0:
-        deck.delete()
-        return JsonResponse(
-            {"ok": False, "error": "Add at least one card with a term."},
-            status=400,
-        )
-
-    index_base = request.build_absolute_uri(reverse("vocabulary:index"))
-    sep = "&" if "?" in index_base else "?"
-    base_q = (
-        f"{index_base}{sep}topic={CustomCard.TOPIC_OTHER}&deck={deck.pk}"
-    )
-    redirect_url = f"{base_q}&panel=flashcards#flashcard" if practice else f"{base_q}#flashcard"
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "created": created,
-            "skipped": skipped,
-            "deck_pk": deck.pk,
-            "redirect_url": redirect_url,
-        }
-    )
-
-
-@login_required
-@require_http_methods(["GET"])
-def flashcard_set_create(request: HttpRequest) -> HttpResponse:
-    t = (request.GET.get("topic") or "").strip().lower()
-    initial_topic = t if _valid_topic(t) else Word.TOPIC_ENVIRONMENT
-    return render(
-        request,
-        "vocabulary/flashcard_set_create.html",
-        {
-            "max_cards": MAX_CARDS,
-            "topic_choices": _topic_choices_full(),
-            "initial_topic": initial_topic,
-            "user_vocab_level": _profile_vocab_level_int(request.user),
-        },
-    )
-
-
-@login_required
-@require_POST
-def flashcard_set_generate(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    prompt = (data.get("prompt") or "").strip()
-    if len(prompt) > 120_000:
-        return JsonResponse({"ok": False, "error": "Prompt is too long."}, status=400)
-    if not prompt:
-        return JsonResponse({"ok": False, "error": "Enter a prompt (e.g. medical vocabulary)."}, status=400)
-
-    try:
-        count = int(data.get("count") or 10)
-    except (TypeError, ValueError):
-        count = 10
-    count = max(1, min(count, MAX_CARDS))
-
-    level = _profile_vocab_level_int(request.user)
-
-    topic_param = (data.get("topic") or "").strip().lower()
-    if not _valid_topic(topic_param):
-        return JsonResponse({"ok": False, "error": "Choose a topic."}, status=400)
-
-    labels = dict(_topic_choices_full())
-    topic_label = labels.get(topic_param, topic_param)
-
-    try:
-        cards, detected_topic = generate_flashcard_set(
-            prompt=prompt,
-            count=count,
-            level=level,
-            topic_slug=topic_param,
-            topic_label=topic_label,
-        )
-    except (RuntimeError, json.JSONDecodeError, KeyError, ValueError) as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-
-    effective_topic = topic_param
-    if not _valid_topic(detected_topic):
-        detected_topic = CustomCard.TOPIC_OTHER
-
-    warn = None
-    if len(cards) < count:
-        warn = f"Got {len(cards)} cards (you asked for {count}). You can edit them or generate again."
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "cards": cards,
-            "warn": warn,
-            "detected_topic": effective_topic,
-            "topic_label": labels.get(effective_topic, topic_label),
-        }
-    )
-
-
-@login_required
-@require_POST
-def flashcard_set_save(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    topic = (data.get("topic") or "").strip().lower()
-    if not _valid_topic(topic):
-        topic = CustomCard.TOPIC_OTHER
-
-    level = _profile_vocab_level_int(request.user)
-
-    raw_cards = data.get("cards")
-    if not isinstance(raw_cards, list):
-        return JsonResponse({"ok": False, "error": "Expected a cards array."}, status=400)
-    if len(raw_cards) > MAX_CARDS * 3:
-        return JsonResponse({"ok": False, "error": "Too many rows."}, status=400)
-
-    set_title = str(data.get("set_title") or "").strip()[:120]
-    set_description = str(data.get("set_description") or "").strip()[:4000]
-
-    deck_obj = None
-    if topic == CustomCard.TOPIC_OTHER:
-        if not set_title:
-            return JsonResponse(
-                {"ok": False, "error": "Give your flashcard set a title."}, status=400
+            raise Http404("Deck not found")
+        deck = get_object_or_404(CustomDeck, pk=deck_pk, student=user)
+        words = list(deck.words.all().order_by("id"))
+        payload_words = []
+        for w in words:
+            payload_words.append(
+                {
+                    "item_id": f"cw-{w.id}",
+                    "word_id": None,
+                    "custom_word_id": w.id,
+                    "word": w.word,
+                    "pos": "word",
+                    "definition": "No saved definition for this custom word yet.",
+                    "example": f"In IELTS essays, use '{w.word}' naturally in context.",
+                    "collocations": [],
+                    "ielts_note": "Custom word: write a precise definition and a natural sentence.",
+                    "topic_label": "Custom",
+                    "level_label": "Custom",
+                }
             )
-        deck_obj, created_set = CustomDeck.objects.get_or_create(
-            student=request.user,
-            name=set_title,
-            defaults={"description": set_description},
-        )
-        if not created_set and (deck_obj.description or "") != set_description:
-            deck_obj.description = set_description
-            deck_obj.save(update_fields=["description"])
-
-    created = 0
-    skipped: list[str] = []
-
-    for item in raw_cards:
-        if not isinstance(item, dict):
-            continue
-        w = str(item.get("word") or "").strip()[:255]
-        if not w:
-            continue
-        definition = str(item.get("definition") or "").strip()[:4000]
-        example_sentence = str(item.get("example_sentence") or "").strip()[:4000]
-        card = CustomCard(
-            student=request.user,
-            deck=deck_obj,
-            word=w,
-            definition=definition,
-            example_sentence=example_sentence,
-            topic=topic,
-            level=level,
-            next_review_at=None,
-        )
-        try:
-            card.save()
-        except IntegrityError:
-            skipped.append(w)
-        else:
-            _sync_new_card_to_word_bank(request.user, card)
-            created += 1
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "created": created,
-            "skipped": skipped,
-            "topic": topic,
+        return {
+            "slug": slug,
+            "title": deck.name,
+            "is_custom": True,
+            "words": payload_words,
+            "decks_url": reverse("vocabulary:type_it_deck"),
+            "words_url": reverse("vocabulary:type_it_words", kwargs={"deck_id": slug}),
+            "session_url": reverse("vocabulary:type_it_session_page", kwargs={"deck_id": slug}),
         }
-    )
-
-
-@login_required
-@require_POST
-def word_bank_add_from_vocab(request: HttpRequest) -> JsonResponse:
-    """Add a vocabulary row to the writing word bank (same shape as new custom card)."""
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    kind = (data.get("kind") or "").strip().lower()
-    try:
-        pk = int(data.get("id"))
-    except (TypeError, ValueError):
-        return JsonResponse({"ok": False, "error": "Invalid id."}, status=400)
-
-    if kind == "word":
-        word = get_object_or_404(Word, pk=pk)
-        phrase = f"{word.word} — {(word.definition or '').strip()[:450]}".strip()
-        if len(phrase) < 2:
-            phrase = word.word
-        WordBankEntry.objects.create(user=request.user, phrase=phrase[:500], essay=None)
-        return JsonResponse({"ok": True})
-
-    if kind == "custom":
-        card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-        phrase = f"{card.word} — {(card.definition or '').strip()[:450]}".strip()
-        if len(phrase) < 2:
-            phrase = card.word
-        WordBankEntry.objects.create(user=request.user, phrase=phrase[:500], essay=None)
-        return JsonResponse({"ok": True})
-
-    return JsonResponse({"ok": False, "error": "Use kind word or custom."}, status=400)
-
-
-@login_required
-@require_POST
-def vocab_toggle_favorite(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    kind = (data.get("kind") or "").strip().lower()
-    try:
-        pk = int(data.get("id"))
-    except (TypeError, ValueError):
-        return JsonResponse({"ok": False, "error": "Invalid id."}, status=400)
-
-    if kind == "word":
-        word = get_object_or_404(Word, pk=pk)
-        fav = VocabFavorite.objects.filter(user=request.user, word=word).first()
-        if fav:
-            fav.delete()
-            return JsonResponse({"ok": True, "favorited": False})
-        VocabFavorite.objects.create(user=request.user, word=word, custom_card=None)
-        return JsonResponse({"ok": True, "favorited": True})
-
-    if kind == "custom":
-        card = get_object_or_404(CustomCard, pk=pk, student=request.user)
-        fav = VocabFavorite.objects.filter(user=request.user, custom_card=card).first()
-        if fav:
-            fav.delete()
-            return JsonResponse({"ok": True, "favorited": False})
-        VocabFavorite.objects.create(user=request.user, word=None, custom_card=card)
-        return JsonResponse({"ok": True, "favorited": True})
-
-    return JsonResponse({"ok": False, "error": "Use kind word or custom."}, status=400)
-
-
-@login_required
-@require_POST
-def progress_review_settings(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
 
     try:
-        easy = int(data.get("review_easy_days", 7))
-        hard = int(data.get("review_hard_days", 1))
-        sess = int(data.get("review_session_size", 20))
-    except (TypeError, ValueError):
-        return JsonResponse({"ok": False, "error": "Invalid values."}, status=400)
-
-    if easy not in _REVIEW_EASY_DAYS_ALLOWED:
-        return JsonResponse({"ok": False, "error": "Invalid easy interval."}, status=400)
-    if hard not in _REVIEW_HARD_DAYS_ALLOWED:
-        return JsonResponse({"ok": False, "error": "Invalid hard interval."}, status=400)
-    if sess not in _REVIEW_SESSION_SIZE_ALLOWED:
-        return JsonResponse({"ok": False, "error": "Invalid session size."}, status=400)
-
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    profile.review_easy_days = easy
-    profile.review_hard_days = hard
-    profile.review_session_size = sess
-    profile.save(
-        update_fields=["review_easy_days", "review_hard_days", "review_session_size"]
-    )
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "review_easy_days": easy,
-            "review_hard_days": hard,
-            "review_session_size": sess,
-        }
-    )
-
-
-@login_required
-@require_POST
-def progress_flashcard_rating(request: HttpRequest) -> JsonResponse:
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    kind = (data.get("kind") or "").strip().lower()
-    rating = (data.get("rating") or "").strip().lower()
-    try:
-        pk = int(data.get("id"))
-    except (TypeError, ValueError):
-        return JsonResponse({"ok": False, "error": "Invalid id."}, status=400)
-
-    try:
-        prog = record_flashcard_rating(request.user, kind, pk, rating)
-    except Word.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "Word not found."}, status=404)
-    except CustomCard.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "Card not found."}, status=404)
+        topic, level = parse_deck_slug(slug)
     except ValueError as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+        raise Http404("Deck not found") from exc
+    words = ordered_words_for_deck(slug, topic, level)
+    if not words:
+        raise Http404("Deck not found")
+    payload_words = []
+    for w in words:
+        e = enrich_word(w)
+        payload_words.append(
+            {
+                "item_id": f"w-{w.id}",
+                "word_id": w.id,
+                "custom_word_id": None,
+                "word": e["word"],
+                "pos": e["pos"] or "word",
+                "definition": e["definition"],
+                "example": e["example"],
+                "collocations": e["collocations"],
+                "ielts_note": e["ielts_note"],
+                "topic_label": e["topic_label"],
+                "level_label": e["level_label"],
+            }
+        )
+    return {
+        "slug": slug,
+        "title": deck_title(topic, level),
+        "is_custom": False,
+        "words": payload_words,
+        "decks_url": reverse("vocabulary:type_it_deck"),
+        "words_url": reverse("vocabulary:type_it_words", kwargs={"deck_id": slug}),
+        "session_url": reverse("vocabulary:type_it_session_page", kwargs={"deck_id": slug}),
+    }
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "mastery_level": prog.mastery_level,
-            "times_seen": prog.times_seen,
-            "times_marked_hard": prog.times_marked_hard,
-        }
-    )
+
+def _type_it_words_page(request, deck_id: str):
+    deck = _resolve_deck_for_user(request.user, deck_id)
+    words = deck["words"]
+    word_bests = _type_it_word_bests_payload(request.user, words)
+    total = len(words)
+    done = sum(1 for w in words if word_bests.get(w["item_id"], {}).get("passed"))
+    payload = dict(deck)
+    payload["words"] = words
+    payload["word_bests"] = word_bests
+    payload["mastery_total"] = total
+    payload["mastery_done"] = done
+    payload["mastery_pct"] = int(round((100 * done) / total)) if total else 0
+    payload["feedback_url"] = reverse("vocabulary:type_it_feedback")
+    return render(request, "vocabulary/type_it_words.html", {"deck": payload, **_streak_ctx(request)})
+
+
+@login_required
+def type_it_words(request, deck_id: str):
+    return _type_it_words_page(request, deck_id)
+
+
+@login_required
+def type_it_words_topic_level(request, topic: str, level_slug: str):
+    slug_map = {"beginner": 1, "standard": 2, "advanced": 3}
+    t = (topic or "").strip().lower()
+    lvl = slug_map.get((level_slug or "").strip().lower())
+    valid_topics = {c[0] for c in Word.TOPIC_CHOICES}
+    if lvl is None or t not in valid_topics:
+        raise Http404("Deck not found")
+    return _type_it_words_page(request, f"{t}-{lvl}")
+
+
+@login_required
+def type_it_session_page(request, deck_id: str):
+    deck = _resolve_deck_for_user(request.user, deck_id)
+    selected_raw = (request.GET.get("words") or "").strip()
+    selected = [s.strip() for s in selected_raw.split(",") if s.strip()]
+    valid = {w["item_id"]: w for w in deck["words"]}
+    chosen = [valid[s] for s in selected if s in valid]
+    if not chosen:
+        return redirect("vocabulary:type_it_words", deck_id=deck_id)
+    payload = {
+        "deck": {
+            "slug": deck["slug"],
+            "title": deck["title"],
+            "decks_url": deck["decks_url"],
+            "words_url": deck["words_url"],
+            "feedback_url": reverse("vocabulary:type_it_feedback"),
+        },
+        "words": chosen,
+        "word_bests": _type_it_word_bests_payload(request.user, chosen),
+    }
+    return render(request, "vocabulary/type_it_session_flow.html", {"session_payload": payload, **_streak_ctx(request)})
 
 
 @login_required
 @require_POST
-def progress_session_end(request: HttpRequest) -> JsonResponse:
+def type_it_custom_deck_create_api(request):
     try:
-        data = json.loads(request.body.decode("utf-8"))
+        payload = json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
-
-    keys = data.get("keys")
-    if not isinstance(keys, list):
-        return JsonResponse({"ok": False, "error": "Expected keys array."}, status=400)
-    key_strs = [str(x) for x in keys[:500]]
-    n = end_session_for_keys(request.user, key_strs)
-    return JsonResponse({"ok": True, "updated": n})
-
-
-@login_required
-@require_http_methods(["GET"])
-def struggling_practice(request: HttpRequest) -> HttpResponse:
-    deck = build_struggling_deck_payload(
-        request,
-        request.user,
-        vocab_level=_profile_vocab_level_int(request.user),
+        return JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
+    name = (payload.get("name") or "").strip()
+    colour = (payload.get("colour") or "navy").strip().lower()
+    emoji = (payload.get("emoji") or "📖").strip()
+    words_text = (payload.get("words") or "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "error": "name_required"}, status=400)
+    lines = [x.strip() for x in words_text.splitlines() if x.strip()]
+    if not lines:
+        return JsonResponse({"ok": False, "error": "words_required"}, status=400)
+    deck = CustomDeck.objects.create(
+        student=request.user,
+        name=name[:100],
+        colour=colour[:20] or "navy",
+        emoji=emoji[:10] or "📖",
     )
-    return render(
-        request,
-        "vocabulary/struggling.html",
+    objs = []
+    for w in lines[:200]:
+        objs.append(CustomDeckWord(deck=deck, word=w[:100]))
+    CustomDeckWord.objects.bulk_create(objs)
+    return JsonResponse(
         {
-            "deck": deck,
-            "struggling_count": len(deck),
-        },
+            "ok": True,
+            "deck_id": f"custom-{deck.id}",
+            "words_url": reverse("vocabulary:type_it_words", kwargs={"deck_id": f"custom-{deck.id}"}),
+        }
     )

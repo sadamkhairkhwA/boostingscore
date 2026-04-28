@@ -1,28 +1,229 @@
-{% extends "base.html" %}
-{% block title %}General Reading — Boosting Score{% endblock %}
-
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}General reading — Boosting Score{% endblock %}
+{% block body_class %}general-reading-page{% endblock %}
 {% block extra_css %}
-<style>
-.bs-read-page { max-width: 900px; margin: 0 auto; padding: 32px 32px 60px; }
-.bs-read-title { font-size: 1.35rem; font-weight: 700; color: #111827; font-family: Georgia, serif; margin-bottom: 4px; }
-.bs-read-lead { font-size: 0.85rem; color: #6b7280; margin-bottom: 22px; }
-.bs-soon { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 34px; text-align: center; }
-.bs-soon-ic { font-size: 1.6rem; margin-bottom: 10px; }
-.bs-soon-title { font-size: 0.95rem; font-weight: 700; color: #111827; margin-bottom: 6px; }
-.bs-soon-body { font-size: 0.82rem; color: #6b7280; line-height: 1.65; max-width: 420px; margin: 0 auto 16px; }
-</style>
+  <link rel="stylesheet" href="{% static 'reading/css/general_reading.css' %}?v=4" />
 {% endblock %}
-
 {% block content %}
-<div class="bs-read-page">
-  <h1 class="bs-read-title">General reading</h1>
-  <p class="bs-read-lead">Read interesting passages on real-world topics and answer comprehension questions at your own pace — no time pressure.</p>
+<div class="gr-wrap">
+  <header class="gr-head">
+    <div>
+      <h1 class="gr-title">General reading</h1>
+      <p class="gr-sub">Build the reading habit that makes IELTS easier — graded articles, speed tracking, and vocabulary in context.</p>
+    </div>
+    <details class="gr-menu">
+      <summary aria-label="More options">⋯</summary>
+      <div class="gr-menu-panel">
+        <a href="{% url 'reading:home' %}">Reading hub</a>
+        <a href="{% url 'reading:strategies' %}">Reading strategies</a>
+      </div>
+    </details>
+  </header>
 
-  <section class="bs-soon bs-animate bs-delay-1">
-    <div class="bs-soon-ic" aria-hidden="true">📖</div>
-    <div class="bs-soon-title">Passages coming soon</div>
-    <p class="bs-soon-body">We are adding passages across 8 topics — Environment, Health, Technology, Education, Society, Travel, Science, and Business.</p>
-    <a class="bs-btn-primary" href="{% url 'reading:ielts_practice' %}">Try IELTS practice instead →</a>
+  <div class="gr-tabs" role="tablist" aria-label="General reading tabs">
+    <button class="gr-tab active" data-tab="today" aria-selected="true">Today</button>
+    <button class="gr-tab" data-tab="browse" aria-selected="false">Browse</button>
+    <button class="gr-tab" data-tab="reading" aria-selected="false">Reading</button>
+    <button class="gr-tab" data-tab="questions" aria-selected="false">Questions</button>
+    <button class="gr-tab" data-tab="vocab" aria-selected="false">Vocab</button>
+    <button class="gr-tab" data-tab="speed" aria-selected="false">Speed</button>
+    <button class="gr-tab" data-tab="progress" aria-selected="false">Progress</button>
+    <button class="gr-tab" data-tab="history" aria-selected="false">History</button>
+  </div>
+
+  <section class="gr-panel active" data-panel="today">
+    <article class="gr-streak-card">
+      <div>
+        <p class="gr-kicker">Reading streak</p>
+        <h2 id="gr-streak-title" class="gr-streak-title">0-day reading streak 🔥</h2>
+        <p class="gr-muted">Read today's article to keep it going</p>
+      </div>
+      <div id="gr-streak-dots" class="gr-dots" aria-hidden="true"></div>
+    </article>
+
+    <article class="gr-featured">
+      <p class="gr-kicker" id="gr-featured-kicker">Today's article · 5 min</p>
+      <h2 id="gr-featured-title" class="gr-featured-title"></h2>
+      <p id="gr-featured-desc" class="gr-featured-desc"></p>
+      <div id="gr-featured-tags" class="gr-tags"></div>
+      <button id="gr-start-reading" class="gr-btn-dark" type="button">Start reading →</button>
+    </article>
+
+    <h3 class="gr-section-label">Completed today</h3>
+    <div id="gr-completed-today" class="gr-stack"></div>
+
+    <article class="gr-summary-card">
+      <div class="gr-row-between">
+        <h3>Summarise what you read</h3>
+        <span class="gr-pill gr-pill-purple">Active recall</span>
+      </div>
+      <p class="gr-muted">Write 1–2 sentences in your own words. No looking back.</p>
+      <textarea id="gr-summary-input" class="gr-textarea" placeholder="Write your summary..."></textarea>
+      <div class="gr-row-between">
+        <span id="gr-summary-count" class="gr-muted small">0 words</span>
+        <button id="gr-summary-analyse" class="gr-btn-dark" type="button">Get AI feedback →</button>
+      </div>
+      <div id="gr-summary-status" class="gr-status"></div>
+      <div id="gr-summary-feedback" class="gr-feedback" hidden>
+        <div class="gr-row-between">
+          <span id="gr-fb-accuracy" class="gr-pill"></span>
+          <span id="gr-fb-score" class="gr-score"></span>
+        </div>
+        <div class="gr-stars" id="gr-fb-stars"></div>
+        <div class="gr-progress"><span id="gr-fb-progress"></span></div>
+        <div id="gr-fb-right" class="gr-fb-box gr-fb-green"></div>
+        <div id="gr-fb-missed" class="gr-fb-box gr-fb-amber"></div>
+        <div id="gr-fb-model" class="gr-fb-model"></div>
+        <p id="gr-fb-tip" class="gr-fb-tip"></p>
+      </div>
+    </article>
+  </section>
+
+  <section class="gr-panel" data-panel="browse">
+    <div id="gr-topic-filters" class="gr-filters"></div>
+    <div id="gr-level-filters" class="gr-filters"></div>
+    <div id="gr-article-grid" class="gr-article-grid"></div>
+  </section>
+
+  <section class="gr-panel" data-panel="reading">
+    <div class="gr-row-between">
+      <button id="gr-reading-back" class="gr-btn-light" type="button">← Back</button>
+      <span id="gr-reading-timer" class="gr-timer">⏱ 0:00</span>
+    </div>
+    <article class="gr-card">
+      <h2 id="gr-reading-title"></h2>
+      <div id="gr-reading-tags" class="gr-tags"></div>
+      <div id="gr-reading-body" class="gr-reading-body"></div>
+      <div class="gr-vocab-highlight">
+        <h4>Vocabulary highlights</h4>
+        <p id="gr-reading-vocab-line"></p>
+        <div id="gr-word-popup" class="gr-word-popup" hidden>
+          <h5 id="gr-word-title"></h5>
+          <p id="gr-word-pron" class="gr-muted small"></p>
+          <p id="gr-word-def"></p>
+          <p><span id="gr-word-level" class="gr-pill"></span></p>
+          <button id="gr-word-add" class="gr-btn-light" type="button">Add to deck</button>
+        </div>
+      </div>
+      <div class="gr-row-between mt12">
+        <button id="gr-bookmark-btn" class="gr-btn-light" type="button">Bookmark article</button>
+        <button id="gr-reading-done" class="gr-btn-dark" type="button">Done reading — start questions →</button>
+      </div>
+    </article>
+  </section>
+
+  <section class="gr-panel" data-panel="questions">
+    <article class="gr-card">
+      <div class="gr-progress"><span id="gr-q-progress"></span></div>
+      <div class="gr-row-between mt8">
+        <p id="gr-q-counter" class="gr-muted">Question 1 of 5</p>
+        <p id="gr-q-correct" class="gr-muted">Correct: 0</p>
+      </div>
+      <h3 id="gr-q-text"></h3>
+      <div id="gr-q-options" class="gr-options"></div>
+      <p id="gr-q-explain" class="gr-muted" hidden></p>
+      <button id="gr-q-next" class="gr-btn-dark" type="button" hidden>Next question →</button>
+      <div id="gr-q-results" hidden>
+        <h3 id="gr-r-title"></h3>
+        <p id="gr-r-meta"></p>
+        <p id="gr-r-message" class="gr-pill"></p>
+        <div class="gr-row-gap mt12">
+          <button id="gr-r-vocab" class="gr-btn-light" type="button">Review vocab</button>
+          <button id="gr-r-next" class="gr-btn-dark" type="button">Next article</button>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="gr-panel" data-panel="vocab">
+    <article class="gr-card">
+      <h3>Mini flashcard session</h3>
+      <p id="gr-vocab-progress" class="gr-muted"></p>
+      <button id="gr-flashcard" class="gr-flashcard" type="button"></button>
+      <div id="gr-flash-actions" class="gr-row-gap" hidden>
+        <button id="gr-flash-hard" class="gr-btn-light" type="button">Hard</button>
+        <button id="gr-flash-easy" class="gr-btn-dark" type="button">Easy</button>
+      </div>
+      <p id="gr-flash-score" class="gr-muted"></p>
+      <button id="gr-save-vocab" class="gr-btn-dark" type="button">Save all words to my deck →</button>
+      <div id="gr-save-vocab-msg" class="gr-status"></div>
+    </article>
+  </section>
+
+  <section class="gr-panel" data-panel="speed">
+    <article class="gr-card">
+      <div class="gr-row-between"><h3>Your reading speed</h3><span class="gr-pill gr-pill-blue">Last 7 sessions</span></div>
+      <div class="gr-metrics">
+        <div class="gr-metric"><div id="gr-sp-current" class="big"></div><div class="gr-muted small">Current wpm</div></div>
+        <div class="gr-metric"><div id="gr-sp-vs" class="big"></div><div class="gr-muted small">vs last week</div></div>
+        <div class="gr-metric"><div id="gr-sp-target" class="big"></div><div class="gr-muted small">wpm to target</div></div>
+      </div>
+      <p class="gr-muted small">Your speed vs 200 wpm IELTS target</p>
+      <div class="gr-progress"><span id="gr-sp-progress"></span></div>
+      <div id="gr-speed-chart" class="gr-speed-chart"></div>
+    </article>
+    <article class="gr-card">
+      <h3>What affects your reading speed?</h3>
+      <ul class="gr-tip-list">
+        <li>📖 <strong>Sub-vocalising</strong> — saying words in your head slows you down.</li>
+        <li>👁️ <strong>Eye fixations</strong> — read 3–4 word chunks, not one word at a time.</li>
+        <li>🔄 <strong>Re-reading</strong> — scan for answers; avoid full-passage re-reads.</li>
+      </ul>
+    </article>
+    <article class="gr-card">
+      <h3>Speed challenge</h3>
+      <p id="gr-challenge-best" class="gr-muted"></p>
+      <div class="gr-row-gap">
+        <button id="gr-challenge-start" class="gr-btn-dark" type="button">Start speed challenge →</button>
+        <button id="gr-challenge-done" class="gr-btn-light" type="button" disabled>Done reading</button>
+      </div>
+      <p id="gr-challenge-timer" class="gr-timer">0:00</p>
+      <div id="gr-challenge-result" class="gr-status"></div>
+    </article>
+  </section>
+
+  <section class="gr-panel" data-panel="progress">
+    <article class="gr-streak-card">
+      <div>
+        <p class="gr-kicker">Level progression</p>
+        <h3 id="gr-level-title"></h3>
+        <p id="gr-level-req" class="gr-muted"></p>
+      </div>
+      <div class="gr-progress level"><span id="gr-level-progress"></span></div>
+    </article>
+    <article class="gr-card">
+      <div id="gr-level-cards" class="gr-level-cards"></div>
+    </article>
+    <article class="gr-card">
+      <h3>Topic accuracy</h3>
+      <div id="gr-topic-bars"></div>
+    </article>
+    <article class="gr-card">
+      <h3>Monthly activity</h3>
+      <div id="gr-calendar" class="gr-calendar"></div>
+    </article>
+    <article class="gr-stat-grid" id="gr-progress-stats"></article>
+  </section>
+
+  <section class="gr-panel" data-panel="history">
+    <article class="gr-card">
+      <h3>Reading history</h3>
+      <div id="gr-history-list" class="gr-stack"></div>
+    </article>
+    <article class="gr-card">
+      <h3>Bookmarks</h3>
+      <div id="gr-bookmarks-list" class="gr-stack"></div>
+    </article>
   </section>
 </div>
+{% endblock %}
+{% block extra_js %}
+  {{ general_reading_bootstrap|json_script:"gr-bootstrap-data" }}
+  <script>
+    window.GR_BOOTSTRAP = JSON.parse(
+      document.getElementById("gr-bootstrap-data").textContent
+    );
+  </script>
+  <script src="{% static 'reading/js/general_reading.js' %}?v=5"></script>
 {% endblock %}

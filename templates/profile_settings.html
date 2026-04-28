@@ -13,8 +13,28 @@
       </p>
     </div>
     <div class="bs-form-actions">
-      <a class="bs-btn-outline bs-btn-block" href="{% url 'placement_retake' %}">Retake placement test</a>
+      <a class="bs-btn-outline bs-btn-block" href="{% url 'vocabulary:home' %}">Vocabulary home</a>
     </div>
+
+    <div class="bs-auth-card bs-animate bs-delay-2" style="margin-top:18px;">
+      <p class="bs-section-label">Reading history</p>
+      {% if reading_history %}
+      <ul class="bs-reading-history">
+        {% for r in reading_history %}
+        <li>
+          <strong>{{ r.test.title|default:r.test.slug }}</strong>
+          — {{ r.score }}/40 · Band {{ r.band }}
+          · {{ r.duration_label }}
+          · {{ r.completed_at|date:"j M Y, H:i" }}
+          · <a href="{% url 'reading:academic_tests_index' %}">Hub</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="bs-auth-sub bs-auth-sub--tight">No completed academic reading tests yet. Try <a href="{% url 'reading:academic_tests_index' %}">IELTS Academic Reading tests</a>.</p>
+      {% endif %}
+    </div>
+
     <p class="bs-auth-footer"><a href="{% url 'home' %}">← Back to home</a></p>
   </div>
 {% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ deck.title }} · Select words — Type it{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vocabulary/css/type_it_full.css' %}?v=4">
+{% endblock %}
+{% block content %}
+<div class="bs-page ti-full ti-words-page">
+  <header class="ti-ws-head">
+    <div class="ti-ws-head__left">
+      <a href="{{ deck.decks_url }}" class="ti-ws-back">← Back to decks</a>
+      <h1 class="ti-ws-title">{{ deck.title }}</h1>
+      <p class="ti-ws-sub">Select the words you want to practise this session.</p>
+    </div>
+    <div class="ti-ws-mastery" aria-label="Overall mastery">
+      <div class="ti-ws-mastery__lbl">Overall mastery</div>
+      <div class="ti-ws-mastery__count" id="ti-mastery-count">{{ deck.mastery_done }} / {{ deck.mastery_total }} done</div>
+      <div class="ti-ws-mastery__bar" role="progressbar" aria-valuenow="{{ deck.mastery_done }}" aria-valuemin="0" aria-valuemax="{{ deck.mastery_total }}">
+        <div class="ti-ws-mastery__fill" id="ti-mastery-fill" style="width: {{ deck.mastery_pct }}%"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="ti-ws-search-wrap">
+    <span class="ti-ws-search__ic" aria-hidden="true">⌕</span>
+    <input type="search" id="ti-word-search" class="ti-ws-search" placeholder="Search words..." autocomplete="off" />
+  </div>
+
+  <div class="ti-ws-toolbar">
+    <div class="ti-ws-filters" id="ti-filter-row">
+      <button class="ti-ws-filter ti-ws-filter--on" data-filter="all" type="button">All</button>
+      <button class="ti-ws-filter" data-filter="new" type="button">Not started</button>
+      <button class="ti-ws-filter" data-filter="retry" type="button">Retry</button>
+      <button class="ti-ws-filter" data-filter="done" type="button">Done ✓</button>
+    </div>
+    <div class="ti-ws-actions">
+      <button id="ti-select-all" type="button" class="ti-ws-mini">Select all</button>
+      <button id="ti-clear-all" type="button" class="ti-ws-mini">Clear</button>
+    </div>
+  </div>
+
+  <div id="ti-word-rows" class="ti-ws-rows"></div>
+
+  <div class="ti-ws-spacer" aria-hidden="true"></div>
+
+  <div class="ti-ws-bottom">
+    <div class="ti-ws-bottom__left">
+      <div id="ti-selected-count" class="ti-ws-bottom__count">0 words selected</div>
+      <div class="ti-ws-bottom__hint">Tap words above to select or deselect</div>
+    </div>
+    <button id="ti-start-session" type="button" class="ti-ws-start" disabled>Start session →</button>
+  </div>
+</div>
+
+{{ deck|json_script:"ti-words-payload" }}
+<script src="{% static 'vocabulary/js/type_it_words.js' %}?v=4" defer></script>
+{% endblock %}

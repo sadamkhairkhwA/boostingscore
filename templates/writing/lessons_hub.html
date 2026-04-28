@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Writing Lessons{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  <section class="wt1-wrap">
+    <h1 class="wt1-title wt1-title--hero">Writing Lessons</h1>
+    <p class="wt1-sub">Learn to write every IELTS question type. Structure, stages, common mistakes, examiner expectations.</p>
+    <div class="wr-tabs"><button class="wt1-btn wt1-btn--dark" type="button" data-tab="t1">📊 Task 1</button><button class="wt1-btn wt1-btn--outline" type="button" data-tab="t2">✍️ Task 2</button></div>
+    <div id="wr-lessons-t1">
+      {% for l in task1_lessons %}
+      <details class="wr-row"{% if forloop.first %} open{% endif %}>
+        <summary><span class="ic">{{ l.icon }}</span><div><strong>{{ l.title }}</strong><p>{{ l.subtitle }}</p></div><span class="tag">{% if l.id in done_ids %}Done ✓{% else %}{{ l.level }}{% endif %}</span></summary>
+        <div class="wr-row-body"><p>{{ l.content }}</p><a href="{% url 'writing:lesson_detail' l.id %}">Open lesson →</a></div>
+      </details>
+      {% endfor %}
+    </div>
+    <div id="wr-lessons-t2" class="ti-hidden">
+      {% for l in task2_lessons %}
+      <details class="wr-row"><summary><span class="ic">{{ l.icon }}</span><div><strong>{{ l.title }}</strong><p>{{ l.subtitle }}</p></div><span class="tag">{% if l.id in done_ids %}Done ✓{% else %}{{ l.level }}{% endif %}</span></summary><div class="wr-row-body"><p>{{ l.content }}</p><a href="{% url 'writing:lesson_detail' l.id %}">Open lesson →</a></div></details>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+  const t1 = document.getElementById("wr-lessons-t1");
+  const t2 = document.getElementById("wr-lessons-t2");
+  document.querySelectorAll(".wr-tabs [data-tab]").forEach(btn => btn.addEventListener("click", () => {
+    const isT1 = btn.dataset.tab === "t1";
+    t1.classList.toggle("ti-hidden", !isT1);
+    t2.classList.toggle("ti-hidden", isT1);
+  }));
+})();
+</script>
+{% endblock %}

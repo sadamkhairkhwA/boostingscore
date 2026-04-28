@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Type it — Boosting Score{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vocabulary/css/type_it_full.css' %}?v=5">
+{% endblock %}
+{% block content %}
+<div class="bs-page tidb-page">
+  <div id="tidb-view-topics">
+    <header class="tidb-head">
+      <h1 class="bs-page-title tidb-title">Type it</h1>
+      <p class="bs-page-sub tidb-sub">Choose a topic to practise</p>
+    </header>
+
+    <section class="tidb-section">
+      <h2 class="tidb-sec-label">IELTS topic decks</h2>
+      <div class="tidb-topic-grid">
+        {% for t in type_it_topics %}
+        <button type="button" class="tidb-topic-card" data-topic="{{ t.topic }}" aria-label="Open {{ t.name }} levels">
+          <div class="tidb-topic-top">
+            <span class="tidb-topic-emoji" aria-hidden="true">{{ t.emoji }}</span>
+            <div class="tidb-topic-text">
+              <span class="tidb-topic-name">{{ t.name }}</span>
+              <span class="tidb-topic-line">{{ t.total_words }} words · 3 levels</span>
+            </div>
+          </div>
+          <div class="tidb-bar" role="progressbar" aria-valuenow="{{ t.done }}" aria-valuemin="0" aria-valuemax="{{ t.total_words }}">
+            <div class="tidb-bar-fill" style="width: {{ t.pct }}%"></div>
+          </div>
+          <div class="tidb-count">{{ t.done }} / {{ t.total_words }} done</div>
+        </button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="tidb-section tidb-section--custom">
+      <h2 class="tidb-sec-label">My custom decks</h2>
+      <div class="tidb-custom-grid">
+        {% for d in custom_decks %}
+        <a class="tidb-custom-card" href="{{ d.url }}">
+          <div class="tidb-topic-top">
+            <span class="tidb-topic-emoji" aria-hidden="true">{{ d.emoji }}</span>
+            <div class="tidb-topic-text">
+              <span class="tidb-topic-name">{{ d.name }}</span>
+              <span class="tidb-topic-line">Custom · {{ d.count }} words</span>
+            </div>
+          </div>
+          <div class="tidb-bar">
+            <div class="tidb-bar-fill" style="width: {{ d.pct }}%"></div>
+          </div>
+          <div class="tidb-count">{{ d.done }} / {{ d.count }} done</div>
+        </a>
+        {% endfor %}
+        <button id="ti-open-create" class="tidb-create-card" type="button">
+          <span class="tidb-create-plus" aria-hidden="true">+</span>
+          <span class="tidb-create-title">Create new deck</span>
+          <span class="tidb-create-sub">Add your own vocabulary words</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div id="tidb-view-levels" class="tidb-hidden" aria-hidden="true">
+    <button type="button" class="tidb-back" id="tidb-back-topics">← All topics</button>
+    <header class="tidb-level-head" id="tidb-level-head"></header>
+    <div class="tidb-level-list" id="tidb-level-cards"></div>
+  </div>
+</div>
+
+<div id="ti-create-modal" class="ti-modal ti-modal--hidden" aria-hidden="true">
+  <div class="ti-modal-panel">
+    <h3>Create deck</h3>
+    <label class="ti-f-label" for="ti-create-name">Deck name</label>
+    <input id="ti-create-name" class="ti-input" type="text" maxlength="100" required>
+
+    <p class="ti-f-label">Pick a colour</p>
+    <div id="ti-colours" class="ti-pick-row"></div>
+
+    <p class="ti-f-label">Pick an emoji</p>
+    <div id="ti-emojis" class="ti-pick-row"></div>
+
+    <label class="ti-f-label" for="ti-create-words">Add words (one per line)</label>
+    <textarea id="ti-create-words" class="ti-textarea" rows="6"></textarea>
+
+    <p id="ti-create-err" class="ti-err ti-hidden"></p>
+    <div class="ti-modal-actions">
+      <button id="ti-create-cancel" type="button" class="ti-btn ti-btn--outline">Cancel</button>
+      <button id="ti-create-save" type="button" class="ti-btn ti-btn--dark">Create deck →</button>
+    </div>
+  </div>
+</div>
+
+{{ type_it_topics|json_script:"ti-type-it-topics-data" }}
+<script>
+window.TI_DECK_CREATE = {
+  createUrl: "{{ create_url }}",
+  csrfToken: "{{ csrf_token }}",
+};
+</script>
+<script src="{% static 'vocabulary/js/type_it_deck_browser.js' %}?v=5" defer></script>
+{% endblock %}

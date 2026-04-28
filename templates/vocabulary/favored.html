@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Favored words — Boosting Score{% endblock %}
+{% block content %}
+<div class="bs-page">
+  <div class="bs-sec-hd">
+    <div>
+      <h1 class="bs-page-title">Favored words</h1>
+      <p class="bs-page-sub">Words you starred from the word list — revisit them before test day.</p>
+    </div>
+    <a class="bs-btn-dark" href="{% url 'vocabulary:word_list' %}">Word list</a>
+  </div>
+
+  {% if items %}
+  <div class="bs-classes">
+    {% for p in items %}
+    <div class="bs-ccard" style="cursor:default;">
+      <div class="bs-ccard-icon" style="background:#EAF3DE;">⭐️</div>
+      <div class="bs-ccard-body">
+        <div class="bs-ccard-name">{{ p.word.word }}</div>
+        <div class="bs-ccard-sub">{{ p.word.get_topic_display }} · mastery {{ p.mastery_level }}/5</div>
+        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:{% widthratio p.mastery_level 5 100 %}%;"></div></div>
+      </div>
+      <div class="bs-ccard-right">
+        <a class="bs-ccard-btn" style="background:#3B6D11;color:#fff;text-decoration:none;display:inline-block;" href="{% url 'vocabulary:type_it_session' %}?word_id={{ p.word.id }}">Type it →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bs-empty">
+    <div class="bs-empty-icon">⭐️</div>
+    <div class="bs-empty-title">No favorites yet</div>
+    <div class="bs-empty-sub">Open the word list and press “Save” on any word you want to revisit.</div>
+    <a class="bs-btn-primary" href="{% url 'vocabulary:word_list' %}">Browse words</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

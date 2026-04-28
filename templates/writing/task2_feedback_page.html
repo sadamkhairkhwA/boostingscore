@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Task 2 Feedback{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  {% include "writing/_task1_topbar.html" %}
+  <section class="wt1-wrap">
+    <div class="wt1-fb-head">
+      <div><p class="wt1-label wt1-label--tight">{{ type_meta.name|upper }} · {{ question.title|upper }}</p><h1 class="wt1-title wt1-title--list">AI Feedback</h1></div>
+      <div class="wt1-actions wt1-actions--top">
+        <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task2_question_page' essay_type question.id %}">Try again</a>
+        <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task2' %}">More questions</a>
+      </div>
+    </div>
+    <div class="wt1-score-card wt1-score-card--rich">
+      <p class="wt1-label wt1-label--tight">Estimated Band Score</p>
+      <div class="wt1-score">Band {{ feedback.band_score|default:6|floatformat:1 }}</div>
+      <div class="wt1-crit-tabs" id="wt1-crit-tabs">
+        {% for c in criteria %}
+        <button type="button" class="wt1-crit-tab{% if c.key == weakest_key %} is-active{% endif %}" data-criterion="{{ c.key }}"><span class="dot" style="background:{{ c.color }}"></span>{{ c.label }}</button>
+        {% endfor %}
+      </div>
+      <div class="wt1-crit-panel" id="wt1-crit-panel"></div>
+      <p class="wt1-score-summary">Your weakest area is <strong class="wt1-amber">{{ weakest_label }} ({{ weakest_score|floatformat:1 }})</strong>. Recommendations below are personalised.</p>
+    </div>
+    <div class="wt1-fb-card wt1-fb-card--good"><h3>✓ What you did well</h3><ul>{% for item in feedback.did_well %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    <div class="wt1-fb-card wt1-fb-card--improve"><h3>⚠ What to improve</h3><ul>{% for item in feedback.improve %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    <div class="wt1-fb-card wt1-fb-card--lang"><h3>💬 Language suggestions</h3><ul>{% for item in feedback.language_suggestions %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    <div class="wt1-model"><p class="wt1-label wt1-label--tight">Model answer (Band 7)</p><p><em>{{ feedback.model_answer }}</em></p></div>
+    <div class="wt1-actions"><a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task2_question_page' essay_type question.id %}">Try again</a><a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task2_question_list' essay_type %}">Next question →</a></div>
+  </section>
+</div>
+{{ feedback|json_script:"wt1-feedback-json" }}
+{{ criteria|json_script:"wt1-criteria-json" }}
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+{% endblock %}
