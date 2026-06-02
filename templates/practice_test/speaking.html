@@ -13,7 +13,6 @@
   <input type="hidden" id="pt-session-id" value="{{ session.id }}">
   <input type="hidden" id="pt-csrf" value="{{ csrf_token }}">
   <input type="hidden" id="pt-sample-url" value="{% static 'speaking_videos/intro.mp4' %}">
-  <input type="hidden" id="pt-video-base" value="{% static 'speaking_videos/' %}">
   <input type="hidden" id="pt-submit-url" value="{% url 'practice_test:speaking_submit_answer' %}">
   <input type="hidden" id="pt-finish-url" value="{% url 'practice_test:speaking_finish' %}">
 
@@ -119,21 +118,6 @@
                controlsList="nofullscreen nodownload noremoteplayback"
                preload="auto"
                oncontextmenu="return false;"></video>
-        <button type="button"
-                class="pt-spkv-video-play"
-                id="pt-video-play"
-                aria-label="Play question"
-                hidden>
-          <svg viewBox="0 0 64 64" width="74" height="74" aria-hidden="true">
-            <circle cx="32" cy="32" r="32" fill="rgba(0,0,0,.65)"/>
-            <path d="M26 20 L46 32 L26 44 Z" fill="#fff"/>
-          </svg>
-          <span>Play question</span>
-        </button>
-        <div class="pt-spkv-video-loading" id="pt-video-loading" hidden>
-          <div class="pt-spkv-spinner pt-spkv-spinner--sm" aria-hidden="true"></div>
-          <span>Loading video…</span>
-        </div>
       </div>
 
       <div class="pt-spkv-qtext" id="pt-qtext" hidden></div>
@@ -210,7 +194,6 @@
   var SESSION_ID = document.getElementById('pt-session-id').value;
   var CSRF       = document.getElementById('pt-csrf').value;
   var SAMPLE_URL = document.getElementById('pt-sample-url').value;
-  var VIDEO_BASE = document.getElementById('pt-video-base').value;
   var SUBMIT_URL = document.getElementById('pt-submit-url').value;
   var FINISH_URL = document.getElementById('pt-finish-url').value;
 
@@ -327,27 +310,14 @@
   var currentQuestion = null;     // { part, index, text, video, prep_seconds? }
 
   var video       = $('pt-video');
-  var videoPlay   = $('pt-video-play');
-  var videoLoad   = $('pt-video-loading');
   var phaseLabel  = $('phase-label');
   var qText       = $('pt-qtext');
 
-  videoPlay.addEventListener('click', function(){
-    videoPlay.hidden = true;
-    try {
-      var p = video.play();
-      if (p && p.catch) p.catch(function(){ videoPlay.hidden = false; });
-    } catch(e) { videoPlay.hidden = false; }
-  });
-
-  // The examiner clip plays start-to-finish without interruption — no
-  // pause / scrub / skip is offered. The Play overlay only exists as a
-  // fallback for browsers that block autoplay.
-  video.addEventListener('play',  function(){ videoPlay.hidden = true; videoLoad.hidden = true; });
+  // The examiner clip plays start-to-finish — no pause / scrub / skip and
+  // no on-screen play / loading controls. If the file fails to load we
+  // simply log a clear message in the phase label.
   video.addEventListener('error', function(){
-    videoLoad.hidden = true;
-    videoPlay.hidden = false;
-    phaseLabel.textContent = 'Couldn\'t load the video — click play to retry';
+    phaseLabel.textContent = 'Couldn\'t load the question video. Please reload the page.';
   });
 
   function startTest(){
@@ -374,26 +344,30 @@
     });
   }
 
+  // Hard guard — recording can ONLY be initiated from the video.ended path
+  // (or after the Part 2 prep timer). startRecording() refuses to run
+  // unless this gate has been opened by afterQuestionVideo().
+  var recordingAllowed = false;
+
   function runStep(){
     if (stepIdx >= FLOW.length){ finishSession(); return; }
     var step = FLOW[stepIdx];
     hideAllPanels();
     qText.hidden = true;
     qText.textContent = '';
+    recordingAllowed = false;
 
-    // Reset video state and queue the next clip.
-    videoPlay.hidden = true;
-    videoLoad.hidden = false;
+    // Load the next clip via the URL Django already resolved (works under
+    // ManifestStaticFilesStorage on Railway as well as local dev).
     try { video.pause(); } catch(e){}
     video.removeAttribute('src');
     video.load();
-    video.src = VIDEO_BASE + step.video;
+    video.src = step.url;
     video.load();
 
     if (step.kind === 'intro' || step.kind === 'outro'){
       currentQuestion = null;
       phaseLabel.textContent = step.label || '';
-      // Highlight a part as soon as its intro starts.
       var m = /intro_p(\d)/.exec(step.video);
       if (m) setActivePart(m[1]);
       video.onended = function(){
@@ -410,9 +384,6 @@
       setActivePart(step.part);
       phaseLabel.textContent = 'Part ' + step.part + ' · Question ' + (step.index + 1);
       video.onended = function(){
-        // The examiner has finished asking the question. The video stays
-        // on its last frame and the written question appears below so the
-        // student can re-read while answering — they cannot replay or skip.
         showQuestionText(step.text);
         setTimeout(afterQuestionVideo, 1000);
       };
@@ -420,7 +391,6 @@
       return;
     }
 
-    // Unknown step type — skip.
     stepIdx++;
     runStep();
   }
@@ -432,31 +402,20 @@
   }
 
   function attemptPlay(){
-    var played = false;
-    var p;
-    try { p = video.play(); } catch(e) { p = null; }
-    if (p && p.then){
-      p.then(function(){ played = true; videoLoad.hidden = true; })
-       .catch(function(){
-         // Autoplay was blocked (typical on iOS / Safari and some
-         // privacy-strict Chrome profiles). Surface a big visible Play
-         // button so the student can start the clip manually.
-         videoLoad.hidden = true;
-         videoPlay.hidden = false;
-         phaseLabel.textContent = 'Click play to hear the question';
-       });
-    }
-    // Safety net — if neither play nor canplay fires within 4s, show the
-    // overlay so the test never silently stalls on a slow / blocked load.
-    setTimeout(function(){
-      if (!played && video.paused){
-        videoLoad.hidden = true;
-        videoPlay.hidden = false;
+    try {
+      var p = video.play();
+      if (p && p.catch){
+        p.catch(function(){
+          phaseLabel.textContent = 'Browser blocked autoplay — please reload the page.';
+        });
       }
-    }, 4000);
+    } catch(e) {
+      phaseLabel.textContent = 'Could not start the video. Please reload the page.';
+    }
   }
 
   function afterQuestionVideo(){
+    recordingAllowed = true;
     if (currentQuestion.prep_seconds) {
       runPrep(currentQuestion.prep_seconds);
     } else {
@@ -481,6 +440,9 @@
   });
 
   async function startRecording(){
+    // Hard gate: refuse to record unless the examiner video has finished
+    // (this gate is only opened by afterQuestionVideo()).
+    if (!recordingAllowed) return;
     var s;
     try { s = await getMicStream(); }
     catch(e){ alert('We could not access your microphone.'); return; }

@@ -400,17 +400,27 @@ def speaking(request):
 
     The full-test ``/test/full/speaking/`` page is a separate template and
     is intentionally untouched.
+
+    Each flow step's ``url`` is resolved through Django's static() helper so
+    it works under both StaticFilesStorage (local dev) and the production
+    ManifestStaticFilesStorage (filename hashing on Railway).
     """
+    from django.templatetags.static import static
+
     session = TestSession.objects.create(
         user=request.user,
         kind=TestSession.KIND_SPEAKING,
     )
+    flow_with_urls = [
+        {**step, "url": static("speaking_videos/" + step["video"])}
+        for step in C.SPEAKING_VIDEO_FLOW
+    ]
     return render(
         request,
         "practice_test/speaking.html",
         {
             "session": session,
-            "flow": C.SPEAKING_VIDEO_FLOW,
+            "flow": flow_with_urls,
             "total_questions": C.speaking_video_questions_total(),
         },
     )
