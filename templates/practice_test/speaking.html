@@ -4,7 +4,7 @@
 {% block pt_title %}Speaking Test{% endblock %}
 
 {% block pt_head %}
-<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=3">
 {% endblock %}
 
 {% block pt_content %}
@@ -39,7 +39,10 @@
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
               Play sample
             </button>
-            <button type="button" class="pt-btn" id="hp-confirm" disabled>I can hear it clearly ✓</button>
+            <button type="button" class="pt-btn" id="hp-confirm" disabled>
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              I can hear it clearly
+            </button>
           </div>
           <audio id="hp-audio" preload="auto" hidden></audio>
         </div>
@@ -62,7 +65,10 @@
           </div>
           <audio id="mic-playback" controls hidden style="margin-top:12px; width:100%; max-width:420px;"></audio>
           <div class="pt-spkv-step__row" style="margin-top:12px;">
-            <button type="button" class="pt-btn" id="mic-confirm" disabled>Mic works ✓</button>
+            <button type="button" class="pt-btn" id="mic-confirm" disabled>
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Mic works
+            </button>
           </div>
         </div>
         <div class="pt-spkv-step__status" id="mic-status" aria-hidden="true"></div>
@@ -149,26 +155,13 @@
         </button>
       </div>
 
-      {# Scoring panel #}
+      {# Scoring panel — Whisper transcription + GPT scoring happen silently
+         on the server; the student just sees a "Saving answer…" spinner and
+         the test auto-advances to the next examiner video. All feedback is
+         shown later on the results page. #}
       <div class="pt-spkv-scoring" id="pt-scoring" hidden>
         <div class="pt-spkv-spinner" aria-hidden="true"></div>
-        <p>AI is checking your answer…</p>
-      </div>
-
-      {# Feedback panel #}
-      <div class="pt-spkv-fb" id="pt-fb" hidden>
-        <div class="pt-spkv-fb__scores">
-          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-fl">—</div><div class="pt-spkv-fb__lbl">Fluency</div></div>
-          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-vo">—</div><div class="pt-spkv-fb__lbl">Vocabulary</div></div>
-          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-gr">—</div><div class="pt-spkv-fb__lbl">Grammar</div></div>
-          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-pr">—</div><div class="pt-spkv-fb__lbl">Pronunciation</div></div>
-        </div>
-        <p class="pt-spkv-fb__text" id="fb-text"></p>
-        <p class="pt-spkv-fb__transcript" id="fb-transcript"></p>
-        <div class="pt-spkv-fb__actions">
-          <button type="button" class="pt-btn pt-btn--ghost" id="pt-redo">Re-record</button>
-          <button type="button" class="pt-btn" id="pt-next">Next question →</button>
-        </div>
+        <p>Saving answer…</p>
       </div>
 
     </div>
@@ -221,7 +214,7 @@
   $('hp-confirm').addEventListener('click', function(){
     setup.headphones = true;
     $('step-hp').classList.add('is-done');
-    $('hp-status').textContent = '✓';
+    $('hp-status').innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     refreshStart();
   });
 
@@ -284,7 +277,7 @@
   $('mic-confirm').addEventListener('click', function(){
     setup.mic = true;
     $('step-mic').classList.add('is-done');
-    $('mic-status').textContent = '✓';
+    $('mic-status').innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     refreshStart();
   });
 
@@ -482,6 +475,15 @@
     var ext = (recBlob.type.indexOf('mp4') >= 0) ? 'm4a' : 'webm';
     fd.append('audio', recBlob, 'p' + currentQuestion.part + 'q' + (currentQuestion.index+1) + '_' + Date.now() + '.' + ext);
 
+    // Whisper + GPT scoring happen on the server and are stored on the
+    // SpeakingResponse. The student sees no scores or transcript during the
+    // exam — we just auto-advance to the next examiner video. All feedback
+    // is shown on the results page after the outro.
+    function advance(){
+      $('pt-scoring').hidden = true;
+      stepIdx++;
+      runStep();
+    }
     fetch(SUBMIT_URL, {
       method: 'POST',
       credentials: 'same-origin',
@@ -489,44 +491,9 @@
       body: fd,
     })
     .then(function(r){ return r.json(); })
-    .then(function(d){
-      $('pt-scoring').hidden = true;
-      if (!d || !d.ok){
-        showFeedback({ feedback: (d && d.error) || 'Something went wrong. Please re-record.' });
-        return;
-      }
-      showFeedback(d);
-    })
-    .catch(function(){
-      $('pt-scoring').hidden = true;
-      showFeedback({ feedback: 'Network error. Please re-record.' });
-    });
+    .then(advance)
+    .catch(advance);
   }
-
-  function showFeedback(d){
-    $('fb-fl').textContent = (d.fluency       != null) ? d.fluency       : '—';
-    $('fb-vo').textContent = (d.vocabulary    != null) ? d.vocabulary    : '—';
-    $('fb-gr').textContent = (d.grammar       != null) ? d.grammar       : '—';
-    $('fb-pr').textContent = (d.pronunciation != null) ? d.pronunciation : '—';
-    $('fb-text').textContent = d.feedback || '';
-    if (d.transcript){
-      $('fb-transcript').textContent = '“' + d.transcript + '”';
-      $('fb-transcript').hidden = false;
-    } else {
-      $('fb-transcript').textContent = '';
-      $('fb-transcript').hidden = true;
-    }
-    $('pt-fb').hidden = false;
-  }
-
-  $('pt-redo').addEventListener('click', function(){
-    $('pt-fb').hidden = true;
-    startRecording();
-  });
-  $('pt-next').addEventListener('click', function(){
-    stepIdx++;
-    runStep();
-  });
 
   function finishSession(){
     hideAllPanels();
