@@ -4,7 +4,7 @@
 {% block pt_title %}Speaking Test{% endblock %}
 
 {% block pt_head %}
-<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=5">
 {% endblock %}
 
 {% block pt_content %}
@@ -124,9 +124,12 @@
                controlsList="nofullscreen nodownload noremoteplayback"
                preload="auto"
                oncontextmenu="return false;"></video>
+        {# Subtle loading spinner shown over the current video while the next
+           clip is being preloaded. Never interactive. #}
+        <div class="pt-spkv-video-spinner" id="pt-video-spinner" aria-hidden="true" hidden>
+          <div class="pt-spkv-spinner" aria-hidden="true"></div>
+        </div>
       </div>
-
-      <div class="pt-spkv-qtext" id="pt-qtext" hidden></div>
 
       {# Prep panel — Part 2 only #}
       <div class="pt-spkv-prep" id="pt-prep" hidden>
@@ -299,9 +302,9 @@
   var recTimerInt = null;
   var currentQuestion = null;     // { part, index, text, video, prep_seconds? }
 
-  var video       = $('pt-video');
-  var phaseLabel  = $('phase-label');
-  var qText       = $('pt-qtext');
+  var video        = $('pt-video');
+  var phaseLabel   = $('phase-label');
+  var videoSpinner = $('pt-video-spinner');
 
   // The examiner clip plays start-to-finish — no pause / scrub / skip and
   // no on-screen play / loading controls. If the file fails to load we
@@ -344,18 +347,56 @@
     if (stepIdx >= FLOW.length){ finishSession(); return; }
     var step = FLOW[stepIdx];
     hideAllPanels();
-    qText.hidden = true;
-    qText.textContent = '';
     recordingAllowed = false;
 
-    // Load the next clip via the URL Django already resolved (works under
-    // ManifestStaticFilesStorage on Railway as well as local dev).
-    try { video.pause(); } catch(e){}
-    video.removeAttribute('src');
-    video.load();
-    video.src = step.url;
-    video.load();
+    // Preload the next clip in a detached <video> element first, keeping the
+    // CURRENT examiner video frozen on its last frame so the student never
+    // sees a black gap between clips. Only swap once the new clip is ready.
+    videoSpinner.hidden = false;
 
+    var preloader = document.createElement('video');
+    preloader.preload = 'auto';
+    preloader.muted = true;
+    preloader.playsInline = true;
+    preloader.src = step.url;
+
+    var swapped = false;
+    function doSwap(){
+      if (swapped) return;
+      swapped = true;
+      preloader.removeEventListener('canplay',     doSwap);
+      preloader.removeEventListener('loadeddata',  doSwap);
+      preloader.removeEventListener('error',       doSwap);
+
+      // Wire the new step's handlers BEFORE swapping src so .onended is set
+      // by the time the new clip starts.
+      wireStepHandlers(step);
+
+      try { video.pause(); } catch(e){}
+      video.src = step.url;
+      video.load();
+      videoSpinner.hidden = true;
+      attemptPlay();
+
+      // Detach the preloader element from memory.
+      try { preloader.src = ''; preloader.load(); } catch(e){}
+    }
+
+    // canplay = enough data buffered to start; loadeddata = first frame ready.
+    // Either is sufficient to swap without a black gap.
+    preloader.addEventListener('canplay',    doSwap);
+    preloader.addEventListener('loadeddata', doSwap);
+    // If the preloader itself errors, swap anyway so the test never stalls;
+    // the main element's error handler will surface a clear message.
+    preloader.addEventListener('error',      doSwap);
+    // Safety net for browsers (notably iOS Safari) that may stall before
+    // firing canplay / loadeddata events.
+    setTimeout(doSwap, 6000);
+
+    preloader.load();
+  }
+
+  function wireStepHandlers(step){
     if (step.kind === 'intro' || step.kind === 'outro'){
       currentQuestion = null;
       phaseLabel.textContent = step.label || '';
@@ -366,30 +407,19 @@
         stepIdx++;
         runStep();
       };
-      attemptPlay();
       return;
     }
-
     if (step.kind === 'question'){
       currentQuestion = step;
       setActivePart(step.part);
       phaseLabel.textContent = 'Part ' + step.part + ' · Question ' + (step.index + 1);
-      video.onended = function(){
-        showQuestionText(step.text);
-        setTimeout(afterQuestionVideo, 1000);
-      };
-      attemptPlay();
+      // No written question text — the student only sees & hears the examiner.
+      video.onended = function(){ setTimeout(afterQuestionVideo, 1000); };
       return;
     }
-
+    // Unknown step type — skip.
     stepIdx++;
     runStep();
-  }
-
-  function showQuestionText(text){
-    if (!text) { qText.hidden = true; return; }
-    qText.textContent = text;
-    qText.hidden = false;
   }
 
   function attemptPlay(){

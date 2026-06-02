@@ -166,6 +166,17 @@ body.pt-spkv-active .pt-main{ padding: 0; max-width: none; }
   aspect-ratio: 16 / 9;
 }
 
+/* Subtle loading overlay shown over the CURRENT video while the next clip
+   is being preloaded. Pointer events disabled so the student still can't
+   interact with the player in any way. */
+.pt-spkv-video-spinner{
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  border-radius: var(--spkv-radius);
+}
+
 /* Big centered Play overlay — shown when autoplay is blocked or the video
    is paused waiting for the student. */
 .pt-spkv-video-play{
