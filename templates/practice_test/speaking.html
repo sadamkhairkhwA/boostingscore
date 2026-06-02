@@ -4,7 +4,7 @@
 {% block pt_title %}Speaking Test{% endblock %}
 
 {% block pt_head %}
-<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=4">
 {% endblock %}
 
 {% block pt_content %}
@@ -155,10 +155,7 @@
         </button>
       </div>
 
-      {# Scoring panel — Whisper transcription + GPT scoring happen silently
-         on the server; the student just sees a "Saving answer…" spinner and
-         the test auto-advances to the next examiner video. All feedback is
-         shown later on the results page. #}
+      {# Scoring panel: silent spinner while we upload + score in the background #}
       <div class="pt-spkv-scoring" id="pt-scoring" hidden>
         <div class="pt-spkv-spinner" aria-hidden="true"></div>
         <p>Saving answer…</p>
@@ -325,10 +322,11 @@
   }
 
   function hideAllPanels(){
-    $('pt-prep').hidden = true;
-    $('pt-rec').hidden = true;
+    // The feedback panel was removed in favour of silent auto-advance, so
+    // we only need to hide the prep, recording and scoring panels here.
+    $('pt-prep').hidden    = true;
+    $('pt-rec').hidden     = true;
     $('pt-scoring').hidden = true;
-    $('pt-fb').hidden = true;
   }
 
   function setActivePart(part){
