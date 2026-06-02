@@ -1,0 +1,91 @@
+{% extends "practice_test/_shell.html" %}
+{% load static %}
+
+{% block pt_title %}Speaking results{% endblock %}
+
+{% block pt_head %}
+<link rel="stylesheet" href="{% static 'practice_test/css/speaking_results.css' %}?v=1">
+{% endblock %}
+
+{% block pt_content %}
+<section class="spkr">
+
+  {# 1. Score header #}
+  <div class="spkr-hero">
+    <div class="spkr-hero__band" aria-label="Overall band score">
+      {{ report.overall_band|default:"—" }}
+    </div>
+    <p class="spkr-hero__msg">
+      {{ report.overall_feedback|default:"Your speaking test has been recorded." }}
+    </p>
+  </div>
+
+  {# 2. Full transcript #}
+  <section class="spkr-card" aria-labelledby="spkr-h-transcript">
+    <h2 id="spkr-h-transcript" class="spkr-card__title">Full transcript</h2>
+    {% if report.transcript %}
+      <div class="spkr-transcript">
+        {% for line in report.transcript %}
+          <div class="spkr-line">
+            <div class="spkr-line__label">{{ line.label }}</div>
+            <div class="spkr-line__text">{{ line.text }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="spkr-empty">No answers were recorded for this session.</p>
+    {% endif %}
+  </section>
+
+  {# 3. Errors and corrections #}
+  {% if report.errors %}
+  <section class="spkr-card" aria-labelledby="spkr-h-errors">
+    <h2 id="spkr-h-errors" class="spkr-card__title">Errors and corrections</h2>
+    <div class="spkr-errors" role="table">
+      <div class="spkr-errors__head" role="row">
+        <div role="columnheader">Original</div>
+        <div role="columnheader">Corrected</div>
+      </div>
+      {% for err in report.errors %}
+        <div class="spkr-errors__row" role="row">
+          <div class="spkr-errors__original" role="cell">{{ err.original }}</div>
+          <div class="spkr-errors__arrow" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+          </div>
+          <div class="spkr-errors__corrected" role="cell">{{ err.corrected }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# 4. Better answer examples #}
+  {% if report.better_examples %}
+  <section class="spkr-card" aria-labelledby="spkr-h-examples">
+    <h2 id="spkr-h-examples" class="spkr-card__title">Better answer examples</h2>
+    <ul class="spkr-list">
+      {% for ex in report.better_examples %}
+        <li>{{ ex }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {# 5. Improvement tips #}
+  {% if report.tips %}
+  <section class="spkr-card" aria-labelledby="spkr-h-tips">
+    <h2 id="spkr-h-tips" class="spkr-card__title">Improvement tips</h2>
+    <ul class="spkr-list">
+      {% for tip in report.tips %}
+        <li>{{ tip }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <div class="spkr-actions">
+    <a href="{% url 'practice_test:speaking' %}" class="spkr-btn spkr-btn--primary">Take test again</a>
+    <a href="{% url 'home' %}" class="spkr-btn spkr-btn--ghost">Back to home</a>
+  </div>
+</section>
+{% endblock %}

@@ -526,7 +526,7 @@
   function finishSession(){
     hideAllPanels();
     clearInterval(sessionTimer);
-    phaseLabel.textContent = 'Finishing your test…';
+    phaseLabel.textContent = 'Generating your report…';
     var fd = new FormData();
     fd.append('session_id', SESSION_ID);
     fetch(FINISH_URL, {

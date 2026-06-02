@@ -22,6 +22,7 @@ from .scoring import (
     round_half,
     score_speaking,
     score_writing,
+    synthesize_speaking_report,
     transcribe_audio,
 )
 
@@ -523,12 +524,34 @@ def speaking_submit_answer(request):
     })
 
 
+def _build_speaking_report(session) -> dict:
+    """Generate the consolidated speaking report and cache it on the session.
+
+    The result is stored on ``session.raw["report"]`` so subsequent loads of
+    the results page don't re-call GPT. The cached copy is the source of
+    truth for the new speaking_results template.
+    """
+    responses = list(
+        SpeakingResponse.objects.filter(session=session)
+        .order_by("part", "question_index")
+    )
+    report = synthesize_speaking_report(responses)
+    session.raw = session.raw or {}
+    session.raw["report"] = report
+    if report.get("overall_band"):
+        session.band_overall = report["overall_band"]
+        session.band_speaking = report["overall_band"]
+    session.save(update_fields=["raw", "band_overall", "band_speaking"])
+    return report
+
+
 @login_required
 @csrf_protect
 @require_POST
 def speaking_finish(request):
-    """POST endpoint hit when the outro video ends — finalises the session
-    and returns the URL the browser should redirect to."""
+    """POST endpoint hit when the outro video ends — finalises the session,
+    generates the consolidated AI report and returns the URL to redirect to.
+    """
     sid = request.POST.get("session_id")
     if not sid:
         return JsonResponse({"ok": False, "error": "missing session_id"}, status=400)
@@ -536,6 +559,9 @@ def speaking_finish(request):
         TestSession, id=sid, user=request.user, kind=TestSession.KIND_SPEAKING,
     )
     overall = _finalise_speaking_session(session)
+    # Generate the consolidated report once, here, so the results page can
+    # render instantly without another GPT round-trip.
+    _build_speaking_report(session)
     return JsonResponse({
         "ok": True,
         "overall": overall,
@@ -545,12 +571,29 @@ def speaking_finish(request):
 
 @login_required
 def speaking_results(request, session_id: int):
-    """Alias URL that matches the spec — defers to the existing results page
-    which already renders the full per-question speaking breakdown."""
+    """Dedicated /test/speaking/results/<id>/ page.
+
+    Renders only the five sections required by the speaking results spec:
+    score header, full transcript, errors & corrections, better answer
+    examples, improvement tips. The general ``/test/results/<id>/`` page
+    used by reading / writing / listening is intentionally left alone.
+    """
     session = get_object_or_404(
-        TestSession, id=session_id, user=request.user,
+        TestSession, id=session_id, user=request.user, kind=TestSession.KIND_SPEAKING,
     )
-    return redirect("practice_test:results", session_id=session.id)
+    report = (session.raw or {}).get("report")
+    # First visit (or older sessions created before the report cache existed)
+    # — generate it lazily so the page still works.
+    if not isinstance(report, dict) or not report.get("transcript"):
+        report = _build_speaking_report(session)
+    return render(
+        request,
+        "practice_test/speaking_results.html",
+        {
+            "session": session,
+            "report":  report,
+        },
+    )
 
 
 @login_required

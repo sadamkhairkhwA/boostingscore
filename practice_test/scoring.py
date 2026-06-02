@@ -631,3 +631,200 @@ def score_speaking(
     data["metrics"] = metrics
     data.setdefault("feedback", "")
     return data
+
+
+# =============================================================================
+# Final consolidated speaking report
+# =============================================================================
+#
+# The standalone speaking test (``/test/speaking/``) saves a SpeakingResponse
+# per question, with per-criterion bands and inline annotations. The results
+# page however shows ONE consolidated, exam-style report with five sections:
+#
+#   1. Score header  (overall band + one-line summary)
+#   2. Full transcript
+#   3. Errors and corrections
+#   4. Better-answer examples
+#   5. Improvement tips
+#
+# ``synthesize_speaking_report`` makes one final GPT-4o-mini call that takes
+# all the per-question transcripts and returns the JSON in exactly that
+# shape. We deliberately build the ``transcript`` list ourselves (verbatim
+# from Whisper) so the AI can never paraphrase a student's words; the AI
+# only generates the analytical sections.
+
+
+def _label_for(part: int, qi: int) -> str:
+    """Pretty per-question label used in the report (e.g. ``Part 1 Q3``)."""
+    return f"Part {int(part)} Q{int(qi) + 1}"
+
+
+def _empty_speaking_report(message: str, transcript_lines: list[dict]) -> dict:
+    return {
+        "overall_band": 0.0,
+        "overall_feedback": message,
+        "transcript": transcript_lines,
+        "errors": [],
+        "better_examples": [],
+        "tips": [],
+    }
+
+
+def synthesize_speaking_report(responses: list) -> dict[str, Any]:
+    """Build the final, exam-style speaking report from per-question results.
+
+    ``responses`` is an iterable of ``SpeakingResponse`` instances for one
+    session. Returns a dict in the shape the results template renders:
+
+        {
+          "overall_band":    6.5,
+          "overall_feedback":"One short sentence summarising performance.",
+          "transcript":      [{"label": "Part 1 Q1", "text": "..."}, ...],
+          "errors":          [{"original": "...", "corrected": "..."}, ...],
+          "better_examples": ["...", "..."],
+          "tips":            ["...", "..."],
+        }
+    """
+    items = sorted(
+        (r for r in responses if r is not None),
+        key=lambda r: (int(r.part or 0), int(r.question_index or 0)),
+    )
+
+    transcript_lines: list[dict] = []
+    bands: list[float] = []
+    ai_input_blocks: list[str] = []
+    for r in items:
+        text = (r.transcript or "").strip()
+        label = _label_for(r.part, r.question_index)
+        transcript_lines.append({
+            "label": label,
+            "text":  text or "(no response)",
+        })
+        if isinstance(r.band, (int, float)) and r.band > 0:
+            bands.append(float(r.band))
+        ai_input_blocks.append(
+            f"{label}\n"
+            f"Question: {(r.question_text or '').strip()}\n"
+            f"Student answer: {text or '(no response captured)'}"
+        )
+
+    fallback_band = round_half(sum(bands) / len(bands)) if bands else 0.0
+
+    if not transcript_lines:
+        return _empty_speaking_report(
+            "No answers were recorded — take the test again to get a report.",
+            [],
+        )
+    if not any((r.transcript or "").strip() for r in items):
+        return _empty_speaking_report(
+            "We could not transcribe any of your answers. Check your microphone and try again.",
+            transcript_lines,
+        )
+    if not resolve_openai_api_key():
+        return _empty_speaking_report(
+            "AI feedback is not available right now — your answers were saved.",
+            transcript_lines,
+        )
+
+    system = (
+        "You are a strict but fair IELTS Speaking examiner. "
+        "You receive verbatim transcripts of a student's answers across "
+        "Parts 1, 2 and 3. Produce ONE consolidated exam report in JSON. "
+        "Do not paraphrase the student. Be specific to what they actually said."
+    )
+    user = (
+        "Verbatim transcripts of the student's speaking test:\n\n"
+        + "\n\n".join(ai_input_blocks)
+        + "\n\n"
+        "Return ONLY valid JSON in this EXACT shape:\n"
+        "{\n"
+        '  "overall_band": 6.5,\n'
+        '  "overall_feedback": "One short sentence summarising overall performance.",\n'
+        '  "errors": [\n'
+        '    {"original": "verbatim incorrect sentence the student said", "corrected": "the corrected version"}\n'
+        "  ],\n"
+        '  "better_examples": [\n'
+        '    "Short example sentence using stronger vocabulary or structure, relevant to one of the student\'s answers."\n'
+        "  ],\n"
+        '  "tips": [\n'
+        '    "Specific, actionable improvement tip based on this student\'s actual answers."\n'
+        "  ]\n"
+        "}\n\n"
+        "Rules:\n"
+        "- overall_band: a single IELTS band (0–9) in 0.5 steps based on the whole test.\n"
+        "- overall_feedback: ONE short sentence. No greetings, no scores in the text.\n"
+        "- errors: 3–8 items. EACH original MUST be a verbatim phrase or sentence from the student's transcripts. If you cannot quote it verbatim, skip it.\n"
+        "- better_examples: 2–3 short sentences, each clearly inspired by something the student tried to say.\n"
+        "- tips: 3–5 SPECIFIC bullet points based on this student's actual mistakes. NO generic advice like 'practise every day'.\n"
+        "- Output JSON only. No prose outside the JSON."
+    )
+
+    def _call(client):
+        return client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+
+    rsp, err = _call_with_proxy_fallback(_call)
+    if err or rsp is None:
+        return {
+            "overall_band": fallback_band,
+            "overall_feedback": friendly_openai_error(err)
+                or "AI could not generate the final report — your answers were saved.",
+            "transcript": transcript_lines,
+            "errors": [],
+            "better_examples": [],
+            "tips": [],
+        }
+    try:
+        data = json.loads(rsp.choices[0].message.content or "{}")
+    except Exception as exc:
+        return {
+            "overall_band": fallback_band,
+            "overall_feedback": f"AI returned an invalid report ({type(exc).__name__}).",
+            "transcript": transcript_lines,
+            "errors": [],
+            "better_examples": [],
+            "tips": [],
+        }
+
+    band = data.get("overall_band")
+    if isinstance(band, (int, float)):
+        band = round_half(float(band))
+    else:
+        band = fallback_band
+
+    feedback = (data.get("overall_feedback") or "").strip()
+    if not feedback:
+        feedback = "Keep practising — focus on the tips below."
+
+    errors_raw = data.get("errors") or []
+    errors: list[dict] = []
+    if isinstance(errors_raw, list):
+        for e in errors_raw:
+            if not isinstance(e, dict):
+                continue
+            original = (e.get("original") or "").strip()
+            corrected = (e.get("corrected") or "").strip()
+            if original and corrected and original != corrected:
+                errors.append({"original": original, "corrected": corrected})
+
+    def _clean_strings(value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        out = []
+        for s in value:
+            if isinstance(s, str) and s.strip():
+                out.append(s.strip())
+        return out
+
+    return {
+        "overall_band": band,
+        "overall_feedback": feedback,
+        "transcript": transcript_lines,
+        "errors": errors[:8],
+        "better_examples": _clean_strings(data.get("better_examples"))[:3],
+        "tips": _clean_strings(data.get("tips"))[:5],
+    }
