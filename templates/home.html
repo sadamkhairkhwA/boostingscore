@@ -1,136 +1,268 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block title %}Home — Boosting Score{% endblock %}
-{% block content %}
-<div class="bs-page">
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/home_dash.css' %}?v=3">
+</head>
+<body class="dash-body">
 
-  <div class="bs-hero animate-fade">
-    <div class="bs-hero-glow bs-hero-glow-1"></div>
-    <div class="bs-hero-glow bs-hero-glow-2"></div>
-    <div class="bs-hero-inner">
-      <div class="bs-hero-tag">{{ greeting }}, {{ request.user.first_name|default:request.user.username }}</div>
-      <div class="bs-hero-title">Ready to boost your <span>IELTS score</span> today?</div>
-      <div class="bs-hero-sub">{% if due_count > 0 %}You have {{ due_count }} vocabulary words due for review. Every session gets you closer to your target band.{% else %}No words due today — great job! Keep the streak going.{% endif %}</div>
-      <div class="bs-hero-btns">
-        <a href="{% url 'vocabulary:index' %}" class="bs-btn-primary">Continue studying →</a>
-        <a href="{% url 'writing:home' %}" class="bs-btn-ghost">Write an essay</a>
-      </div>
+{# ---------------- Navbar (logo · pills · avatar · logout) ---------------- #}
+<header class="dash-nav">
+  <div class="dash-nav__inner">
+    <a href="{% url 'home' %}" class="dash-logo">Boosting<span>Score</span></a>
+
+    <div class="dash-nav__right">
+      <span class="dash-pill dash-pill--level">
+        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+          <path fill="currentColor" d="M12 2l2.6 6.3L21 9l-5 4.4L17.5 20 12 16.8 6.5 20 8 13.4 3 9l6.4-.7z"/>
+        </svg>
+        {% if request.user.profile.level == 1 %}Beginner{% elif request.user.profile.level == 2 %}Standard{% else %}Advanced{% endif %}
+      </span>
+      <span class="dash-pill dash-pill--streak">
+        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+          <path fill="currentColor" d="M12 2c1 3 4 4 4 8a4 4 0 1 1-8 0c0-2 1-3 2-4-1 3 1 4 2 4 1 0 2-1 2-2.5C14 5 13 4 12 2z"/>
+        </svg>
+        {{ streak|default:0 }} day streak
+      </span>
+      <span class="dash-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
+      <a href="{% url 'logout' %}" class="dash-nav__logout">Log out</a>
     </div>
   </div>
+</header>
 
-  <div class="bs-stats">
-    <div class="bs-stat animate-up delay-1">
-      <div class="bs-stat-val bs-green">{{ words_learned|default:0 }}</div>
-      <div class="bs-stat-lbl">Words learned</div>
-      <div class="bs-stat-sub">+{{ words_this_week|default:0 }} this week</div>
-    </div>
-    <div class="bs-stat animate-up delay-2">
-      <div class="bs-stat-val">🔥 {{ streak|default:0 }}</div>
-      <div class="bs-stat-lbl">Day streak</div>
-      <div class="bs-stat-sub">{% if streak == 0 %}Start today!{% elif streak == 1 %}Good start{% else %}Keep going!{% endif %}</div>
-    </div>
-    <div class="bs-stat animate-up delay-3">
-      <div class="bs-stat-val">{{ mastered_pct|default:0 }}%</div>
-      <div class="bs-stat-lbl">Mastered</div>
-      <div class="bs-stat-sub">{{ mastered_count|default:0 }} / {{ words_learned|default:0 }} words</div>
-    </div>
-    <div class="bs-stat animate-up delay-4">
-      <div class="bs-stat-val {% if due_count > 0 %}bs-amber{% endif %}">{{ due_count|default:0 }}</div>
-      <div class="bs-stat-lbl">Due for review</div>
-      <div class="bs-stat-sub">Spaced repetition</div>
-    </div>
-  </div>
+<main class="dash-main">
 
-  {% if due_count > 0 %}
-  <a href="{% url 'vocabulary:index' %}" class="bs-due animate-up delay-2">
-    <div class="bs-due-icon">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-        <rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/>
-        <rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/>
-      </svg>
+  {# ---------------- Greeting ---------------- #}
+  <section class="dash-greet">
+    <div class="dash-greet__date">{% now "l, F j" %}</div>
+    <h1 class="dash-greet__title">{{ greeting }}, {{ request.user.first_name|default:request.user.username }}.</h1>
+    <p class="dash-greet__sub">
+      {% if due_count > 0 %}You have {{ due_count }} vocabulary word{{ due_count|pluralize }} due for review.{% elif words_learned == 0 %}You haven't started yet — pick any section below to begin.{% else %}No words due today. Keep your streak going.{% endif %}
+    </p>
+  </section>
+
+  {# ---------------- 4 stat cards ---------------- #}
+  <section class="dash-stats">
+    <div class="dash-stat dash-stat--green">
+      <div class="dash-stat__num">{{ words_learned|default:0 }}</div>
+      <div class="dash-stat__lbl">Words learned</div>
     </div>
-    <div class="bs-due-body">
-      <div class="bs-due-title">{{ due_count }} words due for review today</div>
-      <div class="bs-due-sub">Spaced repetition — review today to lock these words into memory</div>
+    <div class="dash-stat dash-stat--amber">
+      <div class="dash-stat__num">{{ streak|default:0 }}</div>
+      <div class="dash-stat__lbl">Day streak</div>
     </div>
-    <div class="bs-due-btn">Review now →</div>
-  </a>
-  {% endif %}
+    <div class="dash-stat dash-stat--purple">
+      <div class="dash-stat__num">{{ mastered_pct|default:0 }}%</div>
+      <div class="dash-stat__lbl">Mastered</div>
+    </div>
+    <div class="dash-stat dash-stat--blue">
+      <div class="dash-stat__num">{{ tests_taken|default:0 }}</div>
+      <div class="dash-stat__lbl">Tests taken</div>
+    </div>
+  </section>
 
-  <p class="bs-sec-lbl">Quick actions</p>
-  <div class="bs-quick">
-    <a href="{% url 'vocabulary:type_it_deck' %}" class="bs-qcard animate-up delay-1">
-      <div class="bs-qcard-icon" style="background:#EAF3DE;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-      </div>
-      <div class="bs-qcard-title">Type it</div>
-      <div class="bs-qcard-sub">Write sentences · AI band score</div>
-    </a>
-    <a href="{% url 'writing:home' %}" class="bs-qcard animate-up delay-2">
-      <div class="bs-qcard-icon" style="background:#F3F4F6;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </div>
-      <div class="bs-qcard-title">Write an essay</div>
-      <div class="bs-qcard-sub">Task 1 or Task 2 · AI feedback</div>
-    </a>
-    <a href="{% url 'reading:home' %}" class="bs-qcard animate-up delay-3">
-      <div class="bs-qcard-icon" style="background:#EAF3DE;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      </div>
-      <div class="bs-qcard-title">Reading practice</div>
-      <div class="bs-qcard-sub">Strategies · IELTS lab</div>
-    </a>
-    <a href="{% url 'reading:academic_tests_index' %}" class="bs-qcard animate-up delay-4">
-      <div class="bs-qcard-icon" style="background:#dbeafe;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </div>
-      <div class="bs-qcard-title">Academic mock</div>
-      <div class="bs-qcard-sub">40 questions · 60 min timer</div>
-    </a>
-  </div>
+  {# ---------------- Section heading ---------------- #}
+  <header class="dash-sec">
+    <h2 class="dash-sec__title">Where do you want to start?</h2>
+    <p class="dash-sec__sub">Pick a section and begin.</p>
+  </header>
 
-  <div class="bs-sec-hd">
-    <div class="bs-sec-title">Your study classes</div>
-    <a href="{% url 'vocabulary:home' %}" class="bs-sec-link">See all →</a>
-  </div>
-  <div class="bs-classes">
-    <a href="{% url 'vocabulary:home' %}" class="bs-ccard animate-up delay-1">
-      <div class="bs-ccard-icon" style="background:#EAF3DE;">📚</div>
-      <div class="bs-ccard-body">
-        <div class="bs-ccard-name">Vocabulary</div>
-        <div class="bs-ccard-sub">{{ words_learned|default:0 }} cards · {% if due_count > 0 %}{{ due_count }} due today{% else %}All caught up{% endif %}</div>
-        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:{{ mastered_pct|default:0 }}%;"></div></div>
-      </div>
-      <div class="bs-ccard-right">
-        <div class="bs-ccard-stat">{{ mastered_count|default:0 }} learned</div>
-        <span class="bs-ccard-btn" style="background:#3B6D11;color:#fff;">Study →</span>
-      </div>
-    </a>
-    <a href="{% url 'reading:home' %}" class="bs-ccard animate-up delay-2">
-      <div class="bs-ccard-icon" style="background:#F3F4F6;">📖</div>
-      <div class="bs-ccard-body">
-        <div class="bs-ccard-name">Reading</div>
-        <div class="bs-ccard-sub">IELTS practice · AI generated tests</div>
-        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:{{ reading_pct|default:0 }}%;"></div></div>
-      </div>
-      <div class="bs-ccard-right">
-        <div class="bs-ccard-stat" style="{% if not reading_done %}color:#9CA3AF{% endif %}">{% if reading_done %}{{ reading_done }} completed{% else %}Not started{% endif %}</div>
-        <span class="bs-ccard-btn" style="background:#111827;color:#fff;">{% if reading_done %}Continue{% else %}Start{% endif %} →</span>
-      </div>
-    </a>
-    <a href="{% url 'writing:home' %}" class="bs-ccard animate-up delay-3">
-      <div class="bs-ccard-icon" style="background:#F3F4F6;">✍️</div>
-      <div class="bs-ccard-body">
-        <div class="bs-ccard-name">Writing</div>
-        <div class="bs-ccard-sub">Task 1 & Task 2 · AI band scoring</div>
-        <div class="bs-ccard-bar"><div class="bs-ccard-fill" style="width:0%;"></div></div>
-      </div>
-      <div class="bs-ccard-right">
-        <div class="bs-ccard-stat" style="color:#9CA3AF;">{% if essays_done %}{{ essays_done }} essays{% else %}Not started{% endif %}</div>
-        <span class="bs-ccard-btn" style="background:#111827;color:#fff;">{% if essays_done %}Continue{% else %}Start{% endif %} →</span>
-      </div>
-    </a>
-  </div>
+  {# ---------------- 6 feature cards ---------------- #}
+  <section class="dash-grid">
 
-</div>
-{% endblock %}
+    <a href="{% url 'vocabulary:home' %}" class="dash-fcard">
+      <span class="dash-fcard__ico dash-fcard__ico--green">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H6a3 3 0 0 1-3-3zM6 17h13"/></svg>
+      </span>
+      <div class="dash-fcard__name">Vocabulary</div>
+      <p class="dash-fcard__desc">IELTS words by topic with definitions and synonyms.</p>
+      <div class="dash-fcard__foot">
+        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
+        <span class="dash-fcard__meta">1,400+ words</span>
+      </div>
+    </a>
+
+    <a href="{% url 'vocabulary:type_it_deck' %}" class="dash-fcard">
+      <span class="dash-fcard__ico dash-fcard__ico--navy">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4"/></svg>
+      </span>
+      <div class="dash-fcard__name">Type-it</div>
+      <p class="dash-fcard__desc">Write from memory. AI scores you instantly.</p>
+      <div class="dash-fcard__foot">
+        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
+        <span class="dash-fcard__meta">AI feedback</span>
+      </div>
+    </a>
+
+    <a href="{% url 'writing:home' %}" class="dash-fcard">
+      <span class="dash-fcard__ico dash-fcard__ico--purple">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></svg>
+      </span>
+      <div class="dash-fcard__name">Writing</div>
+      <p class="dash-fcard__desc">AI band score with inline highlights on your essay.</p>
+      <div class="dash-fcard__foot">
+        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
+        <span class="dash-fcard__meta">Task 1 &amp; 2</span>
+      </div>
+    </a>
+
+    <a href="{% url 'reading:home' %}" class="dash-fcard">
+      <span class="dash-fcard__ico dash-fcard__ico--orange">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </span>
+      <div class="dash-fcard__name">Reading</div>
+      <p class="dash-fcard__desc">Timed passages with all IELTS question types.</p>
+      <div class="dash-fcard__foot">
+        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
+        <span class="dash-fcard__meta">Academic + GT</span>
+      </div>
+    </a>
+
+    <a href="{% url 'writing:lessons_hub' %}" class="dash-fcard">
+      <span class="dash-fcard__ico dash-fcard__ico--green">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 9 12 5 2 9l10 4 10-4zM6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>
+      </span>
+      <div class="dash-fcard__name">Writing Lessons</div>
+      <p class="dash-fcard__desc">The exact structure examiners expect — Task 1 and Task 2.</p>
+      <div class="dash-fcard__foot">
+        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
+        <span class="dash-fcard__meta">18 lessons</span>
+      </div>
+    </a>
+
+    <a href="{% url 'reading:academic_tests_index' %}" class="dash-fcard dash-fcard--accent">
+      <span class="dash-fcard__ico dash-fcard__ico--black">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+      <div class="dash-fcard__name">Practice Test</div>
+      <p class="dash-fcard__desc">All 4 IELTS sections — Reading, Writing, Listening and Speaking.</p>
+      <div class="dash-fcard__foot">
+        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
+        <span class="dash-fcard__meta">Full IELTS simulation</span>
+      </div>
+    </a>
+
+  </section>
+
+  {# ---------------- Practice Test dark banner ---------------- #}
+  <section class="dash-banner">
+    <div class="dash-banner__left">
+      <h3 class="dash-banner__title">Take a full practice test</h3>
+      <p class="dash-banner__sub">Reading · Writing · Listening · Speaking. No pausing. Full band score at the end.</p>
+      <div class="dash-banner__btns">
+        <a href="{% url 'reading:academic_tests_index' %}" class="dash-btn dash-btn--white">Start a test <span class="dash-arrow">→</span></a>
+        <a href="{% url 'profile_settings' %}" class="dash-btn dash-btn--ghost">View results</a>
+      </div>
+    </div>
+
+    <ul class="dash-banner__list">
+      <li class="dash-banner__row">
+        <div class="dash-banner__row-text">
+          <span class="dash-banner__row-name">Reading</span>
+          <span class="dash-banner__row-sub">3 passages · 40 questions</span>
+        </div>
+        <span class="dash-banner__row-badge">60 min</span>
+      </li>
+
+      <li class="dash-banner__row">
+        <div class="dash-banner__row-text">
+          <span class="dash-banner__row-name">Writing</span>
+          <span class="dash-banner__row-sub">Task 1 + Task 2 · AI band score</span>
+        </div>
+        <span class="dash-banner__row-badge">60 min</span>
+      </li>
+
+      <li class="dash-banner__row dash-banner__row--soon">
+        <div class="dash-banner__row-text">
+          <span class="dash-banner__row-name">Listening</span>
+          <span class="dash-banner__row-sub">4 sections · 40 questions</span>
+        </div>
+        <span class="dash-banner__row-badge dash-banner__row-badge--soon">Coming soon</span>
+      </li>
+
+      <li class="dash-banner__row dash-banner__row--soon">
+        <div class="dash-banner__row-text">
+          <span class="dash-banner__row-name">Speaking</span>
+          <span class="dash-banner__row-sub">3 parts · AI feedback</span>
+        </div>
+        <span class="dash-banner__row-badge dash-banner__row-badge--soon">Coming soon</span>
+      </li>
+
+      <li class="dash-banner__row dash-banner__row--full">
+        <div class="dash-banner__row-text">
+          <span class="dash-banner__row-name">Full IELTS Test</span>
+          <span class="dash-banner__row-sub">All 4 sections · real exam order</span>
+        </div>
+        <span class="dash-banner__row-badge">3 hrs</span>
+      </li>
+    </ul>
+  </section>
+
+  {# ---------------- Two-column: Today's plan + Progress ---------------- #}
+  <section class="dash-bottom">
+
+    <div class="dash-card">
+      <header class="dash-card__hd">
+        <h3 class="dash-card__title">Today's plan</h3>
+      </header>
+      <ul class="dash-tlist">
+        {% for t in today_tasks %}
+          <li class="dash-tlist__row">
+            <span class="dash-tlist__ico">
+              {% if t.icon == 'book' %}
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H6a3 3 0 0 1-3-3zM6 17h13"/></svg>
+              {% elif t.icon == 'pencil' %}
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4"/></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 9 12 5 2 9l10 4 10-4zM6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>
+              {% endif %}
+            </span>
+            <div class="dash-tlist__body">
+              <div class="dash-tlist__title">{{ t.title }}</div>
+              <div class="dash-tlist__sub">{{ t.sub }}</div>
+            </div>
+            <a href="{% url t.url_name %}" class="dash-tlist__btn {% if t.primary %}is-primary{% endif %} {% if t.done %}is-done{% endif %}">
+              {% if t.done %}Done{% else %}Start{% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="dash-card">
+      <header class="dash-card__hd">
+        <h3 class="dash-card__title">Your progress</h3>
+      </header>
+      <div class="dash-prow">
+        <span class="dash-prow__lbl">Vocabulary</span>
+        <div class="dash-prow__bar"><i style="width: {{ vocab_pct|default:0 }}%"></i></div>
+        <span class="dash-prow__val">{{ vocab_pct|default:0 }}%</span>
+      </div>
+      <div class="dash-prow">
+        <span class="dash-prow__lbl">Writing</span>
+        <div class="dash-prow__bar"><i style="width: {{ writing_pct|default:0 }}%"></i></div>
+        <span class="dash-prow__val">{{ writing_pct|default:0 }}%</span>
+      </div>
+      <div class="dash-prow">
+        <span class="dash-prow__lbl">Lessons</span>
+        <div class="dash-prow__bar"><i style="width: {% widthratio lessons_done lessons_total 100 %}%"></i></div>
+        <span class="dash-prow__val">{{ lessons_done }} / {{ lessons_total }}</span>
+      </div>
+      <div class="dash-prow">
+        <span class="dash-prow__lbl">Tests</span>
+        <div class="dash-prow__bar"><i style="width: {{ tests_pct|default:0 }}%"></i></div>
+        <span class="dash-prow__val">{{ tests_taken|default:0 }}</span>
+      </div>
+      <div class="dash-best">
+        <span class="dash-best__lbl">Best band score</span>
+        <span class="dash-best__val">{% if best_band_score %}{{ best_band_score }}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+</body>
+</html>

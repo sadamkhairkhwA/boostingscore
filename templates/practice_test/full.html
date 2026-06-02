@@ -1,0 +1,55 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Full IELTS Test{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
+  <h1 class="pt-h1">Full IELTS Academic Test</h1>
+  <p class="pt-sub">Four sections in order: Reading → Writing → Speaking → Listening. Around 2 hours 45 minutes total.</p>
+
+  {% include "practice_test/_step_bar.html" %}
+
+  <section class="pt-full-intro">
+
+    <h2 style="margin: 0 0 6px; color: var(--pt-ink); font-size: 18px;">How the full test works</h2>
+    <p style="margin: 0 0 14px; color: var(--pt-body);">
+      You'll move through each section without pausing. We save your band score for every section as you go, so even if you stop you keep what's been done. At the end you'll see one overall band score and a per-section breakdown.
+    </p>
+
+    <div class="pt-full-steps">
+      <div class="pt-full-step">
+        <span class="pt-full-step__num">1</span>
+        <b>Reading</b>
+        <small>60 min · 3 passages · 40 Q</small>
+      </div>
+      <div class="pt-full-step">
+        <span class="pt-full-step__num">2</span>
+        <b>Writing</b>
+        <small>60 min · Task 1 + Task 2 · AI band score</small>
+      </div>
+      <div class="pt-full-step">
+        <span class="pt-full-step__num">3</span>
+        <b>Listening</b>
+        <small>30 min · 40 Q</small>
+        <div style="margin-top:6px;"><span class="pt-badge-soon">Coming soon</span></div>
+      </div>
+      <div class="pt-full-step">
+        <span class="pt-full-step__num">4</span>
+        <b>Speaking</b>
+        <small>~15 min · 3 parts · record + AI checks</small>
+      </div>
+    </div>
+
+    <p style="font-size:13.5px; color: var(--pt-muted); margin: 0 0 18px;">
+      Tip: have a quiet room, a working microphone for Speaking, and ~3 hours of uninterrupted time.
+    </p>
+
+    <div class="pt-result-actions">
+      <a class="pt-btn pt-btn--lg" href="{% url 'practice_test:full_reading' %}?full={{ session.id }}">Start with Reading →</a>
+      <a class="pt-btn pt-btn--ghost" href="{% url 'practice_test:hub' %}">Cancel</a>
+    </div>
+
+  </section>
+
+{% endblock %}

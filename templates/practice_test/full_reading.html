@@ -1,0 +1,122 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Full Test — Reading{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Cancel full test</a>
+  <h1 class="pt-h1">Step 1 · Reading</h1>
+  <p class="pt-sub">3 passages · {{ total }} questions · {{ minutes }} minutes. Submit to continue to Writing.</p>
+
+  {% include "practice_test/_step_bar.html" %}
+
+  <form method="post" action="{% url 'practice_test:full_reading_submit' %}" id="pt-reading-form">
+    {% csrf_token %}
+    <input type="hidden" name="full" value="{{ full_id }}">
+
+    <div class="pt-runner-top">
+      <div>
+        <div class="pt-runner-top__title">Academic Reading</div>
+        <div class="pt-runner-top__meta">Answer all questions. Spelling matters in gap-fill answers.</div>
+      </div>
+      <div class="pt-runner-top__timer" id="pt-timer" data-minutes="{{ minutes }}">{{ minutes }}:00</div>
+    </div>
+
+    <div class="pt-reading">
+      <div class="pt-reading__col" id="pt-pass-col">
+        <div class="pt-reading__passnav">
+          {% for p in passages %}
+            <button type="button" class="js-pass-btn {% if forloop.first %}is-active{% endif %}" data-target="pt-pass-{{ p.number }}">Passage {{ p.number }}</button>
+          {% endfor %}
+        </div>
+        {% for p in passages %}
+          <article id="pt-pass-{{ p.number }}" class="pt-passage {% if forloop.first %}is-active{% endif %}">
+            <div class="pt-reading__pad">
+              <div class="pt-passage-tag">Passage {{ p.number }}</div>
+              <h2>{{ p.title }}</h2>
+              {% for para in p.paragraphs %}
+                <p>{{ para }}</p>
+              {% endfor %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+
+      <div class="pt-reading__col">
+        {% for p in passages %}
+          <div class="pt-reading__pad" style="border-bottom:.5px solid var(--pt-border);">
+            <div class="pt-passage-tag">Passage {{ p.number }} — questions</div>
+          </div>
+          {% for q in p.questions %}
+            <div class="pt-q">
+              <div class="pt-q__text"><span class="pt-q__num">{{ q.number }}.</span> {{ q.text }}</div>
+              {% if q.type == "tfng" %}
+                <div class="pt-q__opts">
+                  <label><input type="radio" name="{{ q.id }}" value="TRUE"> TRUE</label>
+                  <label><input type="radio" name="{{ q.id }}" value="FALSE"> FALSE</label>
+                  <label><input type="radio" name="{{ q.id }}" value="NOT GIVEN"> NOT GIVEN</label>
+                </div>
+              {% elif q.type == "mcq" %}
+                <div class="pt-q__opts">
+                  {% for opt in q.options %}
+                    <label><input type="radio" name="{{ q.id }}" value="{{ opt }}"> {{ opt }}</label>
+                  {% endfor %}
+                </div>
+              {% elif q.type == "gap" %}
+                <input type="text" name="{{ q.id }}" placeholder="Your answer" autocomplete="off">
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endfor %}
+
+        <div class="pt-submit-bar">
+          <div class="pt-submit-bar__meta">Answered <b id="pt-answered">0</b> / {{ total }}</div>
+          <button type="submit" class="pt-btn">Save &amp; continue to Writing →</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+{% endblock %}
+
+{% block pt_scripts %}
+<script>
+(function(){
+  document.querySelectorAll('.js-pass-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.js-pass-btn').forEach(function(b){ b.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+      document.querySelectorAll('.pt-passage').forEach(function(p){ p.classList.remove('is-active'); });
+      var t = document.getElementById(btn.dataset.target);
+      if (t) t.classList.add('is-active');
+      var col = document.getElementById('pt-pass-col');
+      if (col) col.scrollTop = 0;
+    });
+  });
+
+  var form = document.getElementById('pt-reading-form');
+  var counter = document.getElementById('pt-answered');
+  function recount(){
+    var names = new Set();
+    form.querySelectorAll('input[type=text]').forEach(function(i){ if (i.value.trim()) names.add(i.name); });
+    form.querySelectorAll('input[type=radio]:checked').forEach(function(i){ names.add(i.name); });
+    counter.textContent = names.size;
+  }
+  form.addEventListener('input', recount);
+  form.addEventListener('change', recount);
+
+  var el = document.getElementById('pt-timer');
+  if (el){
+    var mins = parseInt(el.dataset.minutes, 10) || 60;
+    var seconds = mins * 60;
+    function tick(){
+      var m = Math.floor(seconds / 60), s = seconds % 60;
+      el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      if (seconds <= 0) { el.style.color = '#c0392b'; return; }
+      seconds--; setTimeout(tick, 1000);
+    }
+    tick();
+  }
+})();
+</script>
+{% endblock %}

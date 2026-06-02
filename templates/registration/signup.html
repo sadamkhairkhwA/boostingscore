@@ -1,28 +1,89 @@
-{% extends 'base.html' %}
-{% block title %}Sign up — Boosting Score{% endblock %}
-{% block content %}
-<div class="bs-auth-page">
-  <div class="bs-auth-card animate-fade">
-    <div class="bs-auth-logo">Boosting<span>Score</span></div>
-    <div class="bs-auth-title">Create your account</div>
-    <div class="bs-auth-sub">Start improving your IELTS score today</div>
-    {% if form.errors %}
-    <div class="bs-auth-error">
-      {% for field in form %}{% for error in field.errors %}{{ error }} {% endfor %}{% endfor %}
-      {% for error in form.non_field_errors %}{{ error }} {% endfor %}
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign up — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=1">
+</head>
+<body class="auth-body">
+
+<header class="auth-top">
+  <div class="auth-top__inner">
+    <a href="/" class="auth-logo">Boosting<span>Score</span></a>
+    <div class="auth-top__right">
+      <span>Already a member?</span>
+      <a href="{% url 'login' %}">Log in</a>
     </div>
-    {% endif %}
-    <form method="post">
-      {% csrf_token %}
-      <label class="bs-auth-label">Username</label>
-      <input class="bs-auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" autofocus>
-      <label class="bs-auth-label">Password</label>
-      <input class="bs-auth-input" type="password" name="password1" placeholder="Choose a password">
-      <label class="bs-auth-label">Confirm password</label>
-      <input class="bs-auth-input" type="password" name="password2" placeholder="Repeat your password">
-      <button type="submit" class="bs-auth-btn">Create account</button>
-    </form>
-    <div class="bs-auth-footer">Already have an account? <a href="{% url 'login' %}">Log in</a></div>
   </div>
+</header>
+
+<main class="auth-shell">
+
+  <aside class="auth-promo">
+    <div class="auth-promo__inner">
+      <span class="auth-promo__eyebrow">IELTS coach · AI-powered</span>
+      <h2 class="auth-promo__h1">Reach your <span class="g">target band</span> with daily, focused practice.</h2>
+      <p class="auth-promo__sub">Vocabulary, Reading and Writing with live AI feedback, inline highlights, and a streak that keeps you moving — built for IELTS.</p>
+
+      <ul class="auth-promo__list">
+        <li>1,400+ IELTS words graded by topic and difficulty</li>
+        <li>Type-it drills with instant AI verdict and tips</li>
+        <li>Real Task 1 &amp; Task 2 questions with 4-criterion scoring</li>
+        <li>Inline highlights: green / amber / red</li>
+        <li>Free to start — no credit card, no setup</li>
+      </ul>
+
+      <div class="auth-promo__stats">
+        <div class="auth-promo__stat"><b>1,400+</b><span>IELTS words</span></div>
+        <div class="auth-promo__stat"><b>8</b><span>topic categories</span></div>
+        <div class="auth-promo__stat"><b>Band 9</b><span>scoring scale</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="auth-formwrap">
+    <div class="auth-card">
+      <div class="auth-card__brand">Boosting<span>Score</span></div>
+      <h1 class="auth-card__title">Create your account</h1>
+      <p class="auth-card__sub">Start improving your IELTS score today</p>
+
+      {% if form.errors %}
+        <div class="auth-card__error">
+          {% for field in form %}{% for error in field.errors %}{{ error }} {% endfor %}{% endfor %}
+          {% for error in form.non_field_errors %}{{ error }} {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <label class="auth-label" for="id_username">Username</label>
+        <input id="id_username" class="auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" autofocus required>
+
+        <label class="auth-label" for="id_password1">Password</label>
+        <input id="id_password1" class="auth-input" type="password" name="password1" placeholder="Choose a password" autocomplete="new-password" required>
+
+        <label class="auth-label" for="id_password2">Confirm password</label>
+        <input id="id_password2" class="auth-input" type="password" name="password2" placeholder="Repeat your password" autocomplete="new-password" required>
+
+        <button type="submit" class="auth-btn">Create account</button>
+      </form>
+
+      <div class="auth-card__footer">
+        Already have an account? <a href="{% url 'login' %}">Log in</a>
+      </div>
+      <p class="auth-tiny">No credit card. No setup. Free to start.</p>
+    </div>
+  </section>
+</main>
+
+<div class="auth-footerline">
+  © 2026 BoostingScore
+  · <a href="/">Home</a>
+  · <a href="/#about">Privacy</a>
+  · <a href="/#about">Terms</a>
+  · <a href="/#about">Contact</a>
 </div>
-{% endblock %}
+
+</body>
+</html>

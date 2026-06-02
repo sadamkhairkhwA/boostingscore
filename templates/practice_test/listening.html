@@ -1,0 +1,162 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Listening Test{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
+  <h1 class="pt-h1">Listening test</h1>
+  <p class="pt-sub">Single-section practice · 4 sections · {{ total }} questions · {{ minutes }} minutes. Audio plays once.</p>
+
+  <form method="post" action="{% url 'practice_test:listening_submit' %}" id="pt-listen-form">
+    {% csrf_token %}
+
+    <div class="pt-runner-top">
+      <div>
+        <div class="pt-runner-top__title">Academic Listening</div>
+        <div class="pt-runner-top__meta">Click <b>Play once</b> below to start the audio. Spelling matters in gap-fill.</div>
+      </div>
+      <div class="pt-runner-top__timer" id="pt-timer" data-minutes="{{ minutes }}">{{ minutes }}:00</div>
+    </div>
+
+    {# ---------- Audio player (plays once) ---------- #}
+    <section class="pt-listen-player" aria-label="Listening audio">
+      <button type="button" class="pt-listen-player__btn" id="pt-audio-btn" aria-label="Play audio once">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor" d="M8 5v14l11-7L8 5z"/>
+        </svg>
+      </button>
+      <div class="pt-listen-player__main">
+        <div class="pt-listen-player__title" id="pt-audio-status">Ready — click play to begin. Audio plays once.</div>
+        <div class="pt-listen-player__bar"><div class="pt-listen-player__fill" id="pt-audio-bar"></div></div>
+        <div class="pt-listen-player__time"><span id="pt-audio-now">0:00</span> / <span id="pt-audio-dur">—:—</span></div>
+      </div>
+      <audio id="pt-audio" preload="auto" src="{{ audio_url }}"></audio>
+    </section>
+
+    {# ---------- Questions ---------- #}
+    <section class="pt-listen-qs">
+      {% for s in sections %}
+        <div class="pt-listen-qsection" id="pt-section-{{ s.number }}">
+          <div class="pt-passage-tag">Section {{ s.number }} — questions {{ s.questions.0.number }}–{{ s.questions|last|stringformat:"s" }}</div>
+          <h2 style="margin: 6px 0 16px; font-size: 16px; color: var(--pt-ink); font-weight: 800;">{{ s.title }}</h2>
+          {% for q in s.questions %}
+            <div class="pt-q" id="pt-qrow-{{ q.number }}" data-qnum="{{ q.number }}" data-qname="{{ q.id }}">
+              <div class="pt-q__text"><span class="pt-q__num">{{ q.number }}.</span> {{ q.text }}</div>
+              {% if q.type == "mcq" %}
+                <div class="pt-q__opts">
+                  {% for opt in q.options %}
+                    <label><input type="radio" name="{{ q.id }}" value="{{ opt }}"> {{ opt }}</label>
+                  {% endfor %}
+                </div>
+              {% elif q.type == "gap" %}
+                <input type="text" name="{{ q.id }}" placeholder="Your answer" autocomplete="off">
+              {% elif q.type == "short" %}
+                <input type="text" name="{{ q.id }}" placeholder="Short answer (one or two words)" autocomplete="off">
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </section>
+
+    {# ---------- Answered dots (bottom) ---------- #}
+    <section class="pt-listen-dots" aria-label="Question status">
+      {% for s in sections %}
+        {% for q in s.questions %}
+          <button type="button" class="pt-listen-dot" data-target="pt-qrow-{{ q.number }}" data-qname="{{ q.id }}" data-qnum="{{ q.number }}">{{ q.number }}</button>
+        {% endfor %}
+      {% endfor %}
+    </section>
+
+    <div class="pt-submit-bar">
+      <div class="pt-submit-bar__meta">Answered <b id="pt-answered">0</b> / {{ total }}</div>
+      <button type="submit" class="pt-btn">Submit listening →</button>
+    </div>
+
+  </form>
+
+{% endblock %}
+
+{% block pt_scripts %}
+<script>
+(function(){
+  // ---------- Audio: plays once, no scrubbing ----------
+  var audio = document.getElementById('pt-audio');
+  var btn   = document.getElementById('pt-audio-btn');
+  var bar   = document.getElementById('pt-audio-bar');
+  var now   = document.getElementById('pt-audio-now');
+  var dur   = document.getElementById('pt-audio-dur');
+  var stat  = document.getElementById('pt-audio-status');
+  var played = false;
+
+  function fmt(s){
+    if (!isFinite(s)) return '—:—';
+    var m = Math.floor(s/60), r = Math.floor(s%60);
+    return m + ':' + (r<10?'0':'') + r;
+  }
+  audio.addEventListener('loadedmetadata', function(){ dur.textContent = fmt(audio.duration); });
+  audio.addEventListener('timeupdate', function(){
+    now.textContent = fmt(audio.currentTime);
+    if (audio.duration) bar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  });
+  audio.addEventListener('ended', function(){
+    stat.textContent = 'Audio finished. Review your answers and submit when ready.';
+    btn.disabled = true;
+  });
+  // Hard-lock scrubbing: snap back to wherever we were last.
+  var lastTime = 0;
+  audio.addEventListener('timeupdate', function(){ lastTime = audio.currentTime; });
+  audio.addEventListener('seeking', function(){
+    if (Math.abs(audio.currentTime - lastTime) > 0.5) audio.currentTime = lastTime;
+  });
+
+  btn.addEventListener('click', function(){
+    if (played) return;
+    played = true;
+    btn.disabled = true;
+    stat.textContent = 'Playing — audio will not rewind. Listen carefully.';
+    audio.play().catch(function(){
+      played = false; btn.disabled = false;
+      stat.textContent = 'Browser blocked audio. Click play again.';
+    });
+  });
+
+  // ---------- Answered dots ----------
+  var form = document.getElementById('pt-listen-form');
+  var counter = document.getElementById('pt-answered');
+  var dots = document.querySelectorAll('.pt-listen-dot');
+  var dotByName = {};
+  dots.forEach(function(d){ dotByName[d.dataset.qname] = d; d.addEventListener('click', function(){
+    var t = document.getElementById(d.dataset.target);
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }); });
+
+  function recount(){
+    var names = new Set();
+    form.querySelectorAll('input[type=text]').forEach(function(i){ if (i.value.trim()) names.add(i.name); });
+    form.querySelectorAll('input[type=radio]:checked').forEach(function(i){ names.add(i.name); });
+    counter.textContent = names.size;
+    dots.forEach(function(d){
+      d.classList.toggle('is-done', names.has(d.dataset.qname));
+    });
+  }
+  form.addEventListener('input', recount);
+  form.addEventListener('change', recount);
+
+  // ---------- Timer ----------
+  var el = document.getElementById('pt-timer');
+  if (el){
+    var mins = parseInt(el.dataset.minutes, 10) || 30;
+    var seconds = mins * 60;
+    function tick(){
+      var m = Math.floor(seconds / 60), s = seconds % 60;
+      el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      if (seconds <= 0) { el.style.color = '#c0392b'; return; }
+      seconds--; setTimeout(tick, 1000);
+    }
+    tick();
+  }
+})();
+</script>
+{% endblock %}

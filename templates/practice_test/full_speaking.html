@@ -1,0 +1,422 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Full Test — Speaking{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Cancel full test</a>
+  <h1 class="pt-h1">Step 4 · Speaking</h1>
+  <p class="pt-sub">3 parts · {{ total_questions }} questions. AI scores Fluency, Vocabulary, Grammar and Pronunciation. Finish to see your full IELTS band.</p>
+
+  {% include "practice_test/_step_bar.html" %}
+
+  <input type="hidden" id="pt-session-id" value="{{ session.id }}">
+
+  <section class="pt-spk-stage" id="pt-spk-stage">
+
+    <div class="pt-spk-progress" aria-label="Progress">
+      <span>Question <b id="pt-spk-curr">1</b> of {{ total_questions }}</span>
+      <div class="pt-spk-progress__bar"><div class="pt-spk-progress__fill" id="pt-spk-bar"></div></div>
+      <span id="pt-spk-part">Part 1</span>
+    </div>
+
+    <div class="pt-spk-intro" id="pt-spk-intro" hidden>
+      <h3 id="pt-spk-intro-title">Part 1 — Introduction</h3>
+      <p   id="pt-spk-intro-body"></p>
+      <div style="margin-top:12px">
+        <button type="button" class="pt-btn" id="pt-spk-intro-go">Start this part →</button>
+      </div>
+    </div>
+
+    <div class="pt-spk-question" id="pt-spk-question" hidden></div>
+
+    <div class="pt-spk-prep" id="pt-spk-prep" hidden>
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 9v4l2 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M9 2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span>Preparation time: <b id="pt-spk-prep-time">1:00</b> — take notes if you wish.</span>
+      <button type="button" class="pt-btn pt-btn--ghost" id="pt-spk-prep-skip">Skip prep</button>
+    </div>
+
+    <div class="pt-spk-mic" id="pt-spk-mic" hidden>
+      <button type="button" class="pt-spk-btn" id="pt-spk-rec-btn" aria-label="Start recording">
+        <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="13" rx="3" fill="currentColor"/>
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="pt-spk-mic__label" id="pt-spk-mic-label">Click to start recording</div>
+      <div class="pt-spk-mic__time"  id="pt-spk-mic-time">0:00</div>
+      <div class="pt-spk-mic__hint">Speak naturally. Click again to stop.</div>
+    </div>
+
+    <div class="pt-spk-player" id="pt-spk-player" hidden>
+      <audio controls id="pt-spk-audio"></audio>
+    </div>
+
+    <div id="pt-spk-status" style="text-align:center; color: var(--pt-muted); font-size: 13.5px;" hidden></div>
+
+    <div class="pt-spk-feedback" id="pt-spk-feedback" hidden>
+      <div class="pt-spk-scores">
+        <div class="pt-spk-score"><div class="pt-spk-score__num" id="pt-fb-fl">—</div><div class="pt-spk-score__lbl">Fluency</div></div>
+        <div class="pt-spk-score"><div class="pt-spk-score__num" id="pt-fb-vo">—</div><div class="pt-spk-score__lbl">Vocabulary</div></div>
+        <div class="pt-spk-score"><div class="pt-spk-score__num" id="pt-fb-gr">—</div><div class="pt-spk-score__lbl">Grammar</div></div>
+        <div class="pt-spk-score"><div class="pt-spk-score__num" id="pt-fb-pr">—</div><div class="pt-spk-score__lbl">Pronunciation</div></div>
+      </div>
+
+      <div class="pt-spk-metrics" id="pt-fb-metrics" hidden>
+        <div class="pt-spk-metric"><div class="pt-spk-metric__num" id="pt-fb-m-wpm">—</div><div class="pt-spk-metric__lbl">Words / min</div></div>
+        <div class="pt-spk-metric"><div class="pt-spk-metric__num" id="pt-fb-m-words">—</div><div class="pt-spk-metric__lbl">Words spoken</div></div>
+        <div class="pt-spk-metric"><div class="pt-spk-metric__num" id="pt-fb-m-fillers">—</div><div class="pt-spk-metric__lbl">Fillers</div></div>
+        <div class="pt-spk-metric"><div class="pt-spk-metric__num" id="pt-fb-m-pauses">—</div><div class="pt-spk-metric__lbl">Long pauses</div></div>
+      </div>
+
+      <div class="pt-anno-legend" id="pt-fb-legend" hidden>
+        <span class="pt-anno-tag pt-anno--good">Good</span>
+        <span class="pt-anno-tag pt-anno--weak">Weak</span>
+        <span class="pt-anno-tag pt-anno--error">Error</span>
+        <span class="pt-anno-tag pt-anno--filler">Filler</span>
+        <span class="pt-anno-tag pt-anno--pron">Pronunciation</span>
+        <span class="pt-anno-hint">Hover a highlight to see the reason.</span>
+      </div>
+
+      <div class="pt-spk-transcript" id="pt-fb-transcript"></div>
+
+      <div class="pt-spk-criteria" id="pt-fb-criteria" hidden>
+        <article class="pt-crit" data-key="fluency">
+          <header><h4>Fluency &amp; Coherence</h4><span class="pt-crit__band" id="pt-crit-fl-band">—</span></header>
+          <p class="pt-crit__notes" id="pt-crit-fl-notes"></p>
+          <div class="pt-crit__lists">
+            <div><div class="pt-crit__title pt-crit__title--good">What you did well</div><ul id="pt-crit-fl-good"></ul></div>
+            <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div><ul id="pt-crit-fl-imp"></ul></div>
+          </div>
+        </article>
+        <article class="pt-crit" data-key="vocabulary">
+          <header><h4>Lexical Resource</h4><span class="pt-crit__band" id="pt-crit-vo-band">—</span></header>
+          <p class="pt-crit__notes" id="pt-crit-vo-notes"></p>
+          <div class="pt-crit__lists">
+            <div><div class="pt-crit__title pt-crit__title--good">What you did well</div><ul id="pt-crit-vo-good"></ul></div>
+            <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div><ul id="pt-crit-vo-imp"></ul></div>
+          </div>
+        </article>
+        <article class="pt-crit" data-key="grammar">
+          <header><h4>Grammar Range &amp; Accuracy</h4><span class="pt-crit__band" id="pt-crit-gr-band">—</span></header>
+          <p class="pt-crit__notes" id="pt-crit-gr-notes"></p>
+          <div class="pt-crit__lists">
+            <div><div class="pt-crit__title pt-crit__title--good">What you did well</div><ul id="pt-crit-gr-good"></ul></div>
+            <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div><ul id="pt-crit-gr-imp"></ul></div>
+          </div>
+        </article>
+        <article class="pt-crit" data-key="pronunciation">
+          <header><h4>Pronunciation</h4><span class="pt-crit__band" id="pt-crit-pr-band">—</span></header>
+          <p class="pt-crit__notes" id="pt-crit-pr-notes"></p>
+          <div class="pt-crit__lists">
+            <div><div class="pt-crit__title pt-crit__title--good">What you did well</div><ul id="pt-crit-pr-good"></ul></div>
+            <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div><ul id="pt-crit-pr-imp"></ul></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="pt-spk-fbtext" id="pt-fb-text"></div>
+    </div>
+
+    <div class="pt-spk-actions" id="pt-spk-actions" hidden>
+      <button type="button" class="pt-btn pt-btn--ghost" id="pt-spk-redo">Re-record</button>
+      <button type="button" class="pt-btn" id="pt-spk-next">Next question →</button>
+    </div>
+
+  </section>
+
+  <form method="post" action="{% url 'practice_test:full_speaking' %}" id="pt-spk-finish" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="finish">
+    <input type="hidden" name="session_id" value="{{ session.id }}">
+    <input type="hidden" name="full" value="{{ full_id }}">
+  </form>
+
+  <noscript>
+    <p style="color:#c0392b">Speaking practice needs JavaScript and microphone access in your browser.</p>
+  </noscript>
+
+{% endblock %}
+
+{% block pt_scripts %}
+
+{{ parts|json_script:"pt-parts-data" }}
+
+<script>
+(function(){
+  var PARTS = JSON.parse(document.getElementById('pt-parts-data').textContent);
+  var TOTAL = 0;
+  PARTS.forEach(function(p){ TOTAL += p.questions.length; });
+
+  var SESSION_ID = document.getElementById('pt-session-id').value;
+  var CSRF = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+
+  var partIdx = 0, qIdx = 0, answeredCount = 0;
+  var mediaRecorder = null, chunks = [], recordStart = 0;
+  var lastBlob = null, lastDuration = 0, stream = null;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var els = {
+    curr: $('pt-spk-curr'), bar: $('pt-spk-bar'), part: $('pt-spk-part'),
+    intro: $('pt-spk-intro'), introT: $('pt-spk-intro-title'), introB: $('pt-spk-intro-body'),
+    introGo: $('pt-spk-intro-go'),
+    question: $('pt-spk-question'),
+    prep: $('pt-spk-prep'), prepTime: $('pt-spk-prep-time'), prepSkip: $('pt-spk-prep-skip'),
+    mic: $('pt-spk-mic'), recBtn: $('pt-spk-rec-btn'),
+    micLabel: $('pt-spk-mic-label'), micTime: $('pt-spk-mic-time'),
+    player: $('pt-spk-player'), audio: $('pt-spk-audio'),
+    status: $('pt-spk-status'),
+    feedback: $('pt-spk-feedback'),
+    fbFl: $('pt-fb-fl'), fbVo: $('pt-fb-vo'), fbGr: $('pt-fb-gr'), fbPr: $('pt-fb-pr'),
+    fbTr: $('pt-fb-transcript'), fbText: $('pt-fb-text'),
+    fbMetrics: $('pt-fb-metrics'), fbLegend: $('pt-fb-legend'),
+    fbMWpm: $('pt-fb-m-wpm'), fbMWords: $('pt-fb-m-words'),
+    fbMFillers: $('pt-fb-m-fillers'), fbMPauses: $('pt-fb-m-pauses'),
+    fbCriteria: $('pt-fb-criteria'),
+    actions: $('pt-spk-actions'), redo: $('pt-spk-redo'), next: $('pt-spk-next'),
+  };
+
+  function escapeHTML(str){
+    return String(str || '').replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+  function fillList(ulId, items){
+    var ul = document.getElementById(ulId);
+    if (!ul) return;
+    ul.innerHTML = '';
+    (items || []).forEach(function(it){
+      var li = document.createElement('li');
+      li.textContent = it;
+      ul.appendChild(li);
+    });
+    if (!ul.children.length){
+      var li = document.createElement('li');
+      li.className = 'pt-crit__empty';
+      li.textContent = '—';
+      ul.appendChild(li);
+    }
+  }
+  function renderCriteria(criteria){
+    if (!criteria || typeof criteria !== 'object'){
+      els.fbCriteria.hidden = true;
+      return;
+    }
+    var map = {
+      fluency:       {band:'pt-crit-fl-band', notes:'pt-crit-fl-notes', good:'pt-crit-fl-good', imp:'pt-crit-fl-imp'},
+      vocabulary:    {band:'pt-crit-vo-band', notes:'pt-crit-vo-notes', good:'pt-crit-vo-good', imp:'pt-crit-vo-imp'},
+      grammar:       {band:'pt-crit-gr-band', notes:'pt-crit-gr-notes', good:'pt-crit-gr-good', imp:'pt-crit-gr-imp'},
+      pronunciation: {band:'pt-crit-pr-band', notes:'pt-crit-pr-notes', good:'pt-crit-pr-good', imp:'pt-crit-pr-imp'},
+    };
+    Object.keys(map).forEach(function(k){
+      var c = criteria[k] || {};
+      var ids = map[k];
+      var bandEl  = document.getElementById(ids.band);
+      var notesEl = document.getElementById(ids.notes);
+      if (bandEl)  bandEl.textContent  = (c.score != null) ? c.score : '—';
+      if (notesEl) notesEl.textContent = c.notes || '';
+      fillList(ids.good, c.did_well);
+      fillList(ids.imp,  c.improve);
+    });
+    els.fbCriteria.hidden = false;
+  }
+  function renderMetrics(metrics){
+    if (!metrics){
+      els.fbMetrics.hidden = true;
+      return;
+    }
+    els.fbMWpm.textContent     = (metrics.wpm != null) ? metrics.wpm : '—';
+    els.fbMWords.textContent   = (metrics.word_count != null) ? metrics.word_count : '—';
+    els.fbMFillers.textContent = (metrics.filler_count != null) ? metrics.filler_count : '—';
+    els.fbMPauses.textContent  = (metrics.long_pause_count != null) ? metrics.long_pause_count : '—';
+    els.fbMetrics.hidden = false;
+  }
+
+  function show(el, visible){ el.hidden = !visible; }
+  function hideAll(){
+    [els.intro, els.question, els.prep, els.mic, els.player, els.status, els.feedback, els.actions]
+      .forEach(function(e){ show(e, false); });
+  }
+  function progress(){
+    els.curr.textContent = (answeredCount + 1);
+    var pct = Math.min(100, Math.round(answeredCount / TOTAL * 100));
+    els.bar.style.width = pct + '%';
+    els.part.textContent = 'Part ' + PARTS[partIdx].part;
+  }
+  function setQuestion(){
+    els.question.innerHTML = PARTS[partIdx].questions[qIdx].replace(/\n/g, '<br>');
+    show(els.question, true);
+    show(els.mic, true);
+    show(els.actions, false);
+    show(els.player, false);
+    show(els.feedback, false);
+    show(els.status, false);
+    lastBlob = null; lastDuration = 0;
+    els.micLabel.textContent = 'Click to start recording';
+    els.micTime.textContent = '0:00';
+    els.recBtn.classList.remove('pt-spk-btn--rec');
+    els.recBtn.disabled = false;
+  }
+  function showPartIntro(){
+    var p = PARTS[partIdx];
+    hideAll();
+    els.introT.textContent = p.title;
+    els.introB.textContent = p.intro;
+    show(els.intro, true);
+  }
+  function startPart(){
+    hideAll();
+    if (PARTS[partIdx].part === 2) {
+      runPrep(PARTS[partIdx].prep_seconds || 60);
+    } else {
+      setQuestion();
+    }
+  }
+  function runPrep(seconds){
+    show(els.prep, true);
+    show(els.question, true);
+    els.question.innerHTML = PARTS[partIdx].questions[qIdx].replace(/\n/g, '<br>');
+    var t = seconds;
+    function paint(){
+      var m = Math.floor(t/60), s = t % 60;
+      els.prepTime.textContent = m + ':' + (s<10?'0':'') + s;
+    }
+    paint();
+    var iv = setInterval(function(){ t--; paint(); if (t <= 0) { clearInterval(iv); endPrep(); } }, 1000);
+    els.prepSkip.onclick = function(){ clearInterval(iv); endPrep(); };
+  }
+  function endPrep(){ show(els.prep, false); setQuestion(); }
+
+  async function getStream(){
+    if (stream) return stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      alert("Microphone access was blocked. Please allow microphone access in your browser and reload the page.");
+      throw e;
+    }
+    return stream;
+  }
+  function fmt(s){ var m = Math.floor(s/60); var r = s % 60; return m + ':' + (r<10?'0':'') + r; }
+
+  els.recBtn.addEventListener('click', async function(){
+    if (mediaRecorder && mediaRecorder.state === 'recording'){ mediaRecorder.stop(); return; }
+    var s;
+    try { s = await getStream(); } catch(e) { return; }
+    chunks = [];
+    try { mediaRecorder = new MediaRecorder(s); }
+    catch (e) { alert("Your browser does not support audio recording."); return; }
+    mediaRecorder.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = function(){
+      var type = (chunks[0] && chunks[0].type) || 'audio/webm';
+      lastBlob = new Blob(chunks, { type: type });
+      lastDuration = (Date.now() - recordStart) / 1000;
+      els.audio.src = URL.createObjectURL(lastBlob);
+      show(els.player, true);
+      els.recBtn.classList.remove('pt-spk-btn--rec');
+      els.recBtn.disabled = true;
+      els.micLabel.textContent = 'Recording stopped — sending to AI…';
+      uploadAndScore();
+    };
+    recordStart = Date.now();
+    mediaRecorder.start();
+    els.recBtn.classList.add('pt-spk-btn--rec');
+    els.micLabel.textContent = 'Recording… click to stop';
+    var startTs = Date.now();
+    function paintTime(){
+      if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+      els.micTime.textContent = fmt(Math.floor((Date.now() - startTs)/1000));
+      requestAnimationFrame(paintTime);
+    }
+    paintTime();
+  });
+
+  function uploadAndScore(){
+    show(els.status, true);
+    els.status.textContent = 'Transcribing and scoring your answer…';
+    var fd = new FormData();
+    fd.append('session_id', SESSION_ID);
+    fd.append('part', PARTS[partIdx].part);
+    fd.append('question_index', qIdx);
+    fd.append('duration_seconds', lastDuration.toFixed(2));
+    var ext = (lastBlob.type.indexOf('mp4') >= 0) ? 'm4a' : 'webm';
+    fd.append('audio', lastBlob, 'answer_' + Date.now() + '.' + ext);
+
+    fetch('{% url "practice_test:speaking_score_api" %}', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+      credentials: 'same-origin',
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if (!data || !data.ok){
+        els.status.textContent = (data && data.error) || 'Something went wrong. Try again.';
+        els.recBtn.disabled = false;
+        els.micLabel.textContent = 'Click to retry';
+        return;
+      }
+      if (data.session_id) {
+        SESSION_ID = data.session_id;
+        document.getElementById('pt-session-id').value = data.session_id;
+        document.querySelector('#pt-spk-finish input[name=session_id]').value = data.session_id;
+      }
+      show(els.status, false);
+      els.fbFl.textContent = (data.fluency      ?? '—');
+      els.fbVo.textContent = (data.vocabulary   ?? '—');
+      els.fbGr.textContent = (data.grammar      ?? '—');
+      els.fbPr.textContent = (data.pronunciation?? '—');
+
+      if (data.annotated_html) {
+        els.fbTr.innerHTML = '<div class="pt-spk-transcript__label">Your answer</div>' +
+                             '<div class="pt-spk-transcript__body">' + data.annotated_html + '</div>';
+        els.fbLegend.hidden = !(data.annotations && data.annotations.length);
+      } else if (data.transcript) {
+        els.fbTr.innerHTML = '<div class="pt-spk-transcript__label">Your answer</div>' +
+                             '<div class="pt-spk-transcript__body">' + escapeHTML(data.transcript) + '</div>';
+        els.fbLegend.hidden = true;
+      } else {
+        els.fbTr.textContent = 'No transcript available.';
+        els.fbLegend.hidden = true;
+      }
+
+      renderMetrics(data.metrics);
+      renderCriteria(data.criteria);
+
+      els.fbText.textContent = data.feedback || '';
+      show(els.feedback, true);
+      show(els.actions, true);
+    }).catch(function(){
+      els.status.textContent = 'Network error. Check your connection and try again.';
+      els.recBtn.disabled = false;
+      els.micLabel.textContent = 'Click to retry';
+    });
+  }
+
+  els.redo.addEventListener('click', function(){
+    show(els.player, false); show(els.feedback, false); show(els.actions, false); show(els.status, false);
+    els.recBtn.disabled = false;
+    els.micLabel.textContent = 'Click to start recording';
+    els.micTime.textContent = '0:00';
+  });
+  els.next.addEventListener('click', function(){
+    answeredCount++; qIdx++;
+    if (qIdx >= PARTS[partIdx].questions.length){
+      partIdx++; qIdx = 0;
+      if (partIdx >= PARTS.length){
+        document.getElementById('pt-spk-finish').submit();
+        return;
+      }
+      progress(); showPartIntro(); return;
+    }
+    progress(); setQuestion();
+  });
+  els.introGo.addEventListener('click', startPart);
+
+  progress();
+  showPartIntro();
+})();
+</script>
+{% endblock %}

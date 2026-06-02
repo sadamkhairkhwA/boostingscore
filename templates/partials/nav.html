@@ -9,7 +9,6 @@
   </div>
   <div class="bs-nav-right">
     {% if user.is_authenticated %}
-      <span class="bs-badge bs-badge-level">⭐ {% if user.profile.level == 1 %}Beginner{% elif user.profile.level == 2 %}Standard{% else %}Advanced{% endif %}</span>
       <span class="bs-badge bs-badge-streak">🔥 {% if streak %}{{ streak }}{% else %}0{% endif %} day streak</span>
       <span class="bs-nav-user">{{ user.email|default:user.username|truncatechars:22 }}</span>
       <a href="{% url 'logout' %}" class="bs-nav-logout">Log out</a>

@@ -1,0 +1,607 @@
+{% extends "practice_test/_shell.html" %}
+{% load static %}
+
+{% block pt_title %}Speaking Test{% endblock %}
+
+{% block pt_head %}
+<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=1">
+{% endblock %}
+
+{% block pt_content %}
+
+  {# Hidden form data the JS reads #}
+  <input type="hidden" id="pt-session-id" value="{{ session.id }}">
+  <input type="hidden" id="pt-csrf" value="{{ csrf_token }}">
+  <input type="hidden" id="pt-sample-url" value="{% static 'speaking_videos/intro.mp4' %}">
+  <input type="hidden" id="pt-video-base" value="{% static 'speaking_videos/' %}">
+  <input type="hidden" id="pt-submit-url" value="{% url 'practice_test:speaking_submit_answer' %}">
+  <input type="hidden" id="pt-finish-url" value="{% url 'practice_test:speaking_finish' %}">
+
+  {# ==================== PAGE 1 — SETUP ==================== #}
+  <section class="pt-spkv-setup" id="pt-setup">
+
+    <header class="pt-spkv-setup__head">
+      <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
+      <h1 class="pt-h1">Speaking Test</h1>
+      <p class="pt-sub">{{ total_questions }} questions across 3 parts · roughly 15 minutes.<br>
+      Three quick checks first so the AI examiner can hear you clearly.</p>
+    </header>
+
+    <ol class="pt-spkv-steps">
+
+      {# Step 1 — Headphones #}
+      <li class="pt-spkv-step" data-step="headphones" id="step-hp">
+        <div class="pt-spkv-step__num">1</div>
+        <div class="pt-spkv-step__body">
+          <h3>Headphone check</h3>
+          <p>Click play. You should see and hear the examiner clearly through your headphones or speakers.</p>
+          <video class="pt-spkv-sample-video"
+                 id="hp-video"
+                 playsinline webkit-playsinline
+                 controls controlsList="nodownload"
+                 preload="metadata"></video>
+          <div class="pt-spkv-step__row">
+            <button type="button" class="pt-btn pt-btn--ghost" id="hp-play">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+              Play sample
+            </button>
+            <button type="button" class="pt-btn" id="hp-confirm" disabled>I can hear it clearly ✓</button>
+          </div>
+        </div>
+        <div class="pt-spkv-step__status" id="hp-status" aria-hidden="true"></div>
+      </li>
+
+      {# Step 2 — Microphone #}
+      <li class="pt-spkv-step" data-step="mic" id="step-mic">
+        <div class="pt-spkv-step__num">2</div>
+        <div class="pt-spkv-step__body">
+          <h3>Microphone check</h3>
+          <p>Record a quick test sentence — say something like "Hello, my name is …". Then play it back to confirm your mic works.</p>
+          <div class="pt-spkv-step__row">
+            <button type="button" class="pt-btn pt-btn--ghost" id="mic-record">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="9" y="3" width="6" height="13" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Start recording
+            </button>
+            <button type="button" class="pt-btn pt-btn--ghost" id="mic-stop" hidden>Stop</button>
+            <span class="pt-spkv-step__rec" id="mic-rec-time" hidden>0:00</span>
+          </div>
+          <audio id="mic-playback" controls hidden style="margin-top:12px; width:100%; max-width:420px;"></audio>
+          <div class="pt-spkv-step__row" style="margin-top:12px;">
+            <button type="button" class="pt-btn" id="mic-confirm" disabled>Mic works ✓</button>
+          </div>
+        </div>
+        <div class="pt-spkv-step__status" id="mic-status" aria-hidden="true"></div>
+      </li>
+
+      {# Step 3 — Start #}
+      <li class="pt-spkv-step" data-step="start" id="step-start">
+        <div class="pt-spkv-step__num">3</div>
+        <div class="pt-spkv-step__body">
+          <h3>Start the test</h3>
+          <p>The test runs continuously — videos play, you speak, the AI gives you feedback after every answer.</p>
+          <div class="pt-spkv-step__row">
+            <button type="button" class="pt-btn pt-btn--lg" id="start-test" disabled>
+              Start Speaking Test →
+            </button>
+          </div>
+        </div>
+        <div class="pt-spkv-step__status" id="start-status" aria-hidden="true"></div>
+      </li>
+
+    </ol>
+
+    <noscript>
+      <p style="color:#c0392b; margin-top:16px;">The speaking test needs JavaScript and microphone access.</p>
+    </noscript>
+
+  </section>
+
+  {# ==================== PAGE 2 — TEST STAGE ==================== #}
+  <section class="pt-spkv-test" id="pt-test" hidden>
+
+    <div class="pt-spkv-topbar">
+      <div class="pt-spkv-topbar__title">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="9" y="3" width="6" height="13" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Speaking Test
+      </div>
+      <div class="pt-spkv-topbar__timer" id="pt-timer">0:00</div>
+      <button type="button" class="pt-spkv-topbar__exit" id="exit-btn" aria-label="Exit test">
+        Exit
+      </button>
+    </div>
+
+    <div class="pt-spkv-stage">
+
+      <div class="pt-spkv-stage__phase" id="phase-label" aria-live="polite">Welcome</div>
+
+      <div class="pt-spkv-video-wrap">
+        <video class="pt-spkv-video"
+               id="pt-video"
+               playsinline webkit-playsinline
+               disablepictureinpicture
+               controlsList="nofullscreen nodownload noremoteplayback"
+               preload="auto"
+               oncontextmenu="return false;"></video>
+        <button type="button"
+                class="pt-spkv-video-play"
+                id="pt-video-play"
+                aria-label="Play question"
+                hidden>
+          <svg viewBox="0 0 64 64" width="74" height="74" aria-hidden="true">
+            <circle cx="32" cy="32" r="32" fill="rgba(0,0,0,.65)"/>
+            <path d="M26 20 L46 32 L26 44 Z" fill="#fff"/>
+          </svg>
+          <span>Play question</span>
+        </button>
+        <div class="pt-spkv-video-loading" id="pt-video-loading" hidden>
+          <div class="pt-spkv-spinner pt-spkv-spinner--sm" aria-hidden="true"></div>
+          <span>Loading video…</span>
+        </div>
+      </div>
+
+      <div class="pt-spkv-qtext" id="pt-qtext" hidden></div>
+
+      {# Prep panel — Part 2 only #}
+      <div class="pt-spkv-prep" id="pt-prep" hidden>
+        <div class="pt-spkv-prep__head">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M9 2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Preparation time: <b id="pt-prep-time">1:00</b></span>
+        </div>
+        <p class="pt-spkv-prep__hint">Take notes if you wish. You will then speak for 1–2 minutes.</p>
+        <textarea class="pt-spkv-prep__notes" id="pt-prep-notes" placeholder="Make notes here (optional)"></textarea>
+        <div class="pt-spkv-prep__actions">
+          <button type="button" class="pt-btn" id="pt-prep-skip">Start recording now</button>
+        </div>
+      </div>
+
+      {# Recording panel #}
+      <div class="pt-spkv-rec" id="pt-rec" hidden>
+        <div class="pt-spkv-rec__dot" aria-hidden="true"></div>
+        <div class="pt-spkv-rec__label">Recording <b id="pt-rec-time">0:00</b></div>
+        <div class="pt-spkv-rec__wave" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <button type="button" class="pt-btn pt-btn--lg" id="pt-stop-rec">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>
+          Stop recording
+        </button>
+      </div>
+
+      {# Scoring panel #}
+      <div class="pt-spkv-scoring" id="pt-scoring" hidden>
+        <div class="pt-spkv-spinner" aria-hidden="true"></div>
+        <p>AI is checking your answer…</p>
+      </div>
+
+      {# Feedback panel #}
+      <div class="pt-spkv-fb" id="pt-fb" hidden>
+        <div class="pt-spkv-fb__scores">
+          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-fl">—</div><div class="pt-spkv-fb__lbl">Fluency</div></div>
+          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-vo">—</div><div class="pt-spkv-fb__lbl">Vocabulary</div></div>
+          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-gr">—</div><div class="pt-spkv-fb__lbl">Grammar</div></div>
+          <div class="pt-spkv-fb__score"><div class="pt-spkv-fb__num" id="fb-pr">—</div><div class="pt-spkv-fb__lbl">Pronunciation</div></div>
+        </div>
+        <p class="pt-spkv-fb__text" id="fb-text"></p>
+        <p class="pt-spkv-fb__transcript" id="fb-transcript"></p>
+        <div class="pt-spkv-fb__actions">
+          <button type="button" class="pt-btn pt-btn--ghost" id="pt-redo">Re-record</button>
+          <button type="button" class="pt-btn" id="pt-next">Next question →</button>
+        </div>
+      </div>
+
+    </div>
+
+    <nav class="pt-spkv-parts" aria-label="Part progress">
+      <span class="pt-spkv-part" data-part="1">Part 1<small>5 questions</small></span>
+      <span class="pt-spkv-part" data-part="2">Part 2<small>cue card</small></span>
+      <span class="pt-spkv-part" data-part="3">Part 3<small>4 questions</small></span>
+    </nav>
+
+  </section>
+
+{% endblock %}
+
+
+{% block pt_scripts %}
+{{ flow|json_script:"pt-flow-data" }}
+
+<script>
+(function(){
+  // ------------ Data & DOM ------------
+  var FLOW = JSON.parse(document.getElementById('pt-flow-data').textContent);
+  var SESSION_ID = document.getElementById('pt-session-id').value;
+  var CSRF       = document.getElementById('pt-csrf').value;
+  var SAMPLE_URL = document.getElementById('pt-sample-url').value;
+  var VIDEO_BASE = document.getElementById('pt-video-base').value;
+  var SUBMIT_URL = document.getElementById('pt-submit-url').value;
+  var FINISH_URL = document.getElementById('pt-finish-url').value;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ------------ Setup screen ------------
+  var setup = {
+    headphones: false,
+    mic: false,
+  };
+
+  // Headphone check — visible examiner video preview.
+  var hpVideo = $('hp-video');
+  hpVideo.src = SAMPLE_URL;
+  $('hp-play').addEventListener('click', function(){
+    try {
+      hpVideo.currentTime = 0;
+      var p = hpVideo.play();
+      if (p && p.catch){
+        p.then(function(){ $('hp-confirm').disabled = false; })
+         .catch(function(){
+           $('hp-confirm').disabled = false;
+           alert('If the video did not start automatically, press play on the video preview.');
+         });
+      } else {
+        $('hp-confirm').disabled = false;
+      }
+    } catch (e) {
+      $('hp-confirm').disabled = false;
+      alert('Could not start the sample automatically. Press play on the video preview.');
+    }
+  });
+  $('hp-confirm').addEventListener('click', function(){
+    setup.headphones = true;
+    $('step-hp').classList.add('is-done');
+    $('hp-status').textContent = '✓';
+    refreshStart();
+  });
+
+  // Mic check
+  var micStream = null;
+  var micRec = null;
+  var micChunks = [];
+  var micBlob = null;
+  var micStartTs = 0;
+  var micTimer = null;
+  function fmtSec(s){
+    s = Math.max(0, Math.floor(s));
+    var m = Math.floor(s/60); var r = s%60;
+    return m + ':' + (r<10?'0':'') + r;
+  }
+
+  async function getMicStream(){
+    if (micStream) return micStream;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      alert('Microphone access was blocked. Allow microphone in your browser settings and reload.');
+      throw e;
+    }
+    return micStream;
+  }
+
+  $('mic-record').addEventListener('click', async function(){
+    var s;
+    try { s = await getMicStream(); } catch(e){ return; }
+    micChunks = [];
+    try { micRec = new MediaRecorder(s); }
+    catch(e){ alert('Audio recording is not supported in this browser.'); return; }
+    micRec.ondataavailable = function(e){ if (e.data && e.data.size) micChunks.push(e.data); };
+    micRec.onstop = function(){
+      var type = (micChunks[0] && micChunks[0].type) || 'audio/webm';
+      micBlob = new Blob(micChunks, { type: type });
+      var pb = $('mic-playback');
+      pb.src = URL.createObjectURL(micBlob);
+      pb.hidden = false;
+      $('mic-confirm').disabled = false;
+      $('mic-record').hidden = false;
+      $('mic-stop').hidden = true;
+      $('mic-rec-time').hidden = true;
+      clearInterval(micTimer);
+      $('mic-record').textContent = 'Re-record';
+    };
+    micRec.start();
+    micStartTs = Date.now();
+    $('mic-record').hidden = true;
+    $('mic-stop').hidden = false;
+    $('mic-rec-time').hidden = false;
+    micTimer = setInterval(function(){
+      $('mic-rec-time').textContent = fmtSec((Date.now() - micStartTs)/1000);
+    }, 200);
+  });
+  $('mic-stop').addEventListener('click', function(){
+    if (micRec && micRec.state === 'recording') micRec.stop();
+  });
+  $('mic-confirm').addEventListener('click', function(){
+    setup.mic = true;
+    $('step-mic').classList.add('is-done');
+    $('mic-status').textContent = '✓';
+    refreshStart();
+  });
+
+  function refreshStart(){
+    var ready = setup.headphones && setup.mic;
+    $('start-test').disabled = !ready;
+    if (ready) $('step-start').classList.add('is-ready');
+  }
+
+  $('start-test').addEventListener('click', startTest);
+
+  // ------------ Test stage ------------
+  var stepIdx = 0;
+  var recRec = null;
+  var recChunks = [];
+  var recBlob = null;
+  var recStart = 0;
+  var lastDuration = 0;
+  var sessionStartTs = 0;
+  var sessionTimer = null;
+  var prepTimer = null;
+  var recTimerInt = null;
+  var currentQuestion = null;     // { part, index, text, video, prep_seconds? }
+
+  var video       = $('pt-video');
+  var videoPlay   = $('pt-video-play');
+  var videoLoad   = $('pt-video-loading');
+  var phaseLabel  = $('phase-label');
+  var qText       = $('pt-qtext');
+
+  videoPlay.addEventListener('click', function(){
+    videoPlay.hidden = true;
+    try {
+      var p = video.play();
+      if (p && p.catch) p.catch(function(){ videoPlay.hidden = false; });
+    } catch(e) { videoPlay.hidden = false; }
+  });
+
+  // The examiner clip plays start-to-finish without interruption — no
+  // pause / scrub / skip is offered. The Play overlay only exists as a
+  // fallback for browsers that block autoplay.
+  video.addEventListener('play',  function(){ videoPlay.hidden = true; videoLoad.hidden = true; });
+  video.addEventListener('error', function(){
+    videoLoad.hidden = true;
+    videoPlay.hidden = false;
+    phaseLabel.textContent = 'Couldn\'t load the video — click play to retry';
+  });
+
+  function startTest(){
+    $('pt-setup').hidden = true;
+    $('pt-test').hidden = false;
+    document.body.classList.add('pt-spkv-active');
+    sessionStartTs = Date.now();
+    sessionTimer = setInterval(function(){
+      $('pt-timer').textContent = fmtSec((Date.now() - sessionStartTs)/1000);
+    }, 500);
+    runStep();
+  }
+
+  function hideAllPanels(){
+    $('pt-prep').hidden = true;
+    $('pt-rec').hidden = true;
+    $('pt-scoring').hidden = true;
+    $('pt-fb').hidden = true;
+  }
+
+  function setActivePart(part){
+    document.querySelectorAll('.pt-spkv-part').forEach(function(el){
+      el.classList.toggle('is-active', String(part) === el.dataset.part);
+    });
+  }
+
+  function runStep(){
+    if (stepIdx >= FLOW.length){ finishSession(); return; }
+    var step = FLOW[stepIdx];
+    hideAllPanels();
+    qText.hidden = true;
+    qText.textContent = '';
+
+    // Reset video state and queue the next clip.
+    videoPlay.hidden = true;
+    videoLoad.hidden = false;
+    try { video.pause(); } catch(e){}
+    video.removeAttribute('src');
+    video.load();
+    video.src = VIDEO_BASE + step.video;
+    video.load();
+
+    if (step.kind === 'intro' || step.kind === 'outro'){
+      currentQuestion = null;
+      phaseLabel.textContent = step.label || '';
+      // Highlight a part as soon as its intro starts.
+      var m = /intro_p(\d)/.exec(step.video);
+      if (m) setActivePart(m[1]);
+      video.onended = function(){
+        if (step.kind === 'outro'){ finishSession(); return; }
+        stepIdx++;
+        runStep();
+      };
+      attemptPlay();
+      return;
+    }
+
+    if (step.kind === 'question'){
+      currentQuestion = step;
+      setActivePart(step.part);
+      phaseLabel.textContent = 'Part ' + step.part + ' · Question ' + (step.index + 1);
+      video.onended = function(){
+        // The examiner has finished asking the question. The video stays
+        // on its last frame and the written question appears below so the
+        // student can re-read while answering — they cannot replay or skip.
+        showQuestionText(step.text);
+        setTimeout(afterQuestionVideo, 1000);
+      };
+      attemptPlay();
+      return;
+    }
+
+    // Unknown step type — skip.
+    stepIdx++;
+    runStep();
+  }
+
+  function showQuestionText(text){
+    if (!text) { qText.hidden = true; return; }
+    qText.textContent = text;
+    qText.hidden = false;
+  }
+
+  function attemptPlay(){
+    var played = false;
+    var p;
+    try { p = video.play(); } catch(e) { p = null; }
+    if (p && p.then){
+      p.then(function(){ played = true; videoLoad.hidden = true; })
+       .catch(function(){
+         // Autoplay was blocked (typical on iOS / Safari and some
+         // privacy-strict Chrome profiles). Surface a big visible Play
+         // button so the student can start the clip manually.
+         videoLoad.hidden = true;
+         videoPlay.hidden = false;
+         phaseLabel.textContent = 'Click play to hear the question';
+       });
+    }
+    // Safety net — if neither play nor canplay fires within 4s, show the
+    // overlay so the test never silently stalls on a slow / blocked load.
+    setTimeout(function(){
+      if (!played && video.paused){
+        videoLoad.hidden = true;
+        videoPlay.hidden = false;
+      }
+    }, 4000);
+  }
+
+  function afterQuestionVideo(){
+    if (currentQuestion.prep_seconds) {
+      runPrep(currentQuestion.prep_seconds);
+    } else {
+      startRecording();
+    }
+  }
+
+  function runPrep(seconds){
+    $('pt-prep').hidden = false;
+    var t = seconds;
+    function paint(){ $('pt-prep-time').textContent = fmtSec(t); }
+    paint();
+    prepTimer = setInterval(function(){
+      t--; paint();
+      if (t <= 0){ clearInterval(prepTimer); $('pt-prep').hidden = true; startRecording(); }
+    }, 1000);
+  }
+  $('pt-prep-skip').addEventListener('click', function(){
+    clearInterval(prepTimer);
+    $('pt-prep').hidden = true;
+    startRecording();
+  });
+
+  async function startRecording(){
+    var s;
+    try { s = await getMicStream(); }
+    catch(e){ alert('We could not access your microphone.'); return; }
+    recChunks = [];
+    try { recRec = new MediaRecorder(s); }
+    catch(e){ alert('Audio recording is not supported in this browser.'); return; }
+    recRec.ondataavailable = function(e){ if (e.data && e.data.size) recChunks.push(e.data); };
+    recRec.onstop = function(){
+      var type = (recChunks[0] && recChunks[0].type) || 'audio/webm';
+      recBlob = new Blob(recChunks, { type: type });
+      lastDuration = (Date.now() - recStart) / 1000;
+      clearInterval(recTimerInt);
+      $('pt-rec').hidden = true;
+      $('pt-scoring').hidden = false;
+      uploadAnswer();
+    };
+    recRec.start();
+    recStart = Date.now();
+    $('pt-rec').hidden = false;
+    $('pt-rec-time').textContent = '0:00';
+    recTimerInt = setInterval(function(){
+      $('pt-rec-time').textContent = fmtSec((Date.now() - recStart)/1000);
+    }, 250);
+  }
+
+  $('pt-stop-rec').addEventListener('click', function(){
+    if (recRec && recRec.state === 'recording') recRec.stop();
+  });
+
+  function uploadAnswer(){
+    var fd = new FormData();
+    fd.append('session_id',       SESSION_ID);
+    fd.append('part',             currentQuestion.part);
+    fd.append('question_index',   currentQuestion.index);
+    fd.append('question_text',    currentQuestion.text);
+    fd.append('duration_seconds', lastDuration.toFixed(2));
+    var ext = (recBlob.type.indexOf('mp4') >= 0) ? 'm4a' : 'webm';
+    fd.append('audio', recBlob, 'p' + currentQuestion.part + 'q' + (currentQuestion.index+1) + '_' + Date.now() + '.' + ext);
+
+    fetch(SUBMIT_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      $('pt-scoring').hidden = true;
+      if (!d || !d.ok){
+        showFeedback({ feedback: (d && d.error) || 'Something went wrong. Please re-record.' });
+        return;
+      }
+      showFeedback(d);
+    })
+    .catch(function(){
+      $('pt-scoring').hidden = true;
+      showFeedback({ feedback: 'Network error. Please re-record.' });
+    });
+  }
+
+  function showFeedback(d){
+    $('fb-fl').textContent = (d.fluency       != null) ? d.fluency       : '—';
+    $('fb-vo').textContent = (d.vocabulary    != null) ? d.vocabulary    : '—';
+    $('fb-gr').textContent = (d.grammar       != null) ? d.grammar       : '—';
+    $('fb-pr').textContent = (d.pronunciation != null) ? d.pronunciation : '—';
+    $('fb-text').textContent = d.feedback || '';
+    if (d.transcript){
+      $('fb-transcript').textContent = '“' + d.transcript + '”';
+      $('fb-transcript').hidden = false;
+    } else {
+      $('fb-transcript').textContent = '';
+      $('fb-transcript').hidden = true;
+    }
+    $('pt-fb').hidden = false;
+  }
+
+  $('pt-redo').addEventListener('click', function(){
+    $('pt-fb').hidden = true;
+    startRecording();
+  });
+  $('pt-next').addEventListener('click', function(){
+    stepIdx++;
+    runStep();
+  });
+
+  function finishSession(){
+    hideAllPanels();
+    clearInterval(sessionTimer);
+    phaseLabel.textContent = 'Finishing your test…';
+    var fd = new FormData();
+    fd.append('session_id', SESSION_ID);
+    fetch(FINISH_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+      body: fd,
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.results_url) window.location.href = d.results_url;
+      else window.location.href = '/test/';
+    })
+    .catch(function(){ window.location.href = '/test/'; });
+  }
+
+  $('exit-btn').addEventListener('click', function(){
+    if (!confirm('Exit the test? Your answers so far will still be scored.')) return;
+    finishSession();
+  });
+
+})();
+</script>
+{% endblock %}

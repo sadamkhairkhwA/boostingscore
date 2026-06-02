@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from openai import OpenAI
+from openai import AuthenticationError, OpenAI
 
 from boostingscore.openai_key import resolve_openai_api_key
 
@@ -1647,6 +1647,21 @@ def type_it_feedback(request):
         raw_text = (completion.choices[0].message.content or "").strip()
         if not raw_text:
             raise RuntimeError("OpenAI returned empty content")
+    except AuthenticationError:
+        logger.warning("type_it_feedback: OpenAI authentication failed (invalid or revoked API key)")
+        return JsonResponse(
+            {
+                "ok": False,
+                "success": False,
+                "error": "invalid_api_key",
+                "message": (
+                    "OpenAI rejected your API key. Create a new secret key at "
+                    "https://platform.openai.com/account/api-keys , set OPENAI_API_KEY in your "
+                    ".env file (or export it in the same terminal), restart runserver, and try again."
+                ),
+            },
+            status=401,
+        )
     except Exception:
         logger.exception("type_it_feedback: OpenAI call failed (model=%s)", model)
         return JsonResponse(

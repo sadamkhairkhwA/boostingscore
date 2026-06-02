@@ -1,0 +1,31 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block pt_title %}Practice Test{% endblock %} — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'practice_test/css/practice_test.css' %}?v=1">
+  {% block pt_head %}{% endblock %}
+</head>
+<body class="pt-body">
+
+<header class="pt-nav">
+  <div class="pt-nav__inner">
+    <a href="{% url 'home' %}" class="pt-logo">Boosting<span>Score</span></a>
+    <div class="pt-nav__right">
+      {% if request.user.is_authenticated %}
+        <a href="{% url 'practice_test:hub' %}" class="pt-pill">All tests</a>
+        <span class="pt-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
+        <a href="{% url 'logout' %}" class="pt-nav__logout">Log out</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<main class="pt-main">
+  {% block pt_content %}{% endblock %}
+</main>
+
+{% block pt_scripts %}{% endblock %}
+</body>
+</html>

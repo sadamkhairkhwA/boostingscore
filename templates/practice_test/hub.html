@@ -1,0 +1,134 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Practice Test{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'home' %}" class="pt-back">← Back to dashboard</a>
+  <h1 class="pt-h1">Practice Test</h1>
+  <p class="pt-sub">Take a full IELTS-format mock exam, or practise a single section.</p>
+
+  {# ===================== PRIMARY: Take the IELTS Test ===================== #}
+  <section class="pt-take-hero" aria-label="Take the IELTS practice test">
+    <div class="pt-take-hero__main">
+      <span class="pt-take-hero__eyebrow">Full mock exam</span>
+      <h2 class="pt-take-hero__title">Take the IELTS Practice Test</h2>
+      <p class="pt-take-hero__sub">
+        Walk through every section in real exam order — Reading, Writing, Listening, Speaking.
+        AI scores your Writing and Speaking. One overall band score at the end.
+      </p>
+
+      <ol class="pt-take-hero__steps">
+        <li><span class="pt-take-hero__num">1</span><div><b>Reading</b><small>60 min · 3 passages · 40 Q</small></div></li>
+        <li><span class="pt-take-hero__num">2</span><div><b>Writing</b><small>60 min · Task 1 + Task 2 · AI band score</small></div></li>
+        <li><span class="pt-take-hero__num">3</span><div><b>Listening</b><small>30 min · {{ listening_total }} Q{% if not listening_available %} · <span class="pt-badge-soon">Audio not yet generated</span>{% endif %}</small></div></li>
+        <li><span class="pt-take-hero__num">4</span><div><b>Speaking</b><small>~15 min · 3 parts · record + AI checks</small></div></li>
+      </ol>
+
+      <div class="pt-take-hero__cta">
+        <a href="{% url 'practice_test:full' %}" class="pt-btn pt-btn--lg">Take the test →</a>
+        <span class="pt-take-hero__hint">About 2 hours 45 minutes · scored at the end</span>
+      </div>
+    </div>
+
+    <div class="pt-take-hero__side" aria-hidden="true">
+      <div class="pt-take-hero__band">
+        <div class="pt-take-hero__band-num">7.5</div>
+        <div class="pt-take-hero__band-lbl">Sample overall band</div>
+      </div>
+      <div class="pt-take-hero__rows">
+        <div><span>Reading</span><b>8.0</b></div>
+        <div><span>Writing</span><b>7.0</b></div>
+        <div><span>Speaking</span><b>7.5</b></div>
+        <div><span>Listening</span><b>—</b></div>
+      </div>
+    </div>
+  </section>
+
+  {# ===================== SECONDARY: Practise individually ===================== #}
+  <h2 class="pt-section-title">Or practise one section</h2>
+  <p style="margin: 0 0 14px; color: var(--pt-muted); font-size: 13.5px;">Focus on a single skill — your section bands are still saved to your test history.</p>
+
+  <section class="pt-hub-grid" aria-label="Single-section practice">
+
+    <a href="{% url 'practice_test:reading' %}" class="pt-card">
+      <span class="pt-card__ico pt-card__ico--orange">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </span>
+      <div class="pt-card__name">Reading</div>
+      <p class="pt-card__desc">3 passages · {{ reading_total }} questions.</p>
+      <div class="pt-card__foot">
+        <span class="pt-card__cta">Practise →</span>
+        <span class="pt-card__meta">60 min</span>
+      </div>
+    </a>
+
+    <a href="{% url 'practice_test:writing' %}" class="pt-card">
+      <span class="pt-card__ico pt-card__ico--purple">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></svg>
+      </span>
+      <div class="pt-card__name">Writing</div>
+      <p class="pt-card__desc">Task 1 + Task 2 with live AI band score.</p>
+      <div class="pt-card__foot">
+        <span class="pt-card__cta">Practise →</span>
+        <span class="pt-card__meta">60 min</span>
+      </div>
+    </a>
+
+    <a href="{% url 'practice_test:listening' %}" class="pt-card">
+      <span class="pt-card__ico pt-card__ico--navy">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 1 18 0v5a3 3 0 0 1-3 3h-1v-7h4M3 12v5a3 3 0 0 0 3 3h1v-7H3"/></svg>
+      </span>
+      <div class="pt-card__name">Listening</div>
+      <p class="pt-card__desc">4 sections · {{ listening_total }} questions. AI-narrated audio, plays once.</p>
+      <div class="pt-card__foot">
+        <span class="pt-card__cta">{% if listening_available %}Practise →{% else %}Set up audio →{% endif %}</span>
+        <span class="pt-card__meta">30 min</span>
+      </div>
+    </a>
+
+    <a href="{% url 'practice_test:speaking' %}" class="pt-card">
+      <span class="pt-card__ico pt-card__ico--green">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 1 3 3v8a3 3 0 1 1-6 0V4a3 3 0 0 1 3-3zM19 10a7 7 0 0 1-14 0M12 17v5M8 22h8"/></svg>
+      </span>
+      <div class="pt-card__name">Speaking</div>
+      <p class="pt-card__desc">3 parts · {{ speaking_total }} questions. AI scores your audio.</p>
+      <div class="pt-card__foot">
+        <span class="pt-card__cta">Practise →</span>
+        <span class="pt-card__meta">~15 min</span>
+      </div>
+    </a>
+
+  </section>
+
+  {# ===================== HISTORY ===================== #}
+  <h2 class="pt-section-title" id="history">Your test history</h2>
+  <section class="pt-history">
+    <div class="pt-history__head">
+      <div>Test</div>
+      <div class="pt-history__cell--hide-sm">Date</div>
+      <div class="pt-history__cell--hide-sm">Status</div>
+      <div>Band</div>
+      <div></div>
+    </div>
+
+    {% for s in history %}
+      <div class="pt-history__row">
+        <div><b>{{ s.get_kind_display }}</b></div>
+        <div class="pt-history__cell--hide-sm">{{ s.started_at|date:"M j, Y" }}</div>
+        <div class="pt-history__cell--hide-sm">{{ s.get_status_display }}</div>
+        <div>
+          {% if s.band_overall %}
+            <span class="pt-history__band">{{ s.band_overall }}</span>
+          {% else %}
+            <span style="color:#9aa1ad;font-size:13px">—</span>
+          {% endif %}
+        </div>
+        <div><a class="pt-history__view" href="{% url 'practice_test:results' s.id %}">View →</a></div>
+      </div>
+    {% empty %}
+      <div class="pt-history__empty">No tests yet. Take one above to see your progress here.</div>
+    {% endfor %}
+  </section>
+
+{% endblock %}

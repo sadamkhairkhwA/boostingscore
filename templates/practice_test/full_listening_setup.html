@@ -1,0 +1,45 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Full Test — Listening setup{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Cancel full test</a>
+  <h1 class="pt-h1">Step 3 · Listening — audio setup</h1>
+  <p class="pt-sub">The listening audio hasn't been generated yet. Generate it now (~30–60s) or skip to Speaking.</p>
+
+  {% include "practice_test/_step_bar.html" %}
+
+  <section class="pt-listen-card">
+
+    <h3 style="margin:0 0 6px; color: var(--pt-ink); font-size: 17px;">One-time audio setup</h3>
+    <p style="margin: 0 0 14px; color: var(--pt-body); font-size: 14px;">
+      The first time the listening test is taken, OpenAI's text-to-speech API generates the audio file.
+      It's cached forever after — every future test reuses the same file.
+    </p>
+
+    <form method="post" action="{% url 'practice_test:listening_prepare' %}" style="margin: 12px 0 18px;">
+      {% csrf_token %}
+      <button type="submit" class="pt-btn pt-btn--lg" id="pt-gen-btn">Generate audio now →</button>
+    </form>
+
+    <p style="font-size: 12.5px; color: var(--pt-muted); margin: 0 0 18px;">
+      Or skip Listening for this test and finalise your remaining scores.
+    </p>
+
+    <div class="pt-result-actions">
+      <a class="pt-btn pt-btn--ghost" href="{% url 'practice_test:full_speaking' %}?full={{ full_id }}">Skip to Speaking →</a>
+    </div>
+
+  </section>
+
+{% endblock %}
+
+{% block pt_scripts %}
+<script>
+  document.querySelector('form').addEventListener('submit', function(){
+    var b = document.getElementById('pt-gen-btn');
+    b.disabled = true; b.textContent = 'Generating audio… please wait (30–60s)';
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Writing Test{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
+  <h1 class="pt-h1">Writing practice</h1>
+  <p class="pt-sub">Single-section practice · Task 1 + Task 2 · 60 minutes total · AI band score on submit.</p>
+
+  <form method="post" action="{% url 'practice_test:writing_submit' %}" id="pt-write-form">
+    {% csrf_token %}
+
+    <div class="pt-runner-top">
+      <div>
+        <div class="pt-runner-top__title">Academic Writing</div>
+        <div class="pt-runner-top__meta">Task 2 is worth twice as much as Task 1.</div>
+      </div>
+      <div class="pt-runner-top__timer" id="pt-timer" data-minutes="60">60:00</div>
+    </div>
+
+    <div class="pt-write">
+
+      {# ------------- Task 1 ------------- #}
+      <section class="pt-write__task">
+        <h2 class="pt-write__title">{{ task1.title }}</h2>
+        <p class="pt-write__sub">Write at least {{ task1.min_words }} words · suggested {{ task1.minutes }} minutes.</p>
+
+        <div class="pt-write__prompt">{{ task1.instructions }}</div>
+        <div class="pt-write__chart">{{ task1.chart_svg|safe }}</div>
+
+        <textarea
+          class="pt-write__textarea js-wc"
+          name="task1_response"
+          data-min="{{ task1.min_words }}"
+          data-counter="t1-count"
+          placeholder="Start writing your Task 1 response here…"></textarea>
+
+        <div class="pt-write__count is-low" id="t1-count-wrap">
+          <span>Word count: <b id="t1-count">0</b> / {{ task1.min_words }} minimum</span>
+          <span>Recommended: {{ task1.minutes }} min</span>
+        </div>
+      </section>
+
+      {# ------------- Task 2 ------------- #}
+      <section class="pt-write__task">
+        <h2 class="pt-write__title">{{ task2.title }}</h2>
+        <p class="pt-write__sub">Write at least {{ task2.min_words }} words · suggested {{ task2.minutes }} minutes.</p>
+
+        <div class="pt-write__prompt">{{ task2.instructions }}</div>
+
+        <textarea
+          class="pt-write__textarea js-wc"
+          name="task2_response"
+          data-min="{{ task2.min_words }}"
+          data-counter="t2-count"
+          placeholder="Start writing your Task 2 essay here…"></textarea>
+
+        <div class="pt-write__count is-low" id="t2-count-wrap">
+          <span>Word count: <b id="t2-count">0</b> / {{ task2.min_words }} minimum</span>
+          <span>Recommended: {{ task2.minutes }} min</span>
+        </div>
+      </section>
+
+      <div class="pt-submit-bar">
+        <div class="pt-submit-bar__meta">Both tasks will be sent to the AI examiner.</div>
+        <button type="submit" class="pt-btn pt-btn--lg" id="pt-write-submit">Submit writing →</button>
+      </div>
+
+    </div>
+  </form>
+
+{% endblock %}
+
+{% block pt_scripts %}
+<script>
+(function(){
+  function bindWC(ta){
+    var counter = document.getElementById(ta.dataset.counter);
+    var wrap    = document.getElementById(ta.dataset.counter + '-wrap');
+    var minW    = parseInt(ta.dataset.min, 10) || 0;
+    function tick(){
+      var n = (ta.value.trim().match(/\S+/g) || []).length;
+      counter.textContent = n;
+      if (n >= minW) { wrap.classList.remove('is-low'); wrap.classList.add('is-ok'); }
+      else           { wrap.classList.add('is-low');    wrap.classList.remove('is-ok'); }
+    }
+    ta.addEventListener('input', tick);
+    tick();
+  }
+  document.querySelectorAll('.js-wc').forEach(bindWC);
+
+  // Submit button label while AI scoring is in-flight
+  var form = document.getElementById('pt-write-form');
+  var btn  = document.getElementById('pt-write-submit');
+  form.addEventListener('submit', function(){
+    btn.disabled = true;
+    btn.textContent = 'Scoring with AI… please wait';
+  });
+
+  // Timer
+  var el = document.getElementById('pt-timer');
+  if (el){
+    var mins = parseInt(el.dataset.minutes, 10) || 60;
+    var seconds = mins * 60;
+    function tick(){
+      var m = Math.floor(seconds / 60), s = seconds % 60;
+      el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      if (seconds <= 0) { el.style.color = '#c0392b'; return; }
+      seconds--; setTimeout(tick, 1000);
+    }
+    tick();
+  }
+})();
+</script>
+{% endblock %}

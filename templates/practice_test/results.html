@@ -1,0 +1,481 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Test results{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
+
+  {# ---------- Hero band ---------- #}
+  <section class="pt-result-hero">
+    <div class="pt-result-band">
+      <div class="pt-result-band__num">{{ session.band_overall|default:"—" }}</div>
+      <div class="pt-result-band__lbl">Overall band</div>
+    </div>
+    <div>
+      <div class="pt-result-hero__date">{{ session.started_at|date:"l, F j · g:i a" }}</div>
+      <h1>{{ session.get_kind_display }} test complete</h1>
+      <p>
+        {% if session.kind == "reading" %}
+          You answered {{ session.raw.correct }} out of {{ session.raw.total }} questions correctly.
+        {% elif session.kind == "listening" %}
+          You answered {{ session.raw.correct }} out of {{ session.raw.total }} questions correctly.
+        {% elif session.kind == "writing" %}
+          AI examiner band based on Task 1 + Task 2 · Task 2 weighted twice.
+        {% elif session.kind == "speaking" %}
+          Based on {{ session.raw.answered }} answers across 3 speaking parts.
+        {% elif session.kind == "full" %}
+          Average band across the four IELTS sections you completed.
+        {% else %}
+          {{ session.get_kind_display }}.
+        {% endif %}
+      </p>
+    </div>
+  </section>
+
+  {# ---------- Full test: per-section band cards ---------- #}
+  {% if session.kind == "full" %}
+    <div class="pt-result-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 18px;">
+      <div class="pt-card-block" style="text-align:center;">
+        <h3 style="margin-bottom: 10px;">Reading</h3>
+        <div style="font-size:32px; font-weight:800; color: var(--pt-ink);">{{ session.band_reading|default:"—" }}</div>
+        {% if session.raw.reading %}<small style="color:var(--pt-muted);">{{ session.raw.reading.correct }}/{{ session.raw.reading.total }} correct</small>{% endif %}
+      </div>
+      <div class="pt-card-block" style="text-align:center;">
+        <h3 style="margin-bottom: 10px;">Writing</h3>
+        <div style="font-size:32px; font-weight:800; color: var(--pt-ink);">{{ session.band_writing|default:"—" }}</div>
+        {% if session.raw.writing %}<small style="color:var(--pt-muted);">T1 {{ session.raw.writing.task1.band }} · T2 {{ session.raw.writing.task2.band }}</small>{% endif %}
+      </div>
+      <div class="pt-card-block" style="text-align:center; opacity:.7;">
+        <h3 style="margin-bottom: 10px;">Listening</h3>
+        <div style="font-size:32px; font-weight:800; color: var(--pt-muted);">—</div>
+        <small><span class="pt-badge-soon">Coming soon</span></small>
+      </div>
+      <div class="pt-card-block" style="text-align:center;">
+        <h3 style="margin-bottom: 10px;">Speaking</h3>
+        <div style="font-size:32px; font-weight:800; color: var(--pt-ink);">{{ session.band_speaking|default:"—" }}</div>
+        {% if session.raw.speaking %}<small style="color:var(--pt-muted);">{{ session.raw.speaking.answered }} answers</small>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="pt-result-grid">
+
+    {# ---------- LEFT: Breakdown ---------- #}
+    <div class="pt-card-block">
+      <h3>Score breakdown</h3>
+
+      {# ---- Full test ---- #}
+      {% if session.kind == "full" %}
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Reading</span><span class="pt-bar-row__val">{{ session.band_reading|default:"—" }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.band_reading|default:0 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Writing</span><span class="pt-bar-row__val">{{ session.band_writing|default:"—" }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.band_writing|default:0 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name" style="color: var(--pt-muted-2);">Listening · Coming soon</span><span class="pt-bar-row__val" style="color: var(--pt-muted-2);">—</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Speaking</span><span class="pt-bar-row__val">{{ session.band_speaking|default:"—" }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.band_speaking|default:0 9 100 %}%"></div></div>
+        </div>
+
+      {# ---- Reading ---- #}
+      {% elif session.kind == "reading" %}
+        {% for pp in session.raw.by_passage %}
+          {% widthratio pp.correct pp.total 100 as pct_str %}
+          <div class="pt-bar-row">
+            <div class="pt-bar-row__head">
+              <span class="pt-bar-row__name">Passage {{ pp.number }} — {{ pp.title }}</span>
+              <span class="pt-bar-row__val">{{ pp.correct }}/{{ pp.total }}</span>
+            </div>
+            <div class="pt-bar-row__track">
+              <div class="pt-bar-row__fill" style="width: {{ pct_str }}%"></div>
+            </div>
+          </div>
+        {% endfor %}
+
+      {# ---- Listening ---- #}
+      {% elif session.kind == "listening" %}
+        {% for ss in session.raw.by_section %}
+          {% widthratio ss.correct ss.total 100 as pct_str %}
+          <div class="pt-bar-row">
+            <div class="pt-bar-row__head">
+              <span class="pt-bar-row__name">Section {{ ss.number }} — {{ ss.title }}</span>
+              <span class="pt-bar-row__val">{{ ss.correct }}/{{ ss.total }}</span>
+            </div>
+            <div class="pt-bar-row__track">
+              <div class="pt-bar-row__fill" style="width: {{ pct_str }}%"></div>
+            </div>
+          </div>
+        {% endfor %}
+
+      {# ---- Writing ---- #}
+      {% elif session.kind == "writing" %}
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Task 1 band</span><span class="pt-bar-row__val">{{ session.raw.task1.band }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.task1.band 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Task 2 band</span><span class="pt-bar-row__val">{{ session.raw.task2.band }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.task2.band 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Coherence & cohesion (avg)</span><span class="pt-bar-row__val">{{ session.raw.task2.feedback.coherence_cohesion }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.task2.feedback.coherence_cohesion 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Lexical resource (avg)</span><span class="pt-bar-row__val">{{ session.raw.task2.feedback.lexical_resource }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.task2.feedback.lexical_resource 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Grammar accuracy (avg)</span><span class="pt-bar-row__val">{{ session.raw.task2.feedback.grammar_accuracy }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.task2.feedback.grammar_accuracy 9 100 %}%"></div></div>
+        </div>
+
+      {# ---- Speaking ---- #}
+      {% elif session.kind == "speaking" %}
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Fluency & coherence</span><span class="pt-bar-row__val">{{ session.raw.fluency }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.fluency 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Lexical resource</span><span class="pt-bar-row__val">{{ session.raw.vocabulary }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.vocabulary 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Grammatical range</span><span class="pt-bar-row__val">{{ session.raw.grammar }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.grammar 9 100 %}%"></div></div>
+        </div>
+        <div class="pt-bar-row">
+          <div class="pt-bar-row__head"><span class="pt-bar-row__name">Pronunciation</span><span class="pt-bar-row__val">{{ session.raw.pronunciation }}</span></div>
+          <div class="pt-bar-row__track"><div class="pt-bar-row__fill" style="width: {% widthratio session.raw.pronunciation 9 100 %}%"></div></div>
+        </div>
+      {% endif %}
+
+      {# ---- Per-question Speaking breakdown ---- #}
+      {% if speaking_responses %}
+        {% csrf_token %}
+        <div class="pt-spk-results-head">
+          <h3 style="margin: 22px 0 0;">Per question</h3>
+          {% if speaking_failed_count %}
+            <button type="button" class="pt-btn pt-btn--ghost pt-spk-retry-all" data-retry-all>
+              Retry transcription for {{ speaking_failed_count }} failed answer{{ speaking_failed_count|pluralize }}
+            </button>
+          {% endif %}
+        </div>
+        {% for r in speaking_responses %}
+          <div class="pt-q-card{% if not r.transcript %} pt-q-card--failed{% endif %}" data-response-id="{{ r.id }}">
+            <div class="pt-q-card__head">
+              <b>Part {{ r.part }} · Q{{ r.question_index|add:1 }}</b>
+              {% if r.band %}<span class="pt-q-card__band">Band {{ r.band }}</span>{% endif %}
+            </div>
+            <div class="pt-q-card__q">{{ r.question_text|linebreaksbr }}</div>
+
+            {% if r.audio %}<audio controls src="{{ r.audio.url }}" class="pt-q-card__audio"></audio>{% endif %}
+
+            {# Retry banner — shown when transcription failed but the audio is still on disk #}
+            {% if not r.transcript and r.audio %}
+              <div class="pt-spk-retry" data-retry-panel>
+                <div class="pt-spk-retry__msg">{{ r.feedback|default:"Transcription failed for this answer." }}</div>
+                <button type="button" class="pt-btn pt-spk-retry__btn" data-retry-btn>Retry transcription</button>
+              </div>
+            {% endif %}
+
+            {# Compact per-criterion band strip #}
+            {% if r.fluency or r.vocabulary or r.grammar or r.pronunciation %}
+              <div class="pt-q-card__scores">
+                <span><b>{{ r.fluency|default:"—" }}</b><i>Fluency</i></span>
+                <span><b>{{ r.vocabulary|default:"—" }}</b><i>Vocabulary</i></span>
+                <span><b>{{ r.grammar|default:"—" }}</b><i>Grammar</i></span>
+                <span><b>{{ r.pronunciation|default:"—" }}</b><i>Pronunciation</i></span>
+              </div>
+            {% endif %}
+
+            {# Recording metrics from Whisper + heuristics #}
+            {% if r.raw.metrics %}
+              <div class="pt-spk-metrics">
+                <div class="pt-spk-metric"><div class="pt-spk-metric__num">{{ r.raw.metrics.wpm }}</div><div class="pt-spk-metric__lbl">Words / min</div></div>
+                <div class="pt-spk-metric"><div class="pt-spk-metric__num">{{ r.raw.metrics.word_count }}</div><div class="pt-spk-metric__lbl">Words</div></div>
+                <div class="pt-spk-metric"><div class="pt-spk-metric__num">{{ r.raw.metrics.filler_count }}</div><div class="pt-spk-metric__lbl">Fillers</div></div>
+                <div class="pt-spk-metric"><div class="pt-spk-metric__num">{{ r.raw.metrics.long_pause_count }}</div><div class="pt-spk-metric__lbl">Long pauses</div></div>
+              </div>
+            {% endif %}
+
+            {# Annotated transcript (new) — falls back to plain transcript for old responses #}
+            {% if r.raw.annotated_html %}
+              <div class="pt-anno-legend">
+                <span class="pt-anno-tag pt-anno--good">Good</span>
+                <span class="pt-anno-tag pt-anno--weak">Weak</span>
+                <span class="pt-anno-tag pt-anno--error">Error</span>
+                <span class="pt-anno-tag pt-anno--filler">Filler</span>
+                <span class="pt-anno-tag pt-anno--pron">Pronunciation</span>
+                <span class="pt-anno-hint">Hover a highlight to see the reason.</span>
+              </div>
+              <div class="pt-spk-transcript">
+                <div class="pt-spk-transcript__label">Your answer</div>
+                <div class="pt-spk-transcript__body">{{ r.raw.annotated_html|safe }}</div>
+              </div>
+            {% elif r.transcript %}
+              <div class="pt-spk-transcript">
+                <div class="pt-spk-transcript__label">Your answer</div>
+                <div class="pt-spk-transcript__body">{{ r.transcript }}</div>
+              </div>
+            {% endif %}
+
+            {# Per-criterion notes + did_well + improve #}
+            {% if r.raw.criteria %}
+              <div class="pt-spk-criteria">
+                {% with cfl=r.raw.criteria.fluency cvo=r.raw.criteria.vocabulary cgr=r.raw.criteria.grammar cpr=r.raw.criteria.pronunciation %}
+                  {% if cfl %}
+                    <article class="pt-crit">
+                      <header><h4>Fluency &amp; Coherence</h4><span class="pt-crit__band">{{ cfl.score|default:"—" }}</span></header>
+                      {% if cfl.notes %}<p class="pt-crit__notes">{{ cfl.notes }}</p>{% endif %}
+                      <div class="pt-crit__lists">
+                        <div><div class="pt-crit__title pt-crit__title--good">What you did well</div>
+                          <ul>{% for it in cfl.did_well %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                        <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div>
+                          <ul>{% for it in cfl.improve %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                      </div>
+                    </article>
+                  {% endif %}
+                  {% if cvo %}
+                    <article class="pt-crit">
+                      <header><h4>Lexical Resource</h4><span class="pt-crit__band">{{ cvo.score|default:"—" }}</span></header>
+                      {% if cvo.notes %}<p class="pt-crit__notes">{{ cvo.notes }}</p>{% endif %}
+                      <div class="pt-crit__lists">
+                        <div><div class="pt-crit__title pt-crit__title--good">What you did well</div>
+                          <ul>{% for it in cvo.did_well %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                        <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div>
+                          <ul>{% for it in cvo.improve %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                      </div>
+                    </article>
+                  {% endif %}
+                  {% if cgr %}
+                    <article class="pt-crit">
+                      <header><h4>Grammar Range &amp; Accuracy</h4><span class="pt-crit__band">{{ cgr.score|default:"—" }}</span></header>
+                      {% if cgr.notes %}<p class="pt-crit__notes">{{ cgr.notes }}</p>{% endif %}
+                      <div class="pt-crit__lists">
+                        <div><div class="pt-crit__title pt-crit__title--good">What you did well</div>
+                          <ul>{% for it in cgr.did_well %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                        <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div>
+                          <ul>{% for it in cgr.improve %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                      </div>
+                    </article>
+                  {% endif %}
+                  {% if cpr %}
+                    <article class="pt-crit">
+                      <header><h4>Pronunciation</h4><span class="pt-crit__band">{{ cpr.score|default:"—" }}</span></header>
+                      {% if cpr.notes %}<p class="pt-crit__notes">{{ cpr.notes }}</p>{% endif %}
+                      <div class="pt-crit__lists">
+                        <div><div class="pt-crit__title pt-crit__title--good">What you did well</div>
+                          <ul>{% for it in cpr.did_well %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                        <div><div class="pt-crit__title pt-crit__title--imp">What to improve</div>
+                          <ul>{% for it in cpr.improve %}<li>{{ it }}</li>{% empty %}<li class="pt-crit__empty">—</li>{% endfor %}</ul></div>
+                      </div>
+                    </article>
+                  {% endif %}
+                {% endwith %}
+              </div>
+            {% endif %}
+
+            {% if r.feedback %}<div class="pt-q-card__fb">{{ r.feedback }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+    </div>
+
+    {# ---------- RIGHT: What to improve ---------- #}
+    <div class="pt-card-block">
+      <h3>What to improve</h3>
+      <ul class="pt-improve">
+        {% if session.kind == "full" %}
+          {% if session.raw.writing.summary_task1 %}<li><b>Writing T1:</b> {{ session.raw.writing.summary_task1 }}</li>{% endif %}
+          {% if session.raw.writing.summary_task2 %}<li><b>Writing T2:</b> {{ session.raw.writing.summary_task2 }}</li>{% endif %}
+          <li><b>Reading:</b> Re-read any passage where you lost marks — pay close attention to NOT GIVEN vs FALSE distinctions and gap-fill spelling.</li>
+          <li><b>Speaking:</b> Aim for 2–4 sentence answers in Part 1, a full 1–2 minutes in Part 2, and more abstract reasoning with examples in Part 3.</li>
+        {% elif session.kind == "writing" %}
+          {% for tip in session.raw.task1.feedback.improve %}<li><b>Task 1:</b> {{ tip }}</li>{% endfor %}
+          {% for tip in session.raw.task2.feedback.improve %}<li><b>Task 2:</b> {{ tip }}</li>{% endfor %}
+          {% if not session.raw.task1.feedback.improve and not session.raw.task2.feedback.improve %}
+            <li>No improvement notes from the AI examiner for this response.</li>
+          {% endif %}
+        {% elif session.kind == "reading" %}
+          {% if session.band_overall >= 7 %}
+            <li>Strong score. Push for harder vocabulary and tighter timing to break Band 8.</li>
+            <li>Re-read the passages where you lost a mark and identify the wording that misled you.</li>
+          {% else %}
+            <li>Practise scanning passages for keywords before reading in full.</li>
+            <li>Remember: <b>NOT GIVEN</b> ≠ FALSE. Only choose FALSE when the passage clearly contradicts the statement.</li>
+            <li>Be careful with spelling and singular/plural in gap-fill answers — they are marked strictly.</li>
+          {% endif %}
+        {% elif session.kind == "listening" %}
+          {% if session.band_overall >= 7 %}
+            <li>Strong score. Now practise transcribing exact numbers, names and spellings — common Band 8 traps.</li>
+            <li>Focus on Sections 3 and 4, where speakers go faster and reword key ideas.</li>
+          {% else %}
+            <li>Re-listen to the sections you missed and read along with the script to spot the cue words you missed.</li>
+            <li>Predict the type of answer (number, name, noun) before you hear it — it speeds up recognition.</li>
+            <li>Watch your spelling: even a small typo in a gap-fill loses the mark.</li>
+          {% endif %}
+        {% elif session.kind == "speaking" %}
+          {% for r in speaking_responses %}{% if r.feedback %}<li><b>Part {{ r.part }} Q{{ r.question_index|add:1 }}:</b> {{ r.feedback }}</li>{% endif %}{% endfor %}
+        {% else %}
+          <li>Keep practising daily — small consistent sessions beat one big push.</li>
+        {% endif %}
+      </ul>
+
+      {% if session.kind == "writing" and session.raw.task2.feedback.model_answer %}
+        <h3 style="margin-top: 22px;">Band 7 model answer (Task 2)</h3>
+        <div class="pt-q-card" style="margin-top: 0; white-space: pre-wrap;">{{ session.raw.task2.feedback.model_answer }}</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ---------- Writing: highlighted responses + examiner summary ---------- #}
+  {% if session.kind == "writing" %}
+    <div class="pt-card-block" style="margin-top: 18px;">
+      <h3>Your response — with inline highlights</h3>
+      <div class="pt-anno-legend">
+        <span><span class="pt-anno pt-anno--good">well written</span></span>
+        <span><span class="pt-anno pt-anno--weak">weak word choice</span></span>
+        <span><span class="pt-anno pt-anno--error">grammar error</span></span>
+        <small>Hover a highlight to see why.</small>
+      </div>
+
+      <h4 class="pt-anno-title">Task 1 · {{ session.raw.task1.word_count }} words · Band {{ session.raw.task1.band }}</h4>
+      <div class="pt-anno-body">{{ session.raw.task1.annotated_html|default:session.raw.task1.response|safe|linebreaksbr }}</div>
+
+      <h4 class="pt-anno-title">Task 2 · {{ session.raw.task2.word_count }} words · Band {{ session.raw.task2.band }}</h4>
+      <div class="pt-anno-body">{{ session.raw.task2.annotated_html|default:session.raw.task2.response|safe|linebreaksbr }}</div>
+    </div>
+
+    <div class="pt-card-block" style="margin-top: 18px;">
+      <h3>AI examiner summary</h3>
+      <div class="pt-write-fb">
+        <div class="pt-write-fb__pos">
+          <b>What you did well — Task 1</b>
+          <ul>{% for s in session.raw.task1.feedback.did_well %}<li>{{ s }}</li>{% empty %}<li>—</li>{% endfor %}</ul>
+        </div>
+        <div class="pt-write-fb__pos">
+          <b>What you did well — Task 2</b>
+          <ul>{% for s in session.raw.task2.feedback.did_well %}<li>{{ s }}</li>{% empty %}<li>—</li>{% endfor %}</ul>
+        </div>
+      </div>
+      <p style="margin-top: 14px; color: var(--pt-body); font-size: 14px;">
+        <b>Task 1:</b> {{ session.raw.task1.feedback.summary|default:"—" }}<br>
+        <b>Task 2:</b> {{ session.raw.task2.feedback.summary|default:"—" }}
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="pt-result-actions">
+    {% if session.kind == "reading" %}
+      <a class="pt-btn" href="{% url 'practice_test:reading' %}">Take another reading test</a>
+    {% elif session.kind == "listening" %}
+      <a class="pt-btn" href="{% url 'practice_test:listening' %}">Take another listening test</a>
+    {% elif session.kind == "writing" %}
+      <a class="pt-btn" href="{% url 'practice_test:writing' %}">Take another writing test</a>
+    {% elif session.kind == "speaking" %}
+      <a class="pt-btn" href="{% url 'practice_test:speaking' %}">Take another speaking test</a>
+    {% elif session.kind == "full" %}
+      <a class="pt-btn" href="{% url 'practice_test:full' %}">Take another full test</a>
+    {% else %}
+      <a class="pt-btn" href="{% url 'practice_test:hub' %}">Back to tests</a>
+    {% endif %}
+    <a class="pt-btn pt-btn--ghost" href="{% url 'practice_test:hub' %}">All tests</a>
+  </div>
+
+{% if speaking_responses %}
+<script>
+(function(){
+  var csrfInput = document.querySelector('input[name=csrfmiddlewaretoken]');
+  if (!csrfInput) return;
+  var csrf = csrfInput.value;
+
+  function rescore(card){
+    var id = card.getAttribute('data-response-id');
+    if (!id) return Promise.resolve();
+    var panel = card.querySelector('[data-retry-panel]');
+    var btn   = card.querySelector('[data-retry-btn]');
+    if (panel) panel.classList.add('is-loading');
+    if (btn){ btn.disabled = true; btn.textContent = 'Retrying…'; }
+    return fetch('/test/api/speaking/rescore/' + id + '/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if (!data || !data.ok){
+        if (panel){
+          panel.classList.remove('is-loading');
+          panel.classList.add('is-error');
+          var msg = panel.querySelector('.pt-spk-retry__msg');
+          if (msg) msg.textContent = (data && data.error) || 'Retry failed. Try again.';
+        }
+        if (btn){ btn.disabled = false; btn.textContent = 'Retry transcription'; }
+        return false;
+      }
+      // Success — easiest UX is a hard reload so the server-rendered
+      // breakdown (annotated transcript, criteria cards, metrics, header
+      // band) all update together.
+      return true;
+    }).catch(function(){
+      if (panel){
+        panel.classList.remove('is-loading');
+        panel.classList.add('is-error');
+        var msg = panel.querySelector('.pt-spk-retry__msg');
+        if (msg) msg.textContent = 'Network error. Try again.';
+      }
+      if (btn){ btn.disabled = false; btn.textContent = 'Retry transcription'; }
+      return false;
+    });
+  }
+
+  // Per-question retry buttons
+  document.querySelectorAll('.pt-q-card[data-response-id] [data-retry-btn]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var card = btn.closest('.pt-q-card');
+      rescore(card).then(function(ok){ if (ok) window.location.reload(); });
+    });
+  });
+
+  // "Retry all failed" button
+  var allBtn = document.querySelector('[data-retry-all]');
+  if (allBtn){
+    allBtn.addEventListener('click', function(){
+      var failed = Array.prototype.slice.call(
+        document.querySelectorAll('.pt-q-card--failed[data-response-id]')
+      );
+      if (!failed.length) return;
+      allBtn.disabled = true;
+      var original = allBtn.textContent;
+      allBtn.textContent = 'Retrying 0 / ' + failed.length + '…';
+      var done = 0, anySuccess = false;
+      // Run sequentially so we don't hammer the API on a flaky connection.
+      function next(){
+        if (!failed.length){
+          if (anySuccess){ window.location.reload(); return; }
+          allBtn.disabled = false; allBtn.textContent = original; return;
+        }
+        var card = failed.shift();
+        rescore(card).then(function(ok){
+          done++;
+          if (ok) anySuccess = true;
+          allBtn.textContent = 'Retrying ' + done + ' / ' + (done + failed.length) + '…';
+          next();
+        });
+      }
+      next();
+    });
+  }
+})();
+</script>
+{% endif %}
+
+{% endblock %}

@@ -110,13 +110,13 @@
         {% if academic_attempt_count %}
         <div class="art-hub-card__best">
           <span class="art-hub-card__best-txt">Your best: <strong>{{ academic_best_score }}</strong>/40 · Band {{ academic_best_band }}</span>
-          <a class="art-hub-card__improve" href="{% url 'reading:academic_test_session' test_number=1 %}">Improve →</a>
+          <a class="art-hub-card__improve" href="{% url 'practice_test:hub' %}">Improve →</a>
         </div>
         {% endif %}
 
         <div class="art-hub-card__actions">
           {% if academic_attempt_count %}
-          <a class="art-hub-btn art-hub-btn--primary" href="{% url 'reading:academic_test_session' test_number=1 %}">Take again →</a>
+          <a class="art-hub-btn art-hub-btn--primary" href="{% url 'practice_test:hub' %}">Take again →</a>
           <a class="art-hub-btn art-hub-btn--outline" href="{% url 'reading:academic_tests_index' %}#art-history-heading">Review last attempt →</a>
           {% else %}
           <a class="art-hub-btn art-hub-btn--primary art-hub-btn--block" href="{% url 'reading:academic_test_session' test_number=1 %}">Start test →</a>

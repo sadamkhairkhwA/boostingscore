@@ -1,0 +1,56 @@
+{% extends "practice_test/_shell.html" %}
+
+{% block pt_title %}Listening Test — Setup{% endblock %}
+
+{% block pt_content %}
+
+  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
+  <h1 class="pt-h1">Listening test</h1>
+  <p class="pt-sub">{{ section_count }} sections · {{ question_count }} questions · audio plays once.</p>
+
+  <section class="pt-listen-card">
+
+    {% if error %}
+      <div class="pt-listen-soon" style="background: var(--pt-red-sf); color: var(--pt-red); border-color:#f3c5c0;">
+        <strong>Audio generation failed.</strong> {{ error }}<br>
+        Check that <code>OPENAI_API_KEY</code> is set in your <code>.env</code>, then try again.
+      </div>
+    {% endif %}
+
+    <h3 style="margin: 0 0 6px; color: var(--pt-ink); font-size: 17px;">One-time setup</h3>
+    <p style="margin: 0 0 14px; color: var(--pt-body); font-size: 14px;">
+      The first time anyone takes this listening test, the audio needs to be generated using
+      OpenAI's text-to-speech API. This takes about 30–60 seconds and only happens once — the
+      same audio file is reused for every future test.
+    </p>
+
+    <ul style="margin: 0 0 18px; padding-left: 22px; color: var(--pt-body); font-size: 13.5px; line-height: 1.7;">
+      <li>4 sections, 40 questions in total</li>
+      <li>One continuous audio file — plays once, no rewinding</li>
+      <li>Mix of multiple choice, gap fill, matching and short answer</li>
+    </ul>
+
+    <form method="post" action="{% url 'practice_test:listening_prepare' %}">
+      {% csrf_token %}
+      <div class="pt-result-actions">
+        <button type="submit" class="pt-btn pt-btn--lg" id="pt-gen-btn">Generate audio now →</button>
+        <a class="pt-btn pt-btn--ghost" href="{% url 'practice_test:hub' %}">Cancel</a>
+      </div>
+    </form>
+
+    <p style="font-size: 12.5px; color: var(--pt-muted); margin: 16px 0 0;">
+      Prefer the command line? Run <code>python manage.py prepare_listening_audio</code> on the server.
+    </p>
+
+  </section>
+
+{% endblock %}
+
+{% block pt_scripts %}
+<script>
+  document.querySelector('form').addEventListener('submit', function(){
+    var b = document.getElementById('pt-gen-btn');
+    b.disabled = true; b.textContent = 'Generating audio… please wait (30–60s)';
+  });
+</script>
+{% endblock %}

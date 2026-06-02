@@ -1,0 +1,169 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/welcome.css' %}?v=1">
+</head>
+<body class="wc-body">
+
+<header class="wc-top">
+  <div class="wc-top__inner">
+    <a href="/" class="wc-logo">Boosting<span>Score</span></a>
+    <a href="{% url 'home' %}" class="wc-skip">Skip for now →</a>
+  </div>
+</header>
+
+<main class="wc-shell">
+
+  <section class="wc-hero">
+    <span class="wc-pill">
+      <span class="wc-pill__dot" aria-hidden="true"></span>
+      Account created
+    </span>
+    <h1 class="wc-h1">Welcome to <span class="wc-green">BoostingScore</span>, {{ display_name }}.</h1>
+    <p class="wc-sub">
+      You're all set. Let's spend two minutes setting things up so your
+      practice is tailored to your IELTS level — then you're ready to learn.
+    </p>
+  </section>
+
+  <form method="post" class="wc-form" novalidate>
+    {% csrf_token %}
+
+    <!-- Step 1: pick a level -->
+    <section class="wc-step">
+      <div class="wc-step__head">
+        <span class="wc-step__num">1</span>
+        <div>
+          <h2 class="wc-step__title">Choose your starting level</h2>
+          <p class="wc-step__sub">You can change this any time from your profile.</p>
+        </div>
+      </div>
+
+      <div class="wc-levels" role="radiogroup" aria-label="Starting level">
+        <label class="wc-level {% if current_level == 1 %}is-on{% endif %}" data-level="1">
+          <input type="radio" name="level" value="1" {% if current_level == 1 %}checked{% endif %}>
+          <div class="wc-level__band">Band 4 – 5</div>
+          <div class="wc-level__name">Beginner</div>
+          <p class="wc-level__desc">Building vocabulary and confidence. Short, friendly drills.</p>
+          <ul class="wc-level__list">
+            <li>Common IELTS words</li>
+            <li>Simple Type-it drills</li>
+            <li>Task 1 basics</li>
+          </ul>
+        </label>
+
+        <label class="wc-level {% if current_level == 2 %}is-on{% endif %}" data-level="2">
+          <input type="radio" name="level" value="2" {% if current_level == 2 %}checked{% endif %}>
+          <div class="wc-level__band">Band 5.5 – 6.5</div>
+          <div class="wc-level__name">Standard</div>
+          <p class="wc-level__desc">Strengthening accuracy, fluency and topic vocabulary.</p>
+          <ul class="wc-level__list">
+            <li>Topic vocabulary &amp; collocations</li>
+            <li>Type-it with sentences</li>
+            <li>Full Task 1 essays + AI feedback</li>
+          </ul>
+        </label>
+
+        <label class="wc-level {% if current_level == 3 %}is-on{% endif %}" data-level="3">
+          <input type="radio" name="level" value="3" {% if current_level == 3 %}checked{% endif %}>
+          <div class="wc-level__band">Band 7 +</div>
+          <div class="wc-level__name">Advanced</div>
+          <p class="wc-level__desc">Polishing range, precision and band-7 writing structure.</p>
+          <ul class="wc-level__list">
+            <li>Advanced topic words &amp; synonyms</li>
+            <li>Type-it on hard prompts</li>
+            <li>Task 1 + Task 2 with model answers</li>
+          </ul>
+        </label>
+      </div>
+    </section>
+
+    <!-- Step 2: what to do first -->
+    <section class="wc-step">
+      <div class="wc-step__head">
+        <span class="wc-step__num">2</span>
+        <div>
+          <h2 class="wc-step__title">Your first session</h2>
+          <p class="wc-step__sub">A short tour of what's waiting for you on the dashboard.</p>
+        </div>
+      </div>
+
+      <ul class="wc-quick">
+        <li class="wc-quick__card">
+          <div class="wc-quick__icon" aria-hidden="true">📚</div>
+          <div>
+            <h3>Learn 5 vocabulary words</h3>
+            <p>Pick a topic, view definitions, examples and synonyms.</p>
+          </div>
+        </li>
+        <li class="wc-quick__card">
+          <div class="wc-quick__icon" aria-hidden="true">⌨️</div>
+          <div>
+            <h3>Try a Type-it drill</h3>
+            <p>Write a definition or a sentence from memory — get AI scoring instantly.</p>
+          </div>
+        </li>
+        <li class="wc-quick__card">
+          <div class="wc-quick__icon" aria-hidden="true">✍️</div>
+          <div>
+            <h3>Write your first Task 1</h3>
+            <p>Real IELTS question, 4-criterion band score and inline highlights.</p>
+          </div>
+        </li>
+        <li class="wc-quick__card">
+          <div class="wc-quick__icon" aria-hidden="true">🔥</div>
+          <div>
+            <h3>Start your streak</h3>
+            <p>Today is day 1. Practise daily to keep your streak alive.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Footer CTA -->
+    <div class="wc-cta">
+      <div class="wc-cta__text">
+        <strong>You're ready.</strong>
+        <span>We'll personalise your daily plan from your first session.</span>
+      </div>
+      <div class="wc-cta__btns">
+        <a href="{% url 'home' %}" class="wc-btn wc-btn--ghost">Skip</a>
+        <button type="submit" class="wc-btn wc-btn--green">
+          Take me to my dashboard <span class="wc-btn__arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+    </div>
+  </form>
+</main>
+
+<div class="wc-footerline">
+  © 2026 BoostingScore
+  · <a href="/">Home</a>
+  · <a href="/#about">Privacy</a>
+  · <a href="/#about">Terms</a>
+  · <a href="/#about">Contact</a>
+</div>
+
+<script>
+(() => {
+  const cards = document.querySelectorAll('.wc-level');
+  function sync() {
+    cards.forEach(c => {
+      const radio = c.querySelector('input[type="radio"]');
+      c.classList.toggle('is-on', !!(radio && radio.checked));
+    });
+  }
+  cards.forEach(c => {
+    c.addEventListener('click', () => {
+      const radio = c.querySelector('input[type="radio"]');
+      if (radio) { radio.checked = true; sync(); }
+    });
+  });
+  sync();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{% if full_id %}
+<div class="pt-stepbar" aria-label="Full test progress">
+  <div class="pt-stepbar__title">Full IELTS Test · step {{ steps|length }} sections</div>
+  <ol class="pt-stepbar__list">
+    {% for s in steps %}
+      <li class="pt-stepbar__item
+        {% if s.current %} is-current{% endif %}
+        {% if s.done %} is-done{% endif %}
+        {% if s.future %} is-future{% endif %}">
+        <span class="pt-stepbar__num">{{ s.number }}</span>
+        <span class="pt-stepbar__label">{{ s.label }}</span>
+        {% if s.band %}<span class="pt-stepbar__band">Band {{ s.band }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</div>
+{% endif %}

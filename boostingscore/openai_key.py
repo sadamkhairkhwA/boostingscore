@@ -8,6 +8,13 @@ from pathlib import Path
 from django.conf import settings
 
 
+def _parse_env_value(rest: str) -> str:
+    rest = (rest or "").strip()
+    if len(rest) >= 2 and rest[0] == rest[-1] and rest[0] in "\"'":
+        return rest[1:-1].strip()
+    return rest
+
+
 def resolve_openai_api_key() -> str:
     env_val = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if env_val:
@@ -19,21 +26,27 @@ def resolve_openai_api_key() -> str:
 
     text = path.read_text(encoding="utf-8")
 
+    # If `.env` contains multiple `OPENAI_API_KEY=` lines, the last one wins.
+    last_key = ""
     for line in text.splitlines():
         raw = line.strip()
         if not raw or raw.startswith("#"):
             continue
         key, sep, rest = raw.partition("=")
         if sep and key.strip().upper() == "OPENAI_API_KEY":
-            rest = rest.strip()
-            if len(rest) >= 2 and rest[0] == rest[-1] and rest[0] in "\"'":
-                return rest[1:-1]
-            return rest
+            last_key = _parse_env_value(rest)
 
+    if last_key:
+        return last_key
+
+    # Legacy: a lone `sk-...` line with no `KEY=` prefix (older `.env` layouts).
     for line in text.splitlines():
         raw = line.strip()
         if not raw or raw.startswith("#"):
             continue
-        return raw
+        if "=" in raw:
+            continue
+        if raw.startswith("sk-"):
+            return raw
 
     return ""

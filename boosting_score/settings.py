@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "vocabulary.apps.VocabularyConfig",
     "reading",
     "writing",
+    "practice_test.apps.PracticeTestConfig",
 ]
 
 MIDDLEWARE = [
@@ -74,7 +75,7 @@ else:
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY", "") or "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "").strip()
 

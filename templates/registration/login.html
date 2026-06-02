@@ -1,24 +1,353 @@
-{% extends 'base.html' %}
-{% block title %}Log in — Boosting Score{% endblock %}
-{% block content %}
-<div class="bs-auth-page">
-  <div class="bs-auth-card animate-fade">
-    <div class="bs-auth-logo">Boosting<span>Score</span></div>
-    <div class="bs-auth-title">Welcome back</div>
-    <div class="bs-auth-sub">Log in to continue learning</div>
-    {% if form.errors %}
-    <div class="bs-auth-error">Incorrect email or password. Please try again.</div>
-    {% endif %}
-    <form method="post">
-      {% csrf_token %}
-      <label class="bs-auth-label">Username</label>
-      <input class="bs-auth-input" type="text" name="username" placeholder="your username" autocomplete="username" autofocus>
-      <label class="bs-auth-label">Password</label>
-      <input class="bs-auth-input" type="password" name="password" placeholder="••••••••••" autocomplete="current-password">
-      <input type="hidden" name="next" value="{{ next }}">
-      <button type="submit" class="bs-auth-btn">Log in</button>
-    </form>
-    <div class="bs-auth-footer">No account? <a href="{% url 'signup' %}">Sign up free</a></div>
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/auth_showcase.css' %}?v=2">
+</head>
+<body class="auth-body">
+
+<header class="auth-top">
+  <div class="auth-top__inner">
+    <a href="/" class="auth-logo">Boosting<span>Score</span></a>
+    <div class="auth-top__right">
+      <span>New here?</span>
+      <a href="{% url 'signup' %}">Sign up free</a>
+    </div>
   </div>
+</header>
+
+<main class="auth-shell has-showcase">
+
+  <aside class="bs-auth-showcase" aria-hidden="true">
+    <div class="bs-bg-shapes">
+      <span class="bs-shape bs-shape--a"></span>
+      <span class="bs-shape bs-shape--b"></span>
+      <span class="bs-shape bs-shape--c"></span>
+    </div>
+
+    <div class="bs-auth-showcase__inner">
+      <div class="bs-auth-eyebrow">Boosting<span>Score</span> · IELTS coach</div>
+      <h2 class="bs-auth-headline">Everything you need to <span class="bs-typed" data-words='["build vocabulary","write Band 7+","read faster","stay consistent"]'>build vocabulary</span></h2>
+      <p class="bs-auth-tagline">A guided coach for Vocabulary, Reading and Writing — with live AI feedback, inline highlights, smart spaced practice and a streak that keeps you moving.</p>
+
+      <div class="bs-stage">
+        <div class="bs-slide bs-slide--vocab is-on" data-slide="vocab">
+          <div class="bs-slide__visual">
+            <div class="bs-flashcards">
+              <div class="bs-card bs-card--a"><span class="bs-card__tag">Environment</span><div class="bs-card__word">resilient</div><div class="bs-card__def">able to recover quickly</div></div>
+              <div class="bs-card bs-card--b"><span class="bs-card__tag">Health</span><div class="bs-card__word">sedentary</div><div class="bs-card__def">involving little exercise</div></div>
+              <div class="bs-card bs-card--c"><span class="bs-card__tag">Tech</span><div class="bs-card__word">disruption</div><div class="bs-card__def">a major change</div></div>
+            </div>
+            <div class="bs-chips bs-chips--scroll">
+              <div class="bs-chips__track">
+                <span>Environment</span><span>Health</span><span>Technology</span><span>Education</span><span>Crime</span><span>Globalisation</span><span>Society</span><span>Economy</span>
+                <span>Environment</span><span>Health</span><span>Technology</span><span>Education</span><span>Crime</span><span>Globalisation</span><span>Society</span><span>Economy</span>
+              </div>
+            </div>
+          </div>
+          <div class="bs-explain">
+            <div class="bs-explain__tag">Vocabulary</div>
+            <h3>Topic-grouped IELTS words with spaced practice</h3>
+            <ul>
+              <li>1,400+ Band 5–8 words across 8 IELTS topics</li>
+              <li>Type-it-from-memory drills with AI scoring 1–5</li>
+              <li>Mastery tracking and smart review intervals</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bs-slide bs-slide--typeit" data-slide="typeit">
+          <div class="bs-slide__visual">
+            <div class="bs-typeit">
+              <div class="bs-typeit__word">disruption <small>noun</small></div>
+              <div class="bs-typeit__label">Write the definition</div>
+              <div class="bs-typeit__box">
+                <span class="bs-typed-out" data-typewriter="a sudden change that interrupts an activity or process">a sudden change that</span><span class="bs-caret"></span>
+              </div>
+              <div class="bs-scores">
+                <div class="bs-score">Definition <b>4/5</b></div>
+                <div class="bs-score">Sentence <b>4/5</b></div>
+                <div class="bs-score bs-score--tot">Total <b>8/10</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="bs-explain">
+            <div class="bs-explain__tag">Type-it</div>
+            <h3>Recall, write, get scored — instantly</h3>
+            <ul>
+              <li>Write a definition, a sentence, or both</li>
+              <li>AI scores accuracy and clarity 1–5 per task</li>
+              <li>Bandshift tips on what to improve next time</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bs-slide bs-slide--writing" data-slide="writing">
+          <div class="bs-slide__visual">
+            <div class="bs-editor">
+              <div class="bs-editor__top">
+                <span class="bs-dot"></span><span class="bs-dot"></span><span class="bs-dot"></span>
+                <span class="bs-editor__title">Writing · Task 1 · Bar chart</span>
+              </div>
+              <p class="bs-editor__line">
+                The chart <em class="hl hl--good">illustrates</em> the percentage of households
+                using transport <em class="hl hl--imp">that</em> went up over a decade,
+                with cars <em class="hl hl--err">remain</em> the most common.
+              </p>
+              <div class="bs-band">
+                <div class="bs-band__row"><span>Task achievement</span><div class="bar"><i style="--w:78%"></i></div><b>7.0</b></div>
+                <div class="bs-band__row"><span>Coherence</span><div class="bar"><i style="--w:72%"></i></div><b>6.5</b></div>
+                <div class="bs-band__row"><span>Lexical resource</span><div class="bar"><i style="--w:66%"></i></div><b>6.0</b></div>
+                <div class="bs-band__row"><span>Grammar</span><div class="bar"><i style="--w:72%"></i></div><b>6.5</b></div>
+                <div class="bs-band__score">Estimated band <strong class="bs-count" data-to="6.5" data-decimals="1">0.0</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="bs-explain">
+            <div class="bs-explain__tag">Writing</div>
+            <h3>Inline highlights + 4-criterion AI scoring</h3>
+            <ul>
+              <li>Green = well written, red = grammar, amber = stronger word</li>
+              <li>Per-criterion band breakdown with target tips</li>
+              <li>Model answer + “What to learn next” skill links</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bs-slide bs-slide--reading" data-slide="reading">
+          <div class="bs-slide__visual">
+            <div class="bs-passage">
+              <div class="bs-passage__head">
+                <span>Reading · Academic Passage 2</span>
+                <span class="bs-timer">⏱ <span class="bs-timer__t">12:48</span></span>
+              </div>
+              <div class="bs-passage__body">
+                <span class="bs-line"></span>
+                <span class="bs-line"></span>
+                <span class="bs-line bs-line--short"></span>
+                <span class="bs-line"></span>
+                <span class="bs-line bs-line--short"></span>
+                <span class="bs-line"></span>
+                <span class="bs-line bs-line--short"></span>
+                <span class="bs-line"></span>
+              </div>
+              <div class="bs-passage__q">
+                <div class="bs-q">Q4 — <em>The author suggests that…</em></div>
+                <div class="bs-q-opts">
+                  <span class="bs-opt">A</span><span class="bs-opt bs-opt--on">B</span>
+                  <span class="bs-opt">C</span><span class="bs-opt">D</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bs-explain">
+            <div class="bs-explain__tag">Reading</div>
+            <h3>Timed passages and a focused skills lab</h3>
+            <ul>
+              <li>Academic + General Training tests with a live timer</li>
+              <li>Strategy drills: skimming, scanning, matching</li>
+              <li>Track raw score and band over time</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bs-slide bs-slide--lessons" data-slide="lessons">
+          <div class="bs-slide__visual">
+            <div class="bs-tilegrid">
+              <div class="bs-tile bs-tile--purple"><b>🏗️ Task 1 structure</b><span>4-paragraph formula</span><i class="bs-tile__bar"><i style="--w:80%"></i></i></div>
+              <div class="bs-tile bs-tile--green"><b>📈 Trend vocabulary</b><span>rose · surged · plateaued</span><i class="bs-tile__bar"><i style="--w:60%"></i></i></div>
+              <div class="bs-tile bs-tile--amber"><b>🎯 Topic sentences</b><span>Open every paragraph well</span><i class="bs-tile__bar"><i style="--w:45%"></i></i></div>
+              <div class="bs-tile bs-tile--blue"><b>🔗 Linkers &amp; cohesion</b><span>Furthermore · In contrast</span><i class="bs-tile__bar"><i style="--w:30%"></i></i></div>
+            </div>
+          </div>
+          <div class="bs-explain">
+            <div class="bs-explain__tag">Lessons &amp; Skills</div>
+            <h3>Bite-sized lessons that map to your feedback</h3>
+            <ul>
+              <li>18 writing lessons · 32 micro-skills</li>
+              <li>“Linked from your feedback” suggestions</li>
+              <li>Mark done, build progress, see results</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bs-slide bs-slide--streak" data-slide="streak">
+          <div class="bs-slide__visual">
+            <div class="bs-streak">
+              <div class="bs-streak__flame">🔥</div>
+              <div class="bs-streak__num"><span class="bs-count" data-to="12">0</span><small>day streak</small></div>
+              <div class="bs-streak__week">
+                <span></span><span></span><span></span><span></span><span class="on"></span><span class="on"></span><span class="on today"></span>
+              </div>
+              <div class="bs-streak__chips">
+                <span>+<i class="bs-count" data-to="25">0</i> words</span>
+                <span><i class="bs-count" data-to="1">0</i> essay</span>
+                <span><i class="bs-count" data-to="3">0</i> passages</span>
+              </div>
+            </div>
+          </div>
+          <div class="bs-explain">
+            <div class="bs-explain__tag">Daily streak</div>
+            <h3>Small habits, real band-score gains</h3>
+            <ul>
+              <li>Every drill counts toward your streak</li>
+              <li>Weekly heatmap of practice</li>
+              <li>Tiny goals: 10 words · 1 essay · 1 passage</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="bs-auth-dots">
+        <button type="button" class="bs-auth-dot is-on" data-go="vocab">Vocab</button>
+        <button type="button" class="bs-auth-dot" data-go="typeit">Type-it</button>
+        <button type="button" class="bs-auth-dot" data-go="writing">Writing</button>
+        <button type="button" class="bs-auth-dot" data-go="reading">Reading</button>
+        <button type="button" class="bs-auth-dot" data-go="lessons">Lessons</button>
+        <button type="button" class="bs-auth-dot" data-go="streak">Streak</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="auth-formwrap">
+    <div class="auth-card">
+      <div class="auth-card__brand">Boosting<span>Score</span></div>
+      <h1 class="auth-card__title">Welcome back</h1>
+      <p class="auth-card__sub">Log in to continue learning</p>
+
+      {% if form.errors %}
+        <div class="auth-card__error">Incorrect username or password. Please try again.</div>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <label class="auth-label" for="id_username">Username</label>
+        <input id="id_username" class="auth-input" type="text" name="username" placeholder="your username" autocomplete="username" autofocus required>
+
+        <label class="auth-label" for="id_password">Password</label>
+        <input id="id_password" class="auth-input" type="password" name="password" placeholder="••••••••••" autocomplete="current-password" required>
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="auth-btn">Log in</button>
+      </form>
+
+      <div class="auth-card__footer">
+        No account? <a href="{% url 'signup' %}">Sign up free</a>
+      </div>
+      <p class="auth-tiny">By continuing you agree to our Terms and Privacy.</p>
+    </div>
+  </section>
+</main>
+
+<div class="auth-footerline">
+  © 2026 BoostingScore
+  · <a href="/">Home</a>
+  · <a href="/#about">Privacy</a>
+  · <a href="/#about">Terms</a>
+  · <a href="/#about">Contact</a>
 </div>
-{% endblock %}
+
+<script>
+(() => {
+  const slides = Array.from(document.querySelectorAll('.bs-slide'));
+  const dots   = Array.from(document.querySelectorAll('.bs-auth-dot'));
+  if (!slides.length) return;
+
+  let idx = Math.max(0, slides.findIndex(s => s.classList.contains('is-on')));
+  let timer = null;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function show(i) {
+    slides.forEach((s, k) => s.classList.toggle('is-on', k === i));
+    dots.forEach((d, k)   => d.classList.toggle('is-on', k === i));
+    idx = i;
+    runEffects(slides[i]);
+  }
+  function next() { show((idx + 1) % slides.length); }
+  function start() { stop(); if (!reduceMotion) timer = setInterval(next, 5200); }
+  function stop()  { if (timer) clearInterval(timer); timer = null; }
+
+  dots.forEach((d, k) => d.addEventListener('click', () => { show(k); start(); }));
+  const stage = document.querySelector('.bs-stage');
+  if (stage) {
+    stage.addEventListener('mouseenter', stop);
+    stage.addEventListener('mouseleave', start);
+  }
+
+  function runEffects(slide) {
+    if (!slide) return;
+    slide.querySelectorAll('.bar i, .bs-tile__bar i').forEach(b => {
+      b.style.width = '0%';
+      requestAnimationFrame(() => {
+        const w = getComputedStyle(b).getPropertyValue('--w').trim() || '0%';
+        b.style.width = w;
+      });
+    });
+    slide.querySelectorAll('.bs-count').forEach(el => {
+      const to = parseFloat(el.dataset.to || '0');
+      const dec = parseInt(el.dataset.decimals || '0', 10);
+      animateNumber(el, 0, to, 900, dec);
+    });
+    const tw = slide.querySelector('[data-typewriter]');
+    if (tw) typeWrite(tw);
+    const tEl = slide.querySelector('.bs-timer__t');
+    if (tEl) tickTimer(tEl);
+  }
+  function animateNumber(el, from, to, dur, dec) {
+    const t0 = performance.now();
+    function step(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const v = from + (to - from) * (0.5 - Math.cos(p * Math.PI) / 2);
+      el.textContent = dec ? v.toFixed(dec) : String(Math.round(v));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  function typeWrite(el) {
+    const full = el.dataset.typewriter || '';
+    el.textContent = '';
+    let i = 0;
+    function step() {
+      el.textContent = full.slice(0, i++);
+      if (i <= full.length) setTimeout(step, 32);
+    }
+    step();
+  }
+  function tickTimer(el) {
+    const [m, s] = (el.textContent || '12:48').split(':').map(Number);
+    let total = (m * 60 + s);
+    if (el._iv) clearInterval(el._iv);
+    el._iv = setInterval(() => {
+      total = Math.max(0, total - 1);
+      const mm = String(Math.floor(total / 60)).padStart(2, '0');
+      const ss = String(total % 60).padStart(2, '0');
+      el.textContent = `${mm}:${ss}`;
+    }, 1000);
+  }
+  function rotateHeadline() {
+    const el = document.querySelector('.bs-typed');
+    if (!el) return;
+    let words = [];
+    try { words = JSON.parse(el.dataset.words || '[]'); } catch (_) {}
+    if (!words.length) return;
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % words.length;
+      el.classList.add('flip');
+      setTimeout(() => {
+        el.textContent = words[i];
+        el.classList.remove('flip');
+      }, 220);
+    }, 2600);
+  }
+
+  runEffects(slides[idx]);
+  rotateHeadline();
+  start();
+})();
+</script>
+</body>
+</html>
