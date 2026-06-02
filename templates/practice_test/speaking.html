@@ -34,12 +34,7 @@
         <div class="pt-spkv-step__num">1</div>
         <div class="pt-spkv-step__body">
           <h3>Headphone check</h3>
-          <p>Click play. You should see and hear the examiner clearly through your headphones or speakers.</p>
-          <video class="pt-spkv-sample-video"
-                 id="hp-video"
-                 playsinline webkit-playsinline
-                 controls controlsList="nodownload"
-                 preload="metadata"></video>
+          <p>Click play. You should hear the examiner's voice clearly through your headphones or speakers.</p>
           <div class="pt-spkv-step__row">
             <button type="button" class="pt-btn pt-btn--ghost" id="hp-play">
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
@@ -47,6 +42,7 @@
             </button>
             <button type="button" class="pt-btn" id="hp-confirm" disabled>I can hear it clearly ✓</button>
           </div>
+          <audio id="hp-audio" preload="auto" hidden></audio>
         </div>
         <div class="pt-spkv-step__status" id="hp-status" aria-hidden="true"></div>
       </li>
@@ -117,6 +113,7 @@
       <div class="pt-spkv-video-wrap">
         <video class="pt-spkv-video"
                id="pt-video"
+               autoplay
                playsinline webkit-playsinline
                disablepictureinpicture
                controlsList="nofullscreen nodownload noremoteplayback"
@@ -192,10 +189,10 @@
 
     </div>
 
-    <nav class="pt-spkv-parts" aria-label="Part progress">
-      <span class="pt-spkv-part" data-part="1">Part 1<small>5 questions</small></span>
-      <span class="pt-spkv-part" data-part="2">Part 2<small>cue card</small></span>
-      <span class="pt-spkv-part" data-part="3">Part 3<small>4 questions</small></span>
+    <nav class="pt-spkv-parts" aria-label="Part progress (display only)">
+      <span class="pt-spkv-part" data-part="1" aria-hidden="true">Part 1<small>5 questions</small></span>
+      <span class="pt-spkv-part" data-part="2" aria-hidden="true">Part 2<small>cue card</small></span>
+      <span class="pt-spkv-part" data-part="3" aria-hidden="true">Part 3<small>4 questions</small></span>
     </nav>
 
   </section>
@@ -225,25 +222,17 @@
     mic: false,
   };
 
-  // Headphone check — visible examiner video preview.
-  var hpVideo = $('hp-video');
-  hpVideo.src = SAMPLE_URL;
+  // Headphone check — audio only (the <audio> element loads the intro
+  // video URL and plays just its audio track).
+  var hpAudio = $('hp-audio');
+  hpAudio.src = SAMPLE_URL;
   $('hp-play').addEventListener('click', function(){
     try {
-      hpVideo.currentTime = 0;
-      var p = hpVideo.play();
-      if (p && p.catch){
-        p.then(function(){ $('hp-confirm').disabled = false; })
-         .catch(function(){
-           $('hp-confirm').disabled = false;
-           alert('If the video did not start automatically, press play on the video preview.');
-         });
-      } else {
-        $('hp-confirm').disabled = false;
-      }
-    } catch (e) {
+      hpAudio.currentTime = 0;
+      hpAudio.play();
       $('hp-confirm').disabled = false;
-      alert('Could not start the sample automatically. Press play on the video preview.');
+    } catch (e) {
+      alert('Could not play the sample. Make sure your browser allows audio.');
     }
   });
   $('hp-confirm').addEventListener('click', function(){
