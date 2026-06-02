@@ -2,6 +2,12 @@
    Speaking Video Test — /test/speaking/
    ============================================================= */
 
+/* Author styles such as `.pt-spkv-rec { display: flex }` would otherwise
+   beat the user-agent rule for `[hidden]`, causing the recording, prep,
+   scoring and feedback panels to render on page load. Make `hidden`
+   authoritative for every element under this stylesheet. */
+[hidden] { display: none !important; }
+
 :root{
   --spkv-bg:        #f5f5f3;
   --spkv-ink:       #1a1a1a;
