@@ -274,25 +274,39 @@ def speaking_total_questions() -> int:
 # response in context. Edit a ``text`` here if the underlying video changes —
 # the rest of the flow (video order, parts, prep timer) is structural.
 
+# ``max_seconds`` is the hard recording cap for each question. When the
+# student reaches it the recorder stops automatically and the test advances.
+# Values mirror real IELTS timing: short answers in Part 1, the long turn in
+# Part 2 gets the most time, Part 3 answers sit in between.
+_P1_MAX = 90    # 1.5 min per Part 1 answer
+_P2_LONG_MAX = 240  # 4 min for the long turn (1–2 min expected, generous cap)
+_P2_FOLLOWUP_MAX = 90
+_P3_MAX = 180   # 3 min per Part 3 answer
+
 SPEAKING_VIDEO_FLOW = [
     {"kind": "intro", "video": "intro.mp4",    "label": "Welcome"},
     {"kind": "intro", "video": "intro_p1.mp4", "label": "Part 1 introduction"},
 
     {"kind": "question", "video": "p1_q1.mp4", "part": 1, "index": 0,
+     "max_seconds": _P1_MAX,
      "text": "Can you tell me your full name and where you are from?"},
     {"kind": "question", "video": "p1_q2.mp4", "part": 1, "index": 1,
+     "max_seconds": _P1_MAX,
      "text": "Do you work or are you a student? Could you describe what you do?"},
     {"kind": "question", "video": "p1_q3.mp4", "part": 1, "index": 2,
+     "max_seconds": _P1_MAX,
      "text": "What do you usually do in your free time?"},
     {"kind": "question", "video": "p1_q4.mp4", "part": 1, "index": 3,
+     "max_seconds": _P1_MAX,
      "text": "How often do you read books or articles in English?"},
     {"kind": "question", "video": "p1_q5.mp4", "part": 1, "index": 4,
+     "max_seconds": _P1_MAX,
      "text": "What kind of weather do you prefer, and why?"},
 
     {"kind": "intro", "video": "intro_p2.mp4", "label": "Part 2 introduction"},
 
     {"kind": "question", "video": "p2_q1.mp4", "part": 2, "index": 0,
-     "prep_seconds": 60,
+     "prep_seconds": 60, "max_seconds": _P2_LONG_MAX,
      "text": (
          "Describe a skill you would like to learn in the future. "
          "You should say:\n"
@@ -302,17 +316,22 @@ SPEAKING_VIDEO_FLOW = [
          "and explain how learning this skill will benefit you."
      )},
     {"kind": "question", "video": "p2_followup.mp4", "part": 2, "index": 1,
+     "max_seconds": _P2_FOLLOWUP_MAX,
      "text": "Do you think this skill is something most people would find useful? Why?"},
 
     {"kind": "intro", "video": "intro_p3.mp4", "label": "Part 3 introduction"},
 
     {"kind": "question", "video": "p3_q1.mp4", "part": 3, "index": 0,
+     "max_seconds": _P3_MAX,
      "text": "Why do you think some people find it harder than others to learn new skills as adults?"},
     {"kind": "question", "video": "p3_q2.mp4", "part": 3, "index": 1,
+     "max_seconds": _P3_MAX,
      "text": "How has technology changed the way people learn new skills today?"},
     {"kind": "question", "video": "p3_q3.mp4", "part": 3, "index": 2,
+     "max_seconds": _P3_MAX,
      "text": "Do you think schools focus enough on practical life skills? Why or why not?"},
     {"kind": "question", "video": "p3_q4.mp4", "part": 3, "index": 3,
+     "max_seconds": _P3_MAX,
      "text": "In your view, will future jobs require people to keep learning new skills throughout their lives?"},
 
     {"kind": "outro", "video": "outro.mp4", "label": "End of test"},

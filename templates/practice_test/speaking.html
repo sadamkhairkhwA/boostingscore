@@ -4,7 +4,7 @@
 {% block pt_title %}Speaking Test{% endblock %}
 
 {% block pt_head %}
-<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=5">
+<link rel="stylesheet" href="{% static 'practice_test/css/speaking_video.css' %}?v=7">
 {% endblock %}
 
 {% block pt_content %}
@@ -115,19 +115,24 @@
 
       <div class="pt-spkv-stage__phase" id="phase-label" aria-live="polite">Welcome</div>
 
+      {# Two stacked players. The current clip holds its last frame while the
+         next one is buffered in the hidden player behind it, then we cross to
+         the new player — so there is never a black gap or a loading overlay. #}
       <div class="pt-spkv-video-wrap">
-        <video class="pt-spkv-video"
-               id="pt-video"
-               autoplay
+        <video class="pt-spkv-video is-front"
+               id="pt-video-a"
                playsinline webkit-playsinline
                disablepictureinpicture
                controlsList="nofullscreen nodownload noremoteplayback"
                preload="auto"
                oncontextmenu="return false;"></video>
-        {# Subtle loading spinner shown over the current video while the next clip is being preloaded. Never interactive. #}
-        <div class="pt-spkv-video-spinner" id="pt-video-spinner" aria-hidden="true" hidden>
-          <div class="pt-spkv-spinner" aria-hidden="true"></div>
-        </div>
+        <video class="pt-spkv-video"
+               id="pt-video-b"
+               playsinline webkit-playsinline
+               disablepictureinpicture
+               controlsList="nofullscreen nodownload noremoteplayback"
+               preload="auto"
+               oncontextmenu="return false;"></video>
       </div>
 
       {# Prep panel — Part 2 only #}
@@ -146,7 +151,7 @@
       {# Recording panel #}
       <div class="pt-spkv-rec" id="pt-rec" hidden>
         <div class="pt-spkv-rec__dot" aria-hidden="true"></div>
-        <div class="pt-spkv-rec__label">Recording <b id="pt-rec-time">0:00</b></div>
+        <div class="pt-spkv-rec__label">Recording <b id="pt-rec-time">0:00</b><span id="pt-rec-max" class="pt-spkv-rec__max"></span></div>
         <div class="pt-spkv-rec__wave" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span>
           <span></span><span></span><span></span><span></span><span></span>
@@ -300,17 +305,24 @@
   var sessionTimer = null;
   var prepTimer = null;
   var recTimerInt = null;
-  var currentQuestion = null;     // { part, index, text, video, prep_seconds? }
+  var recMaxTimer = null;         // auto-stops recording at the per-question cap
+  var currentQuestion = null;     // { part, index, text, video, prep_seconds?, max_seconds? }
 
-  var video        = $('pt-video');
-  var phaseLabel   = $('phase-label');
-  var videoSpinner = $('pt-video-spinner');
+  // Two stacked players. `activeVideo` is the one currently visible/playing;
+  // `idleVideo` is the hidden one we buffer the next clip into. We swap the
+  // .is-front class between them so the current clip's last frame stays on
+  // screen until the next clip is decoded — no black gap, no spinner.
+  var videoA = $('pt-video-a');
+  var videoB = $('pt-video-b');
+  var activeVideo = videoA;
+  var idleVideo   = videoB;
+  var phaseLabel  = $('phase-label');
 
-  // The examiner clip plays start-to-finish — no pause / scrub / skip and
-  // no on-screen play / loading controls. If the file fails to load we
-  // simply log a clear message in the phase label.
-  video.addEventListener('error', function(){
-    phaseLabel.textContent = 'Couldn\'t load the question video. Please reload the page.';
+  // If either clip fails to load, surface a clear message in the phase label.
+  [videoA, videoB].forEach(function(v){
+    v.addEventListener('error', function(){
+      phaseLabel.textContent = 'Couldn\'t load the question video. Please reload the page.';
+    });
   });
 
   function startTest(){
@@ -349,60 +361,57 @@
     hideAllPanels();
     recordingAllowed = false;
 
-    // Preload the next clip in a detached <video> element first, keeping the
-    // CURRENT examiner video frozen on its last frame so the student never
-    // sees a black gap between clips. Only swap once the new clip is ready.
-    videoSpinner.hidden = false;
-
-    var preloader = document.createElement('video');
-    preloader.preload = 'auto';
-    preloader.muted = true;
-    preloader.playsInline = true;
-    preloader.src = step.url;
+    // Buffer the next clip into the HIDDEN player. The current player keeps
+    // showing its last frame (frozen) the whole time — so there is never a
+    // black gap and no loading spinner. We only bring the new clip to the
+    // front once it has a decoded frame ready.
+    idleVideo.onended = null;
+    idleVideo.pause();
+    idleVideo.src = step.url;
+    idleVideo.load();
 
     var swapped = false;
     function doSwap(){
       if (swapped) return;
       swapped = true;
-      preloader.removeEventListener('canplay',     doSwap);
-      preloader.removeEventListener('loadeddata',  doSwap);
-      preloader.removeEventListener('error',       doSwap);
+      idleVideo.removeEventListener('canplay',    doSwap);
+      idleVideo.removeEventListener('loadeddata', doSwap);
+      idleVideo.removeEventListener('error',      doSwap);
 
-      // Wire the new step's handlers BEFORE swapping src so .onended is set
-      // by the time the new clip starts.
-      wireStepHandlers(step);
+      // Wire handlers on the soon-to-be-active player BEFORE it starts.
+      wireStepHandlers(step, idleVideo);
 
-      try { video.pause(); } catch(e){}
-      video.src = step.url;
-      video.load();
-      videoSpinner.hidden = true;
-      attemptPlay();
+      // Bring the buffered player to the front, push the old one behind.
+      idleVideo.classList.add('is-front');
+      activeVideo.classList.remove('is-front');
 
-      // Detach the preloader element from memory.
-      try { preloader.src = ''; preloader.load(); } catch(e){}
+      // Swap the active / idle references, then play the new front player.
+      var prev = activeVideo;
+      activeVideo = idleVideo;
+      idleVideo   = prev;
+      attemptPlay(activeVideo);
+
+      // Free the now-hidden previous clip's buffer once it's off screen.
+      try { idleVideo.pause(); } catch(e){}
     }
 
-    // canplay = enough data buffered to start; loadeddata = first frame ready.
-    // Either is sufficient to swap without a black gap.
-    preloader.addEventListener('canplay',    doSwap);
-    preloader.addEventListener('loadeddata', doSwap);
-    // If the preloader itself errors, swap anyway so the test never stalls;
-    // the main element's error handler will surface a clear message.
-    preloader.addEventListener('error',      doSwap);
+    // canplay = enough buffered to start; loadeddata = first frame ready.
+    idleVideo.addEventListener('canplay',    doSwap);
+    idleVideo.addEventListener('loadeddata', doSwap);
+    // If the buffered player errors, swap anyway so the test never stalls.
+    idleVideo.addEventListener('error',      doSwap);
     // Safety net for browsers (notably iOS Safari) that may stall before
     // firing canplay / loadeddata events.
     setTimeout(doSwap, 6000);
-
-    preloader.load();
   }
 
-  function wireStepHandlers(step){
+  function wireStepHandlers(step, vid){
     if (step.kind === 'intro' || step.kind === 'outro'){
       currentQuestion = null;
       phaseLabel.textContent = step.label || '';
       var m = /intro_p(\d)/.exec(step.video);
       if (m) setActivePart(m[1]);
-      video.onended = function(){
+      vid.onended = function(){
         if (step.kind === 'outro'){ finishSession(); return; }
         stepIdx++;
         runStep();
@@ -414,7 +423,7 @@
       setActivePart(step.part);
       phaseLabel.textContent = 'Part ' + step.part + ' · Question ' + (step.index + 1);
       // No written question text — the student only sees & hears the examiner.
-      video.onended = function(){ setTimeout(afterQuestionVideo, 1000); };
+      vid.onended = function(){ setTimeout(afterQuestionVideo, 1000); };
       return;
     }
     // Unknown step type — skip.
@@ -422,9 +431,10 @@
     runStep();
   }
 
-  function attemptPlay(){
+  function attemptPlay(vid){
     try {
-      var p = video.play();
+      vid.currentTime = 0;
+      var p = vid.play();
       if (p && p.catch){
         p.catch(function(){
           phaseLabel.textContent = 'Browser blocked autoplay — please reload the page.';
@@ -476,6 +486,7 @@
       recBlob = new Blob(recChunks, { type: type });
       lastDuration = (Date.now() - recStart) / 1000;
       clearInterval(recTimerInt);
+      clearTimeout(recMaxTimer);
       $('pt-rec').hidden = true;
       $('pt-scoring').hidden = false;
       uploadAnswer();
@@ -484,8 +495,21 @@
     recStart = Date.now();
     $('pt-rec').hidden = false;
     $('pt-rec-time').textContent = '0:00';
+
+    // Per-question recording cap: auto-stop when the limit is reached so a
+    // recording can never run forever. The cap comes from the flow data
+    // (content.py); fall back to 3 minutes if a step omits it.
+    var maxSeconds = (currentQuestion && currentQuestion.max_seconds) || 180;
+    $('pt-rec-max').textContent = ' / ' + fmtSec(maxSeconds);
+    recMaxTimer = setTimeout(function(){
+      if (recRec && recRec.state === 'recording') recRec.stop();
+    }, maxSeconds * 1000);
+
     recTimerInt = setInterval(function(){
-      $('pt-rec-time').textContent = fmtSec((Date.now() - recStart)/1000);
+      var elapsed = (Date.now() - recStart) / 1000;
+      $('pt-rec-time').textContent = fmtSec(elapsed);
+      // Flash the timer red in the final 10 seconds as a warning.
+      $('pt-rec-time').classList.toggle('is-ending', (maxSeconds - elapsed) <= 10);
     }, 250);
   }
 
