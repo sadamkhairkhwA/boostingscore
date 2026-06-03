@@ -24,7 +24,7 @@
         <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
           <path fill="currentColor" d="M12 2c1 3 4 4 4 8a4 4 0 1 1-8 0c0-2 1-3 2-4-1 3 1 4 2 4 1 0 2-1 2-2.5C14 5 13 4 12 2z"/>
         </svg>
-        {{ streak|default:0 }} day streak
+        {% if streak %}{{ streak }} day streak{% else %}Day 1{% endif %}
       </span>
       <span class="dash-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
       <a href="{% url 'logout' %}" class="dash-nav__logout">Log out</a>
@@ -37,7 +37,7 @@
   {# ---------------- Greeting ---------------- #}
   <section class="dash-greet">
     <div class="dash-greet__date">{% now "l, F j" %}</div>
-    <h1 class="dash-greet__title">{{ greeting }}, {{ request.user.first_name|default:request.user.username }}.</h1>
+    <h1 class="dash-greet__title">{{ greeting }}, {{ request.user.first_name|default:request.user.username|title }}</h1>
     <p class="dash-greet__sub">
       {% if due_count > 0 %}You have {{ due_count }} vocabulary word{{ due_count|pluralize }} due for review.{% elif words_learned == 0 %}You haven't started yet — pick any section below to begin.{% else %}No words due today. Keep your streak going.{% endif %}
     </p>

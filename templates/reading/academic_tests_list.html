@@ -3,11 +3,105 @@
 {% block title %}IELTS Academic Reading tests — Boosting Score{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=7">
+<style>
+  .art-sections{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin: 0 0 28px;
+  }
+  .art-section{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 16px 16px;
+    background: #fff;
+    border: 1px solid #e8e8e6;
+    border-radius: 14px;
+    text-decoration: none;
+    color: #1a1a1a;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  .art-section:hover{
+    border-color: #d2d2cf;
+    box-shadow: 0 10px 28px -18px rgba(0,0,0,.4);
+    transform: translateY(-2px);
+  }
+  .art-section--active{
+    border-color: #1a1a1a;
+    box-shadow: 0 10px 28px -18px rgba(0,0,0,.45);
+  }
+  .art-section__ico{
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 10px;
+    color: #fff; margin-bottom: 4px;
+  }
+  .art-section__ico--orange{ background: #e8843b; }
+  .art-section__ico--purple{ background: #6f4ed0; }
+  .art-section__ico--navy{ background: #1e3a5f; }
+  .art-section__ico--green{ background: #2d6a0a; }
+  .art-section__name{ font-size: 15px; font-weight: 700; }
+  .art-section__meta{ font-size: 12.5px; color: #666; line-height: 1.45; }
+  .art-section__cta{ margin-top: 6px; font-size: 13px; font-weight: 600; color: #2d6a0a; }
+  .art-section__badge{
+    position: absolute; top: 14px; right: 14px;
+    font-size: 11px; font-weight: 700; letter-spacing: .3px;
+    color: #fff; background: #1a1a1a;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 860px){
+    .art-sections{ grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 520px){
+    .art-sections{ grid-template-columns: 1fr; }
+  }
+</style>
 {% endblock %}
 {% block content %}
 <div class="art-list-page bs-page">
-  <h1 class="bs-page-title">IELTS Academic Reading</h1>
-  <p class="bs-page-sub">Timed computer-delivered practice. Each attempt is saved to your history.</p>
+  <h1 class="bs-page-title">IELTS Practice Test</h1>
+  <p class="bs-page-sub">All four sections — pick one to practise. Each attempt is saved to your history.</p>
+
+  {# All 4 sections are rendered immediately. Reading is the active section on
+     this page; the other three link straight to their own practice pages. #}
+  <nav class="art-sections" aria-label="Practice test sections">
+    <a class="art-section art-section--active" href="{% url 'reading:academic_test_session' test_number=1 %}" aria-current="true">
+      <span class="art-section__ico art-section__ico--orange" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </span>
+      <span class="art-section__name">Reading</span>
+      <span class="art-section__meta">3 passages · 40 questions · 60 min</span>
+      <span class="art-section__badge">Active</span>
+    </a>
+
+    <a class="art-section" href="{% url 'practice_test:writing' %}">
+      <span class="art-section__ico art-section__ico--purple" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></svg>
+      </span>
+      <span class="art-section__name">Writing</span>
+      <span class="art-section__meta">Task 1 + Task 2 · AI band score</span>
+      <span class="art-section__cta">Practise →</span>
+    </a>
+
+    <a class="art-section" href="{% url 'practice_test:listening' %}">
+      <span class="art-section__ico art-section__ico--navy" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 1 18 0v5a3 3 0 0 1-3 3h-1v-7h4M3 12v5a3 3 0 0 0 3 3h1v-7H3"/></svg>
+      </span>
+      <span class="art-section__name">Listening</span>
+      <span class="art-section__meta">4 sections · 40 questions · 30 min</span>
+      <span class="art-section__cta">Practise →</span>
+    </a>
+
+    <a class="art-section" href="{% url 'practice_test:speaking' %}">
+      <span class="art-section__ico art-section__ico--green" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 1 3 3v8a3 3 0 1 1-6 0V4a3 3 0 0 1 3-3zM19 10a7 7 0 0 1-14 0M12 17v5M8 22h8"/></svg>
+      </span>
+      <span class="art-section__name">Speaking</span>
+      <span class="art-section__meta">3 parts · record + AI checks · ~15 min</span>
+      <span class="art-section__cta">Practise →</span>
+    </a>
+  </nav>
 
   <section class="art-history-card" aria-labelledby="art-history-heading">
     <div class="art-history-card__head">

@@ -433,13 +433,12 @@ def speaking(request):
 def speaking_submit_answer(request):
     """POST /test/speaking/submit-answer/ for the video-driven speaking page.
 
-    Receives a single answer (audio + part + question_index + question_text +
-    session_id), runs Whisper transcription and GPT-4o-mini scoring, persists
-    a SpeakingResponse and returns a compact JSON payload for the live
-    feedback panel.
+    During the test we ONLY persist the recorded audio and return instantly.
+    Transcription (Whisper) and the AI report are intentionally NOT run here:
+    doing them per question made the "Saving answer…" step block for many
+    seconds each time. All of that heavy work now happens once, in parallel,
+    in ``speaking_finish`` after the outro video.
     """
-    import os as _os
-
     sid = request.POST.get("session_id")
     if not sid:
         return JsonResponse({"ok": False, "error": "missing session_id"}, status=400)
@@ -481,60 +480,65 @@ def speaking_submit_answer(request):
         duration_seconds=duration,
     )
 
-    if resp.audio and _os.path.exists(resp.audio.path):
-        transcript, transcribe_error, whisper_meta = transcribe_audio(resp.audio.path)
-    else:
-        transcript, transcribe_error, whisper_meta = "", "No audio file was saved on the server.", {}
+    return JsonResponse({"ok": True, "response_id": resp.id})
 
-    metrics = _compute_speaking_metrics(transcript, whisper_meta, duration)
-    scores = score_speaking(
-        part, question_text, transcript, duration, transcribe_error, metrics=metrics,
-    )
-    annotated_html = annotate_speaking_transcript(transcript, scores.get("annotations") or [])
-    scores["annotated_html"] = annotated_html
 
-    resp.transcript    = transcript
-    resp.fluency       = scores.get("fluency")
-    resp.vocabulary    = scores.get("vocabulary")
-    resp.grammar       = scores.get("grammar")
-    resp.pronunciation = scores.get("pronunciation")
-    resp.band          = scores.get("band")
-    resp.feedback      = scores.get("feedback") or ""
-    resp.raw = {
-        **scores,
-        "transcribe_error": transcribe_error,
-        "whisper": {
-            "duration": whisper_meta.get("duration"),
-            "language": whisper_meta.get("language"),
-        },
-    }
-    resp.save()
+def _transcribe_session_responses(responses: list) -> None:
+    """Transcribe every answer that doesn't yet have a transcript, in parallel.
 
-    return JsonResponse({
-        "ok": True,
-        "response_id":   resp.id,
-        "transcript":    transcript,
-        "transcribe_error": transcribe_error,
-        "fluency":       resp.fluency,
-        "vocabulary":    resp.vocabulary,
-        "grammar":       resp.grammar,
-        "pronunciation": resp.pronunciation,
-        "overall":       resp.band,
-        "feedback":      resp.feedback,
-    })
+    Whisper calls are network/IO bound, so a small thread pool lets us process
+    all ~11 answers in a few waves instead of one-at-a-time. The worker only
+    touches the file system + OpenAI (no DB), and the main thread writes the
+    results back — so there are no cross-thread database-connection issues.
+    """
+    import os as _os
+    from concurrent.futures import ThreadPoolExecutor
+
+    todo = [r for r in responses if not (r.transcript or "").strip()]
+    if not todo:
+        return
+
+    def _work(resp):
+        path = resp.audio.path if resp.audio else None
+        if not path or not _os.path.exists(path):
+            return resp.id, "", "No audio file was saved on the server.", {}
+        transcript, err, meta = transcribe_audio(path)
+        return resp.id, transcript, err, meta
+
+    by_id = {r.id: r for r in todo}
+    with ThreadPoolExecutor(max_workers=min(6, len(todo))) as pool:
+        results = list(pool.map(_work, todo))
+
+    for rid, transcript, transcribe_error, whisper_meta in results:
+        resp = by_id.get(rid)
+        if resp is None:
+            continue
+        resp.transcript = transcript
+        resp.raw = {
+            **(resp.raw or {}),
+            "transcribe_error": transcribe_error,
+            "whisper": {
+                "duration": whisper_meta.get("duration"),
+                "language": whisper_meta.get("language"),
+            },
+        }
+        resp.save(update_fields=["transcript", "raw"])
 
 
 def _build_speaking_report(session) -> dict:
     """Generate the consolidated speaking report and cache it on the session.
 
-    The result is stored on ``session.raw["report"]`` so subsequent loads of
-    the results page don't re-call GPT. The cached copy is the source of
-    truth for the new speaking_results template.
+    Transcribes any answers that still need it (in parallel), then runs the
+    single report-synthesis GPT call. The result is stored on
+    ``session.raw["report"]`` so subsequent loads of the results page don't
+    re-call OpenAI. The cached copy is the source of truth for the new
+    speaking_results template.
     """
     responses = list(
         SpeakingResponse.objects.filter(session=session)
         .order_by("part", "question_index")
     )
+    _transcribe_session_responses(responses)
     report = synthesize_speaking_report(responses)
     session.raw = session.raw or {}
     session.raw["report"] = report
@@ -558,13 +562,14 @@ def speaking_finish(request):
     session = get_object_or_404(
         TestSession, id=sid, user=request.user, kind=TestSession.KIND_SPEAKING,
     )
-    overall = _finalise_speaking_session(session)
-    # Generate the consolidated report once, here, so the results page can
-    # render instantly without another GPT round-trip.
-    _build_speaking_report(session)
+    # Mark the session complete, then transcribe every answer in parallel and
+    # run the single report-synthesis call. The report's band is the real
+    # overall score (per-question scoring no longer runs during the test).
+    _finalise_speaking_session(session)
+    report = _build_speaking_report(session)
     return JsonResponse({
         "ok": True,
-        "overall": overall,
+        "overall": report.get("overall_band"),
         "results_url": reverse("practice_test:speaking_results", args=[session.id]),
     })
 

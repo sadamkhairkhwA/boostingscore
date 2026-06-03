@@ -300,10 +300,20 @@ def signup_view(request):
         return redirect("home")
     if request.method == "POST":
         form = UserCreationForm(request.POST)
+        # No AUTH_PASSWORD_VALIDATORS are configured, so enforce our own
+        # minimums here (mirrors the inline rules shown on the form):
+        # username >= 3 characters, password >= 8 characters.
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("welcome")
+            username = form.cleaned_data.get("username", "")
+            password = form.cleaned_data.get("password1", "")
+            if len(username) < 3:
+                form.add_error("username", "Username must be at least 3 characters.")
+            if len(password) < 8:
+                form.add_error("password2", "Password must be at least 8 characters.")
+            if not form.errors:
+                user = form.save()
+                login(request, user)
+                return redirect("welcome")
     else:
         form = UserCreationForm()
     return render(request, "registration/signup.html", {"form": form})

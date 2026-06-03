@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign up — BoostingScore</title>
   <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=1">
+  <style>
+    .auth-field-msg{ margin:6px 0 14px; font-size:12px; color:#6b7280; line-height:1.4; }
+    .auth-field-msg.is-error{ color:#c0392b; }
+    .auth-input--error{ border-color:#c0392b !important; }
+  </style>
 </head>
 <body class="auth-body">
 
@@ -55,16 +60,19 @@
         </div>
       {% endif %}
 
-      <form method="post" novalidate>
+      <form method="post" novalidate id="signup-form">
         {% csrf_token %}
         <label class="auth-label" for="id_username">Username</label>
-        <input id="id_username" class="auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" autofocus required>
+        <input id="id_username" class="auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" minlength="3" autofocus required>
+        <p class="auth-field-msg" data-for="id_username">At least 3 characters.</p>
 
         <label class="auth-label" for="id_password1">Password</label>
-        <input id="id_password1" class="auth-input" type="password" name="password1" placeholder="Choose a password" autocomplete="new-password" required>
+        <input id="id_password1" class="auth-input" type="password" name="password1" placeholder="Choose a password" autocomplete="new-password" minlength="8" required>
+        <p class="auth-field-msg" data-for="id_password1">At least 8 characters.</p>
 
         <label class="auth-label" for="id_password2">Confirm password</label>
-        <input id="id_password2" class="auth-input" type="password" name="password2" placeholder="Repeat your password" autocomplete="new-password" required>
+        <input id="id_password2" class="auth-input" type="password" name="password2" placeholder="Repeat your password" autocomplete="new-password" minlength="8" required>
+        <p class="auth-field-msg" data-for="id_password2">Re-enter the same password.</p>
 
         <button type="submit" class="auth-btn">Create account</button>
       </form>
@@ -84,6 +92,56 @@
   · <a href="/#about">Terms</a>
   · <a href="/#about">Contact</a>
 </div>
+
+<script>
+(function(){
+  var form = document.getElementById('signup-form');
+  if(!form) return;
+  var u  = document.getElementById('id_username');
+  var p1 = document.getElementById('id_password1');
+  var p2 = document.getElementById('id_password2');
+
+  function msgEl(el){ return form.querySelector('.auth-field-msg[data-for="'+el.id+'"]'); }
+  function set(el, text, bad){
+    var m = msgEl(el);
+    if(m){ m.textContent = text; m.classList.toggle('is-error', !!bad); }
+    el.classList.toggle('auth-input--error', !!bad);
+  }
+
+  function checkUser(show){
+    var bad = u.value.trim().length < 3;
+    if(bad){ if(show) set(u, 'Username must be at least 3 characters.', true); }
+    else set(u, 'At least 3 characters.', false);
+    return !bad;
+  }
+  function checkPass(show){
+    var bad = p1.value.length < 8;
+    if(bad){ if(show) set(p1, 'Password must be at least 8 characters.', true); }
+    else set(p1, 'At least 8 characters.', false);
+    return !bad;
+  }
+  function checkConfirm(show){
+    var bad = p2.value.length < 8 || p2.value !== p1.value;
+    if(bad){
+      if(show) set(p2, p2.value !== p1.value ? 'Passwords do not match.' : 'At least 8 characters.', true);
+    } else set(p2, 'Passwords match.', false);
+    return !bad;
+  }
+
+  form.addEventListener('submit', function(e){
+    var ok = checkUser(true);
+    ok = checkPass(true) && ok;
+    ok = checkConfirm(true) && ok;
+    if(!ok) e.preventDefault();
+  });
+
+  // Once a field has shown an error, keep re-checking it live so it clears
+  // as soon as the input becomes valid.
+  u.addEventListener('input',  function(){ if(u.classList.contains('auth-input--error'))  checkUser(true); });
+  p1.addEventListener('input', function(){ if(p1.classList.contains('auth-input--error')) checkPass(true); checkConfirm(p2.classList.contains('auth-input--error')); });
+  p2.addEventListener('input', function(){ if(p2.classList.contains('auth-input--error')) checkConfirm(true); });
+})();
+</script>
 
 </body>
 </html>

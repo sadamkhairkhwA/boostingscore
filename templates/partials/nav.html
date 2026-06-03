@@ -9,7 +9,10 @@
   </div>
   <div class="bs-nav-right">
     {% if user.is_authenticated %}
-      <span class="bs-badge bs-badge-streak">🔥 {% if streak %}{{ streak }}{% else %}0{% endif %} day streak</span>
+      <span class="bs-badge bs-badge-streak">
+        <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style="vertical-align:-1px"><path fill="currentColor" d="M12 2c1 3 4 4 4 8a4 4 0 1 1-8 0c0-2 1-3 2-4-1 3 1 4 2 4 1 0 2-1 2-2.5C14 5 13 4 12 2z"/></svg>
+        {% if streak %}{{ streak }} day streak{% else %}Day 1{% endif %}
+      </span>
       <span class="bs-nav-user">{{ user.email|default:user.username|truncatechars:22 }}</span>
       <a href="{% url 'logout' %}" class="bs-nav-logout">Log out</a>
     {% else %}

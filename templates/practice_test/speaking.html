@@ -115,9 +115,7 @@
 
       <div class="pt-spkv-stage__phase" id="phase-label" aria-live="polite">Welcome</div>
 
-      {# Two stacked players. The current clip holds its last frame while the
-         next one is buffered in the hidden player behind it, then we cross to
-         the new player — so there is never a black gap or a loading overlay. #}
+      {# Two stacked players: the current clip holds its last frame while the next one buffers behind it, then we cross over — no black gap, no loading overlay. #}
       <div class="pt-spkv-video-wrap">
         <video class="pt-spkv-video is-front"
                id="pt-video-a"
@@ -527,10 +525,10 @@
     var ext = (recBlob.type.indexOf('mp4') >= 0) ? 'm4a' : 'webm';
     fd.append('audio', recBlob, 'p' + currentQuestion.part + 'q' + (currentQuestion.index+1) + '_' + Date.now() + '.' + ext);
 
-    // Whisper + GPT scoring happen on the server and are stored on the
-    // SpeakingResponse. The student sees no scores or transcript during the
-    // exam — we just auto-advance to the next examiner video. All feedback
-    // is shown on the results page after the outro.
+    // The server only SAVES the audio here and returns instantly — so this
+    // step is quick. Transcription + the AI report run once at the end (after
+    // the outro), so the student just auto-advances to the next examiner
+    // video with no long "Saving answer…" wait between questions.
     function advance(){
       $('pt-scoring').hidden = true;
       stepIdx++;
