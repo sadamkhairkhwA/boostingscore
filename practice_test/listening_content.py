@@ -1,9 +1,30 @@
 """Scripts + question bank for the IELTS Listening test.
 
-The `script` field for each section is sent to OpenAI TTS to produce one
-continuous audio file. The `questions` are graded server-side after submit
-(spelling matters in gap-fill, just like real IELTS).
+Each section now stores its audio as a list of ``(speaker, text)`` lines instead
+of one block of text. Different speakers map to different OpenAI TTS voices via
+``VOICES`` below, so dialogues sound like a real multi-person IELTS recording.
+
+The ``questions`` are graded server-side after submit (spelling matters in
+gap-fill, just like real IELTS).
 """
+
+# Speaker label -> OpenAI TTS voice. Keep labels short; reuse across sections.
+#   NARRATOR = exam narrator / instructions
+#   W / W2   = female speakers
+#   M / M2   = male speakers
+VOICES: dict[str, str] = {
+    "NARRATOR": "fable",
+    "W": "nova",
+    "W2": "shimmer",
+    "M": "onyx",
+    "M2": "echo",
+}
+
+# How every line should be spoken (passed to gpt-4o-mini-tts as `instructions`).
+SPEAK_INSTRUCTIONS = (
+    "Speak in a clear British English accent at a natural IELTS listening "
+    "exam pace. Sound like a professional exam recording, not casual chat."
+)
 
 # IELTS-style opening narration so the generated audio feels official.
 OPENING_NARRATION = (
@@ -12,7 +33,7 @@ OPENING_NARRATION = (
     "for each section as you listen. The recording will play once only."
 )
 
-# Brief verbal pause between sections; TTS renders these as actual pauses.
+# Brief verbal pause between sections; spoken by the narrator voice.
 SECTION_BREAK = (
     "End of section. You now have a short time to check your answers. "
     "We will now begin the next section."
@@ -20,42 +41,50 @@ SECTION_BREAK = (
 
 
 LISTENING_TEST = {
-    "voice": "alloy",  # OpenAI TTS voice
     "sections": [
         # ===================== SECTION 1 =====================
         {
             "number": 1,
             "title": "Section 1 — Enquiring about sports membership",
-            "script": (
-                "Section 1. You will hear a phone conversation between a customer "
-                "and a receptionist at the Greenfield Community Sports Centre. "
-                "First you have some time to look at questions 1 to 10.\n\n"
-                "Receptionist: Good morning, Greenfield Community Sports Centre, "
-                "Marina speaking. How can I help you?\n"
-                "Caller: Hi, I'm interested in joining the gym. Could you tell me "
-                "about the membership options?\n"
-                "Receptionist: Of course. We have three main plans. Our Standard "
-                "membership is forty pounds per month and gives you full gym "
-                "access. The Plus membership is fifty-five pounds per month and "
-                "also includes group classes. And the Family membership covers up "
-                "to four people for ninety pounds per month.\n"
-                "Caller: Great. The Plus membership sounds good. Can I see the "
-                "list of group classes?\n"
-                "Receptionist: Certainly. We offer yoga on Mondays at six pm, "
-                "spin class on Wednesdays at seven thirty, and pilates on "
-                "Saturdays at ten am. All classes are sixty minutes long.\n"
-                "Caller: Thanks. And what are the opening hours?\n"
-                "Receptionist: The gym is open from six am to ten pm on weekdays, "
-                "and from eight am to eight pm on weekends.\n"
-                "Caller: Perfect. To sign up, what do I need to bring?\n"
-                "Receptionist: You'll need photo identification, proof of your "
-                "current address, and a bank card for the monthly payment. "
-                "There's also a one-off joining fee of twenty-five pounds.\n"
-                "Caller: Okay. My name is Daniel Park, that's P-A-R-K. My phone "
-                "number is zero seven, double-four, five, two, eight, one, "
-                "nine, three, six.\n"
-                "Receptionist: Thank you, Daniel. We'll see you on Saturday."
-            ),
+            "lines": [
+                ("NARRATOR",
+                 "Section 1. You will hear a phone conversation between a "
+                 "customer and a receptionist at the Greenfield Community Sports "
+                 "Centre. First you have some time to look at questions 1 to 10."),
+                ("W",
+                 "Good morning, Greenfield Community Sports Centre, Marina "
+                 "speaking. How can I help you?"),
+                ("M",
+                 "Hi, I'm interested in joining the gym. Could you tell me about "
+                 "the membership options?"),
+                ("W",
+                 "Of course. We have three main plans. Our Standard membership "
+                 "is forty pounds per month and gives you full gym access. The "
+                 "Plus membership is fifty-five pounds per month and also "
+                 "includes group classes. And the Family membership covers up to "
+                 "four people for ninety pounds per month."),
+                ("M",
+                 "Great. The Plus membership sounds good. Can I see the list of "
+                 "group classes?"),
+                ("W",
+                 "Certainly. We offer yoga on Mondays at six pm, spin class on "
+                 "Wednesdays at seven thirty, and pilates on Saturdays at ten am. "
+                 "All classes are sixty minutes long."),
+                ("M", "Thanks. And what are the opening hours?"),
+                ("W",
+                 "The gym is open from six am to ten pm on weekdays, and from "
+                 "eight am to eight pm on weekends."),
+                ("M", "Perfect. To sign up, what do I need to bring?"),
+                ("W",
+                 "You'll need photo identification, proof of your current "
+                 "address, and a bank card for the monthly payment. There's also "
+                 "a one-off joining fee of twenty-five pounds."),
+                ("M",
+                 "Okay. My name is Daniel Park, that's P-A-R-K. My phone number "
+                 "is zero seven, double-four, five, two, eight, one, nine, three, "
+                 "six."),
+                ("W", "Thank you, Daniel. We'll see you on Saturday."),
+            ],
             "questions": [
                 {"type": "gap", "id": "l1q1", "text": "Standard membership costs £____ per month.", "answer": "40"},
                 {"type": "gap", "id": "l1q2", "text": "Plus membership costs £____ per month.", "answer": "55"},
@@ -75,33 +104,40 @@ LISTENING_TEST = {
         {
             "number": 2,
             "title": "Section 2 — Guided tour of a botanical garden",
-            "script": (
-                "Section 2. You will hear a tour guide welcoming visitors to the "
-                "Eastfield Botanical Garden. First you have some time to look at "
-                "questions 11 to 20.\n\n"
-                "Good morning everyone, and welcome to Eastfield Botanical Garden. "
-                "My name is Sophie and I'll be your guide for the next hour. "
-                "Before we start, just a few practical points. The whole garden "
-                "covers eighteen hectares, so we won't see all of it today, but "
-                "the highlights are well worth your visit.\n\n"
-                "Our walk begins at the Rose Garden, which contains over three "
-                "hundred varieties of roses, many of them rare. From there we'll "
-                "move to the Tropical House, where the temperature is kept at a "
-                "constant twenty-eight degrees Celsius year-round to support "
-                "plants from the Amazon.\n\n"
-                "The next stop is the Bamboo Grove. Please walk on the marked "
-                "wooden path only — the soil is very soft and easily damaged.\n\n"
-                "We finish at the Lakeside Café. Lunch is included for tour "
-                "members, and today's menu features mushroom soup, grilled "
-                "vegetables and a fruit tart for dessert.\n\n"
-                "A few reminders: photography is welcome, but please do not use "
-                "a flash inside the Tropical House. Touching the plants is not "
-                "permitted at any time, and please keep your voices low in the "
-                "Bamboo Grove — it's a quiet zone for visiting wildlife.\n\n"
-                "If you need the toilets, they are next to the main entrance. "
-                "The gift shop is open until five pm and offers a ten percent "
-                "discount to tour members."
-            ),
+            "lines": [
+                ("NARRATOR",
+                 "Section 2. You will hear a tour guide welcoming visitors to the "
+                 "Eastfield Botanical Garden. First you have some time to look at "
+                 "questions 11 to 20."),
+                ("W2",
+                 "Good morning everyone, and welcome to Eastfield Botanical "
+                 "Garden. My name is Sophie and I'll be your guide for the next "
+                 "hour. Before we start, just a few practical points. The whole "
+                 "garden covers eighteen hectares, so we won't see all of it "
+                 "today, but the highlights are well worth your visit."),
+                ("W2",
+                 "Our walk begins at the Rose Garden, which contains over three "
+                 "hundred varieties of roses, many of them rare. From there we'll "
+                 "move to the Tropical House, where the temperature is kept at a "
+                 "constant twenty-eight degrees Celsius year-round to support "
+                 "plants from the Amazon."),
+                ("W2",
+                 "The next stop is the Bamboo Grove. Please walk on the marked "
+                 "wooden path only — the soil is very soft and easily damaged."),
+                ("W2",
+                 "We finish at the Lakeside Café. Lunch is included for tour "
+                 "members, and today's menu features mushroom soup, grilled "
+                 "vegetables and a fruit tart for dessert."),
+                ("W2",
+                 "A few reminders: photography is welcome, but please do not use "
+                 "a flash inside the Tropical House. Touching the plants is not "
+                 "permitted at any time, and please keep your voices low in the "
+                 "Bamboo Grove — it's a quiet zone for visiting wildlife."),
+                ("W2",
+                 "If you need the toilets, they are next to the main entrance. "
+                 "The gift shop is open until five pm and offers a ten percent "
+                 "discount to tour members."),
+            ],
             "questions": [
                 {"type": "gap", "id": "l2q1", "text": "The garden covers ____ hectares.", "answer": "18"},
                 {"type": "gap", "id": "l2q2", "text": "The Rose Garden has more than ____ varieties of roses.", "answer": "300"},
@@ -126,38 +162,49 @@ LISTENING_TEST = {
         {
             "number": 3,
             "title": "Section 3 — Discussion about a research project",
-            "script": (
-                "Section 3. You will hear two students, Hannah and Omar, "
-                "discussing their research project with their tutor, Dr Reid. "
-                "First you have some time to look at questions 21 to 30.\n\n"
-                "Dr Reid: So, where are you with your project on urban green spaces?\n"
-                "Hannah: We've completed the literature review and started "
-                "designing the survey. We're planning to interview around fifty "
-                "residents in three different neighbourhoods.\n"
-                "Omar: Right. But we're having trouble deciding how to recruit "
-                "participants. We thought about putting flyers in cafés, but "
-                "Hannah thinks that might bias the sample.\n"
-                "Hannah: Yes — café visitors aren't representative of the whole "
-                "community. I'd prefer to use door-to-door visits.\n"
-                "Dr Reid: Door-to-door is more representative but very time "
-                "consuming. Have you considered using social media?\n"
-                "Omar: We discussed that, but we worried we'd only reach younger "
-                "people.\n"
-                "Dr Reid: A good point. I'd suggest combining two methods — "
-                "social media plus a few well-placed flyers in community "
-                "centres, which tend to attract a wider age group.\n"
-                "Hannah: That makes sense. We could also offer a small reward "
-                "like a five-pound voucher.\n"
-                "Dr Reid: That works, but make sure you mention it in your "
-                "ethics application. By the way, when's the application due?\n"
-                "Omar: We have to submit it by the fifteenth of next month, "
-                "with results of the survey by mid-July.\n"
-                "Dr Reid: Plenty of time. Now, what about the data analysis?\n"
-                "Hannah: We'll use simple descriptive statistics — averages and "
-                "percentages — plus a few quotes from the interviews to add "
-                "depth.\n"
-                "Dr Reid: Good. Just remember to anonymise all quotes."
-            ),
+            "lines": [
+                ("NARRATOR",
+                 "Section 3. You will hear two students, Hannah and Omar, "
+                 "discussing their research project with their tutor, Dr Reid. "
+                 "First you have some time to look at questions 21 to 30."),
+                ("M2", "So, where are you with your project on urban green spaces?"),
+                ("W",
+                 "We've completed the literature review and started designing the "
+                 "survey. We're planning to interview around fifty residents in "
+                 "three different neighbourhoods."),
+                ("M",
+                 "Right. But we're having trouble deciding how to recruit "
+                 "participants. We thought about putting flyers in cafés, but "
+                 "Hannah thinks that might bias the sample."),
+                ("W",
+                 "Yes — café visitors aren't representative of the whole "
+                 "community. I'd prefer to use door-to-door visits."),
+                ("M2",
+                 "Door-to-door is more representative but very time consuming. "
+                 "Have you considered using social media?"),
+                ("M",
+                 "We discussed that, but we worried we'd only reach younger "
+                 "people."),
+                ("M2",
+                 "A good point. I'd suggest combining two methods — social media "
+                 "plus a few well-placed flyers in community centres, which tend "
+                 "to attract a wider age group."),
+                ("W",
+                 "That makes sense. We could also offer a small reward like a "
+                 "five-pound voucher."),
+                ("M2",
+                 "That works, but make sure you mention it in your ethics "
+                 "application. By the way, when's the application due?"),
+                ("M",
+                 "We have to submit it by the fifteenth of next month, with "
+                 "results of the survey by mid-July."),
+                ("M2", "Plenty of time. Now, what about the data analysis?"),
+                ("W",
+                 "We'll use simple descriptive statistics — averages and "
+                 "percentages — plus a few quotes from the interviews to add "
+                 "depth."),
+                ("M2", "Good. Just remember to anonymise all quotes."),
+            ],
             "questions": [
                 {"type": "mcq", "id": "l3q1", "text": "The project focuses on:",
                  "options": ["café culture", "urban green spaces", "social media use", "community centres"],
@@ -184,39 +231,45 @@ LISTENING_TEST = {
         {
             "number": 4,
             "title": "Section 4 — Lecture on habit formation",
-            "script": (
-                "Section 4. You will hear a short lecture on the science of "
-                "habit formation. First you have some time to look at questions "
-                "31 to 40.\n\n"
-                "Good afternoon. Today's lecture is about how habits are formed "
-                "in the brain, and why some habits are so much harder to break "
-                "than others.\n\n"
-                "Researchers describe a habit as a loop with three parts. First "
-                "there is a cue, which is the trigger that tells your brain to "
-                "start a behaviour. Second is the routine itself — the "
-                "behaviour you carry out. And third is the reward, which tells "
-                "your brain that the loop is worth remembering for next time.\n\n"
-                "A famous experiment in the nineteen nineties tracked the "
-                "behaviour of taxi drivers in London. Researchers found that "
-                "drivers had unusually well-developed hippocampi — the part of "
-                "the brain involved in memory and navigation — after just two "
-                "years of driving the city. This showed that adult brains can "
-                "be reshaped by repeated behaviour.\n\n"
-                "Modern studies suggest that, on average, it takes about sixty-"
-                "six days for a new behaviour to become automatic. Simple "
-                "habits like drinking a glass of water in the morning may "
-                "become automatic within just twenty days, while more complex "
-                "ones such as a regular exercise routine can take over two "
-                "hundred days.\n\n"
-                "To change a bad habit, researchers recommend keeping the cue "
-                "and the reward, but replacing the routine. For example, if "
-                "boredom is the cue and pleasure is the reward, a student who "
-                "wants to stop scrolling on their phone could replace that "
-                "routine with reading a chapter of a book.\n\n"
-                "One final tip: small wins matter. People who celebrate even "
-                "tiny progress are about three times more likely to stick with "
-                "a new habit than those who wait for big results."
-            ),
+            "lines": [
+                ("NARRATOR",
+                 "Section 4. You will hear a short lecture on the science of "
+                 "habit formation. First you have some time to look at questions "
+                 "31 to 40."),
+                ("M2",
+                 "Good afternoon. Today's lecture is about how habits are formed "
+                 "in the brain, and why some habits are so much harder to break "
+                 "than others."),
+                ("M2",
+                 "Researchers describe a habit as a loop with three parts. First "
+                 "there is a cue, which is the trigger that tells your brain to "
+                 "start a behaviour. Second is the routine itself — the behaviour "
+                 "you carry out. And third is the reward, which tells your brain "
+                 "that the loop is worth remembering for next time."),
+                ("M2",
+                 "A famous experiment in the nineteen nineties tracked the "
+                 "behaviour of taxi drivers in London. Researchers found that "
+                 "drivers had unusually well-developed hippocampi — the part of "
+                 "the brain involved in memory and navigation — after just two "
+                 "years of driving the city. This showed that adult brains can be "
+                 "reshaped by repeated behaviour."),
+                ("M2",
+                 "Modern studies suggest that, on average, it takes about "
+                 "sixty-six days for a new behaviour to become automatic. Simple "
+                 "habits like drinking a glass of water in the morning may become "
+                 "automatic within just twenty days, while more complex ones such "
+                 "as a regular exercise routine can take over two hundred days."),
+                ("M2",
+                 "To change a bad habit, researchers recommend keeping the cue "
+                 "and the reward, but replacing the routine. For example, if "
+                 "boredom is the cue and pleasure is the reward, a student who "
+                 "wants to stop scrolling on their phone could replace that "
+                 "routine with reading a chapter of a book."),
+                ("M2",
+                 "One final tip: small wins matter. People who celebrate even "
+                 "tiny progress are about three times more likely to stick with a "
+                 "new habit than those who wait for big results."),
+            ],
             "questions": [
                 {"type": "gap", "id": "l4q1", "text": "A habit loop has ____ parts.", "answer": "three"},
                 {"type": "short", "id": "l4q2", "text": "What is the first part of the habit loop called?",

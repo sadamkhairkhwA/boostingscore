@@ -38,7 +38,7 @@
     <section class="pt-listen-qs">
       {% for s in sections %}
         <div class="pt-listen-qsection" id="pt-section-{{ s.number }}">
-          <div class="pt-passage-tag">Section {{ s.number }} — questions {{ s.questions.0.number }}–{{ s.questions|last|stringformat:"s" }}</div>
+          {% with last_q=s.questions|last %}<div class="pt-passage-tag">Section {{ s.number }} — questions {{ s.questions.0.number }}–{{ last_q.number }}</div>{% endwith %}
           <h2 style="margin: 6px 0 16px; font-size: 16px; color: var(--pt-ink); font-weight: 800;">{{ s.title }}</h2>
           {% for q in s.questions %}
             <div class="pt-q" id="pt-qrow-{{ q.number }}" data-qnum="{{ q.number }}" data-qname="{{ q.id }}">
