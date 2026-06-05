@@ -45,14 +45,38 @@ VOICES: dict[str, str] = {
     "NARRATOR": "fable",  # neutral / instructions
 }
 
-# How the model should sound (British exam style).
-SPEAK_INSTRUCTIONS = (
-    "Speak in a clear British English accent at a natural IELTS listening "
-    "exam pace. Sound like a professional exam recording, not casual chat."
-)
+# How each speaker should sound. This maps a speaker label -> tone instruction
+# (passed to gpt-4o-mini-tts as `instructions`). Tweak the wording here to
+# change the delivery without touching the code below.
+INSTRUCTIONS: dict[str, str] = {
+    # Dialogue speakers: natural, like two people chatting on the phone.
+    "M": (
+        "Speak in a warm, relaxed, conversational British English accent, as if "
+        "you are casually chatting with someone on the phone — not reading aloud. "
+        "Use a natural everyday pace with light, friendly intonation and natural "
+        "rhythm. A little informality is fine; sound like a real person, not a "
+        "news reader."
+    ),
+    "W": (
+        "Speak in a warm, relaxed, conversational British English accent, as if "
+        "you are casually chatting with someone on the phone — not reading aloud. "
+        "Use a natural everyday pace with light, friendly intonation and natural "
+        "rhythm. A little informality is fine; sound like a real person, not a "
+        "news reader."
+    ),
+    # Narrator: clear and neutral, but still a natural human voice.
+    "NARRATOR": (
+        "Speak in a clear, neutral British English accent at a steady, natural "
+        "pace. Sound like a calm, human announcer — clear and easy to follow, "
+        "but not stiff or robotic."
+    ),
+}
+
+# Fallback for any speaker without a specific entry above.
+DEFAULT_INSTRUCTIONS = INSTRUCTIONS["NARRATOR"]
 
 # Pause between lines in multi-speaker dialogue (milliseconds).
-PAUSE_BETWEEN_LINES_MS = 600
+PAUSE_BETWEEN_LINES_MS = 300
 
 # -----------------------------------------------------------------------------
 # DIALOGUE SCRIPT — paste your own lines here.
@@ -96,7 +120,7 @@ def _tts_to_file(
     text: str,
     voice: str,
     out_path: Path,
-    instructions: str = SPEAK_INSTRUCTIONS,
+    instructions: str = DEFAULT_INSTRUCTIONS,
 ) -> None:
     """Generate one clip and save as MP3."""
     text = (text or "").strip()
@@ -257,6 +281,7 @@ def generate_dialogue(
                 text=line,
                 voice=voice,
                 out_path=line_path,
+                instructions=INSTRUCTIONS.get(speaker, DEFAULT_INSTRUCTIONS),
             )
             line_files.append(line_path)
 
@@ -297,7 +322,7 @@ def generate_monologue(
     output_filename: str,
     *,
     voice: str = "fable",
-    instructions: str = SPEAK_INSTRUCTIONS,
+    instructions: str = DEFAULT_INSTRUCTIONS,
 ) -> Path:
     """
     Single-voice mode: pass one block of text → one MP3 file (no line stitching).
