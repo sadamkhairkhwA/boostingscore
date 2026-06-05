@@ -2,6 +2,11 @@
 
 {% block pt_title %}Full Test — Listening{% endblock %}
 
+{% block pt_head %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'practice_test/css/listening.css' %}?v=1">
+{% endblock %}
+
 {% block pt_content %}
 
   <a href="{% url 'practice_test:hub' %}" class="pt-back">← Cancel full test</a>
@@ -36,28 +41,9 @@
       <audio id="pt-audio" preload="auto" src="{{ audio_url }}"></audio>
     </section>
 
-    <section class="pt-listen-qs">
+    <section class="pt-lqs">
       {% for s in sections %}
-        <div class="pt-listen-qsection" id="pt-section-{{ s.number }}">
-          {% with last_q=s.questions|last %}<div class="pt-passage-tag">Section {{ s.number }} — questions {{ s.questions.0.number }}–{{ last_q.number }}</div>{% endwith %}
-          <h2 style="margin: 6px 0 16px; font-size: 16px; color: var(--pt-ink); font-weight: 800;">{{ s.title }}</h2>
-          {% for q in s.questions %}
-            <div class="pt-q" id="pt-qrow-{{ q.number }}" data-qnum="{{ q.number }}" data-qname="{{ q.id }}">
-              <div class="pt-q__text"><span class="pt-q__num">{{ q.number }}.</span> {{ q.text }}</div>
-              {% if q.type == "mcq" %}
-                <div class="pt-q__opts">
-                  {% for opt in q.options %}
-                    <label><input type="radio" name="{{ q.id }}" value="{{ opt }}"> {{ opt }}</label>
-                  {% endfor %}
-                </div>
-              {% elif q.type == "gap" %}
-                <input type="text" name="{{ q.id }}" placeholder="Your answer" autocomplete="off">
-              {% elif q.type == "short" %}
-                <input type="text" name="{{ q.id }}" placeholder="Short answer (one or two words)" autocomplete="off">
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
+        {% include "practice_test/_listening_questions.html" with s=s %}
       {% endfor %}
     </section>
 
@@ -128,6 +114,7 @@
   function recount(){
     var names = new Set();
     form.querySelectorAll('input[type=text]').forEach(function(i){ if (i.value.trim()) names.add(i.name); });
+    form.querySelectorAll('select').forEach(function(s){ if (s.value) names.add(s.name); });
     form.querySelectorAll('input[type=radio]:checked').forEach(function(i){ names.add(i.name); });
     counter.textContent = names.size;
     dots.forEach(function(d){ d.classList.toggle('is-done', names.has(d.dataset.qname)); });

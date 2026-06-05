@@ -1,0 +1,72 @@
+{% comment %}Renders one Listening section. Expects `s` (a section dict from _listening_sections_with_numbers).{% endcomment %}
+<div class="pt-lsec" id="pt-section-{{ s.number }}" data-section="{{ s.number }}">
+  <div class="pt-lsec__head">
+    <span class="pt-lsec__tag">Section {{ s.number }} · Questions {{ s.first_no }}–{{ s.last_no }}</span>
+    <h2 class="pt-lsec__title">{{ s.title }}</h2>
+    {% if s.instructions %}<p class="pt-lsec__instr">{{ s.instructions }}</p>{% endif %}
+  </div>
+
+  {% if s.map %}
+  <div class="pt-map">
+    <div class="pt-map__img">{{ s.map.svg|safe }}</div>
+    <div class="pt-map__items">
+      {% for q in s.map_questions %}
+      <div class="pt-q pt-q--map" id="pt-qrow-{{ q.number }}" data-qnum="{{ q.number }}" data-qname="{{ q.id }}">
+        <label class="pt-q__label"><span class="pt-q__num">{{ q.number }}</span> {{ q.text }}</label>
+        <select name="{{ q.id }}" class="pt-select" aria-label="Question {{ q.number }}">
+          <option value="">—</option>
+          {% for opt in q.options %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if s.table_rows %}
+  <div class="pt-table-wrap">
+    {% if s.table.title %}<p class="pt-table__cap">{{ s.table.title }}</p>{% endif %}
+    <table class="pt-table">
+      <thead><tr>{% for c in s.table.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for row in s.table_rows %}
+        <tr>
+          {% for cell in row %}
+          <td>
+            {% if cell.question %}
+            <span class="pt-q pt-q--cell" id="pt-qrow-{{ cell.question.number }}" data-qnum="{{ cell.question.number }}" data-qname="{{ cell.question.id }}">
+              <span class="pt-q__num">{{ cell.question.number }}</span>
+              {% if cell.prefix %}<span class="pt-cell__fix">{{ cell.prefix }}</span>{% endif %}
+              <input type="text" name="{{ cell.question.id }}" class="pt-input pt-input--sm" placeholder="…" autocomplete="off" aria-label="Question {{ cell.question.number }}">
+              {% if cell.suffix %}<span class="pt-cell__fix">{{ cell.suffix }}</span>{% endif %}
+            </span>
+            {% else %}{{ cell.text }}{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% for q in s.flow_questions %}
+  <div class="pt-q pt-q--{{ q.type }}" id="pt-qrow-{{ q.number }}" data-qnum="{{ q.number }}" data-qname="{{ q.id }}">
+    <div class="pt-q__text"><span class="pt-q__num">{{ q.number }}</span> {{ q.text }}</div>
+    {% if q.type == "mcq" %}
+      <div class="pt-q__opts">
+        {% for opt in q.options %}
+          <label class="pt-opt"><input type="radio" name="{{ q.id }}" value="{{ opt }}"> <span>{{ opt }}</span></label>
+        {% endfor %}
+      </div>
+    {% elif q.type == "matching" %}
+      <select name="{{ q.id }}" class="pt-select pt-select--wide" aria-label="Question {{ q.number }}">
+        <option value="">— choose —</option>
+        {% for opt in q.options %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+      </select>
+    {% else %}
+      <input type="text" name="{{ q.id }}" class="pt-input" placeholder="Your answer" autocomplete="off">
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

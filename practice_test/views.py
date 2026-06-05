@@ -202,7 +202,16 @@ def _finalise_speaking_session(session) -> float:
 # =============================================================================
 
 def _listening_sections_with_numbers():
-    """Return LISTENING_TEST sections with each question carrying a running number."""
+    """Return sections with running question numbers + template-friendly groups.
+
+    Each section gets:
+      questions      - all questions, with a running `number`
+      first_no/last_no - question-number range for the heading
+      map_questions  - questions of type "map" (rendered in the map block)
+      table_rows     - resolved rows for a table-completion block (cells carry
+                       the question object + number, or plain text)
+      flow_questions - the remaining questions, rendered as normal rows
+    """
     out = []
     n = 0
     for s in LC.LISTENING_TEST["sections"]:
@@ -210,8 +219,73 @@ def _listening_sections_with_numbers():
         for q in s["questions"]:
             n += 1
             qs.append({**q, "number": n})
-        out.append({**s, "questions": qs})
+        by_id = {q["id"]: q for q in qs}
+
+        table_ids: set[str] = set()
+        table_rows = []
+        table = s.get("table")
+        if table:
+            for row in table["rows"]:
+                cells = []
+                for cell in row:
+                    if "q" in cell:
+                        q = by_id.get(cell["q"])
+                        if q:
+                            table_ids.add(q["id"])
+                        cells.append({
+                            "question": q,
+                            "prefix": cell.get("prefix", ""),
+                            "suffix": cell.get("suffix", ""),
+                        })
+                    else:
+                        cells.append({"text": cell.get("text", "")})
+                table_rows.append(cells)
+
+        map_questions = [q for q in qs if q.get("type") == "map"]
+        flow_questions = [
+            q for q in qs
+            if q.get("type") != "map" and q["id"] not in table_ids
+        ]
+
+        out.append({
+            **s,
+            "questions": qs,
+            "first_no": qs[0]["number"] if qs else 0,
+            "last_no": qs[-1]["number"] if qs else 0,
+            "map_questions": map_questions,
+            "table_rows": table_rows,
+            "flow_questions": flow_questions,
+        })
     return out
+
+
+import re as _re
+
+
+def _norm_answer(value: str) -> str:
+    """Normalise an answer for tolerant comparison (case, spacing, £, times)."""
+    v = (value or "").strip().lower()
+    v = v.replace("£", "").replace("$", "")
+    v = v.replace(".", ":") if _re.fullmatch(r"\d{1,2}\.\d{2}", v) else v  # 7.30 -> 7:30
+    v = v.rstrip(".")
+    v = _re.sub(r"\s+", " ", v)
+    return v.strip()
+
+
+def _acceptable_set(q: dict) -> set[str]:
+    """Build the set of normalised acceptable answers for a question."""
+    out: set[str] = set()
+    ans = q.get("answer")
+    values = ans if isinstance(ans, (list, tuple)) else [ans]
+    for v in list(values) + list(q.get("accept", [])):
+        if v is None:
+            continue
+        out.add(_norm_answer(str(v)))
+        # For matching/map, also accept just the leading option letter (e.g. "C").
+        m = _re.match(r"\s*([a-z])\b", str(v).lower())
+        if q.get("type") in ("matching", "map") and m:
+            out.add(m.group(1))
+    return {x for x in out if x}
 
 
 def _grade_listening(post) -> dict:
@@ -230,13 +304,16 @@ def _grade_listening(post) -> dict:
                 continue
             qtype = q.get("type")
             if qtype == "short":
-                got = raw.lower()
-                if any(kw.lower() in got for kw in q.get("answer_keywords", [])):
+                got = _norm_answer(raw)
+                if any(_norm_answer(kw) in got for kw in q.get("answer_keywords", [])):
                     correct += 1
                     s_correct += 1
             else:
-                expected = (q.get("answer") or "").strip()
-                if raw.lower() == expected.lower():
+                got = _norm_answer(raw)
+                if got in _acceptable_set(q) or any(
+                    got == a or got.lstrip("0") == a.lstrip("0")
+                    for a in _acceptable_set(q)
+                ):
                     correct += 1
                     s_correct += 1
         by_section.append({
@@ -392,7 +469,9 @@ def listening(request):
             "sections": _listening_sections_with_numbers(),
             "total": LC.total_questions(),
             "minutes": 30,
+            "review_seconds": 120,
             "audio_url": tts.audio_url(),
+            "audio_timing": tts.audio_timing(),
         },
     )
 

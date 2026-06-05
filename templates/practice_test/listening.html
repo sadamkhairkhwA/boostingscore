@@ -1,168 +1,284 @@
 {% extends "practice_test/_shell.html" %}
+{% load static %}
 
 {% block pt_title %}Listening Test{% endblock %}
 
-{% block pt_content %}
+{% block pt_head %}
+<link rel="stylesheet" href="{% static 'practice_test/css/listening.css' %}?v=1">
+{% endblock %}
 
-  <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
-  <h1 class="pt-h1">Listening test</h1>
-  <p class="pt-sub">Single-section practice · 4 sections · {{ total }} questions · {{ minutes }} minutes. Audio plays once.</p>
+{% block pt_content %}
+{{ audio_timing|json_script:"pt-timing" }}
+
+<div class="pt-lwrap">
+  <div class="pt-lhead">
+    <a href="{% url 'reading:academic_tests_index' %}" class="pt-lhead__back">← Back to tests</a>
+  </div>
 
   <form method="post" action="{% url 'practice_test:listening_submit' %}" id="pt-listen-form">
     {% csrf_token %}
 
-    <div class="pt-runner-top">
-      <div>
-        <div class="pt-runner-top__title">Academic Listening</div>
-        <div class="pt-runner-top__meta">Click <b>Play once</b> below to start the audio. Spelling matters in gap-fill.</div>
+    {# ---------- Sticky CBT bar: progress + timer + audio ---------- #}
+    <div class="pt-lbar">
+      <div class="pt-lbar__progress" id="pt-progress">
+        {% for s in sections %}
+        <span class="pt-seg" data-seg="{{ s.number }}"><span class="pt-seg__dot"></span><span class="pt-seg__label">Section {{ s.number }}</span></span>
+        {% endfor %}
       </div>
-      <div class="pt-runner-top__timer" id="pt-timer" data-minutes="{{ minutes }}">{{ minutes }}:00</div>
+      <div class="pt-lbar__timer" id="pt-timer" data-minutes="{{ minutes }}" data-review="{{ review_seconds }}">
+        <span class="pt-lbar__phase" id="pt-phase">READY</span>
+        <span id="pt-clock">{{ minutes }}:00</span>
+      </div>
+
+      <div class="pt-aud">
+        <button type="button" class="pt-aud__btn" id="pt-audio-btn" aria-label="Play audio" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7L8 5z"/></svg>
+        </button>
+        <div class="pt-aud__main">
+          <div class="pt-aud__status" id="pt-audio-status">Press “Begin test” to start.</div>
+          <div class="pt-aud__bar"><div class="pt-aud__fill" id="pt-audio-fill"></div></div>
+          <div class="pt-aud__time"><span id="pt-audio-now">0:00</span> / <span id="pt-audio-dur">—:—</span></div>
+        </div>
+        <a class="pt-aud__dl" href="{{ audio_url }}" download="ielts-listening.mp3" title="Download audio">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+          <span>Download</span>
+        </a>
+        <audio id="pt-audio" preload="auto" src="{{ audio_url }}"></audio>
+      </div>
     </div>
 
-    {# ---------- Audio player (plays once) ---------- #}
-    <section class="pt-listen-player" aria-label="Listening audio">
-      <button type="button" class="pt-listen-player__btn" id="pt-audio-btn" aria-label="Play audio once">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <path fill="currentColor" d="M8 5v14l11-7L8 5z"/>
-        </svg>
+    {# ---------- Begin overlay ---------- #}
+    <div class="pt-begin" id="pt-begin">
+      <h1 class="pt-begin__title">IELTS Listening — {{ total }} questions · {{ minutes }} minutes</h1>
+      <p class="pt-begin__sub">You will hear four recordings and answer as you listen. The audio plays <b>once only</b> — you cannot pause or rewind. When you click begin, a short countdown will start and then the recording will play.</p>
+      <button type="button" class="pt-begin__btn" id="pt-begin-btn">
+        Begin test
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 5l7 7-7 7"/></svg>
       </button>
-      <div class="pt-listen-player__main">
-        <div class="pt-listen-player__title" id="pt-audio-status">Ready — click play to begin. Audio plays once.</div>
-        <div class="pt-listen-player__bar"><div class="pt-listen-player__fill" id="pt-audio-bar"></div></div>
-        <div class="pt-listen-player__time"><span id="pt-audio-now">0:00</span> / <span id="pt-audio-dur">—:—</span></div>
-      </div>
-      <a class="pt-listen-player__download" href="{{ audio_url }}" download="ielts-listening.mp3" title="Download audio">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>
-        </svg>
-        <span>Download</span>
-      </a>
-      <audio id="pt-audio" preload="auto" src="{{ audio_url }}"></audio>
-    </section>
+    </div>
 
-    {# ---------- Questions ---------- #}
-    <section class="pt-listen-qs">
+    {# ---------- Review banner (after audio ends) ---------- #}
+    <div class="pt-review" id="pt-review" hidden>
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Recording finished. Review time remaining: <b id="pt-review-clock">2:00</b> — answers lock when it reaches zero.
+    </div>
+
+    {# ---------- Questions (shared partial renders every IELTS type) ---------- #}
+    <div class="pt-lqs">
       {% for s in sections %}
-        <div class="pt-listen-qsection" id="pt-section-{{ s.number }}">
-          {% with last_q=s.questions|last %}<div class="pt-passage-tag">Section {{ s.number }} — questions {{ s.questions.0.number }}–{{ last_q.number }}</div>{% endwith %}
-          <h2 style="margin: 6px 0 16px; font-size: 16px; color: var(--pt-ink); font-weight: 800;">{{ s.title }}</h2>
-          {% for q in s.questions %}
-            <div class="pt-q" id="pt-qrow-{{ q.number }}" data-qnum="{{ q.number }}" data-qname="{{ q.id }}">
-              <div class="pt-q__text"><span class="pt-q__num">{{ q.number }}.</span> {{ q.text }}</div>
-              {% if q.type == "mcq" %}
-                <div class="pt-q__opts">
-                  {% for opt in q.options %}
-                    <label><input type="radio" name="{{ q.id }}" value="{{ opt }}"> {{ opt }}</label>
-                  {% endfor %}
-                </div>
-              {% elif q.type == "gap" %}
-                <input type="text" name="{{ q.id }}" placeholder="Your answer" autocomplete="off">
-              {% elif q.type == "short" %}
-                <input type="text" name="{{ q.id }}" placeholder="Short answer (one or two words)" autocomplete="off">
-              {% endif %}
-            </div>
+        {% include "practice_test/_listening_questions.html" with s=s %}
+      {% endfor %}
+    </div>
+
+    {# ---------- The ONE sticky bottom navigator ---------- #}
+    <div class="pt-lnav">
+      <div class="pt-lnav__row">
+        <span class="pt-lnav__count">Answered <b id="pt-answered">0</b>/{{ total }}</span>
+        <div class="pt-lnav__dots" id="pt-dots">
+          {% for s in sections %}
+            {% if not forloop.first %}<span class="pt-dot__sep" aria-hidden="true"></span>{% endif %}
+            {% for q in s.questions %}
+              <button type="button" class="pt-dot" data-target="pt-qrow-{{ q.number }}" data-qname="{{ q.id }}" data-qnum="{{ q.number }}">{{ q.number }}</button>
+            {% endfor %}
           {% endfor %}
         </div>
-      {% endfor %}
-    </section>
-
-    {# ---------- Answered dots (bottom) ---------- #}
-    <section class="pt-listen-dots" aria-label="Question status">
-      {% for s in sections %}
-        {% for q in s.questions %}
-          <button type="button" class="pt-listen-dot" data-target="pt-qrow-{{ q.number }}" data-qname="{{ q.id }}" data-qnum="{{ q.number }}">{{ q.number }}</button>
-        {% endfor %}
-      {% endfor %}
-    </section>
-
-    <div class="pt-submit-bar">
-      <div class="pt-submit-bar__meta">Answered <b id="pt-answered">0</b> / {{ total }}</div>
-      <button type="submit" class="pt-btn">Submit listening →</button>
+        <button type="submit" class="pt-lnav__submit" id="pt-submit">Submit →</button>
+      </div>
     </div>
 
   </form>
-
+</div>
 {% endblock %}
 
 {% block pt_scripts %}
 <script>
-(function(){
-  // ---------- Audio: plays once, no scrubbing ----------
-  var audio = document.getElementById('pt-audio');
-  var btn   = document.getElementById('pt-audio-btn');
-  var bar   = document.getElementById('pt-audio-bar');
-  var now   = document.getElementById('pt-audio-now');
-  var dur   = document.getElementById('pt-audio-dur');
-  var stat  = document.getElementById('pt-audio-status');
-  var played = false;
+(function () {
+  var form    = document.getElementById('pt-listen-form');
+  var audio   = document.getElementById('pt-audio');
+  var playBtn = document.getElementById('pt-audio-btn');
+  var fill    = document.getElementById('pt-audio-fill');
+  var nowEl   = document.getElementById('pt-audio-now');
+  var durEl   = document.getElementById('pt-audio-dur');
+  var statEl  = document.getElementById('pt-audio-status');
+  var beginCard = document.getElementById('pt-begin');
+  var beginBtn  = document.getElementById('pt-begin-btn');
+  var reviewBox = document.getElementById('pt-review');
+  var reviewClk = document.getElementById('pt-review-clock');
+  var phaseEl   = document.getElementById('pt-phase');
+  var clockEl   = document.getElementById('pt-clock');
+  var timerWrap = document.getElementById('pt-timer');
+  var submitBtn = document.getElementById('pt-submit');
 
-  function fmt(s){
-    if (!isFinite(s)) return '—:—';
-    var m = Math.floor(s/60), r = Math.floor(s%60);
-    return m + ':' + (r<10?'0':'') + r;
+  var timing = [];
+  try { timing = JSON.parse(document.getElementById('pt-timing').textContent || '[]'); } catch (e) {}
+
+  function fmt(s) {
+    if (!isFinite(s) || s < 0) return '0:00';
+    var m = Math.floor(s / 60), r = Math.floor(s % 60);
+    return m + ':' + (r < 10 ? '0' : '') + r;
   }
-  audio.addEventListener('loadedmetadata', function(){ dur.textContent = fmt(audio.duration); });
-  audio.addEventListener('timeupdate', function(){
-    now.textContent = fmt(audio.currentTime);
-    if (audio.duration) bar.style.width = (audio.currentTime / audio.duration * 100) + '%';
-  });
-  audio.addEventListener('ended', function(){
-    stat.textContent = 'Audio finished. Review your answers and submit when ready.';
-    btn.disabled = true;
-  });
-  // Hard-lock scrubbing: snap back to wherever we were last.
-  var lastTime = 0;
-  audio.addEventListener('timeupdate', function(){ lastTime = audio.currentTime; });
-  audio.addEventListener('seeking', function(){
-    if (Math.abs(audio.currentTime - lastTime) > 0.5) audio.currentTime = lastTime;
-  });
 
-  btn.addEventListener('click', function(){
-    if (played) return;
-    played = true;
-    btn.disabled = true;
-    stat.textContent = 'Playing — audio will not rewind. Listen carefully.';
-    audio.play().catch(function(){
-      played = false; btn.disabled = false;
-      stat.textContent = 'Browser blocked audio. Click play again.';
+  // ---------- enable / disable answering ----------
+  function setAnswering(on) {
+    form.querySelectorAll('input, select').forEach(function (el) {
+      if (el.type === 'hidden' || el.type === 'submit') return;
+      el.disabled = !on;
+    });
+  }
+  setAnswering(false);
+
+  // ---------- countdown then play ----------
+  function runCountdown(done) {
+    var overlay = document.createElement('div');
+    overlay.className = 'pt-count';
+    overlay.innerHTML = '<div class="pt-count__n" id="pt-count-n">3</div>';
+    document.body.appendChild(overlay);
+    var n = 3, el = overlay.querySelector('#pt-count-n');
+    var iv = setInterval(function () {
+      n--;
+      if (n <= 0) { clearInterval(iv); overlay.remove(); done(); return; }
+      el.textContent = n;
+      el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+    }, 1000);
+  }
+
+  // ---------- main exam timer (30 min) ----------
+  var examSecs = (parseInt(timerWrap.dataset.minutes, 10) || 30) * 60;
+  var examTimerId = null;
+  function startExamTimer() {
+    phaseEl.textContent = 'PLAYING';
+    if (examTimerId) return;
+    function tick() {
+      clockEl.textContent = fmt(examSecs);
+      if (examSecs <= 0) {
+        lockAnswers('Exam time is over — answers are locked. Submit your test.');
+        return;
+      }
+      examSecs--;
+      examTimerId = setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  beginBtn.addEventListener('click', function () {
+    beginCard.setAttribute('hidden', '');
+    runCountdown(function () {
+      statEl.textContent = 'Playing — the recording will not rewind. Listen carefully.';
+      setAnswering(true);
+      startExamTimer();
+      playBtn.disabled = true;
+      audio.play().catch(function () {
+        statEl.textContent = 'Your browser blocked audio. Click the play button.';
+        playBtn.disabled = false;
+      });
     });
   });
 
-  // ---------- Answered dots ----------
-  var form = document.getElementById('pt-listen-form');
+  playBtn.addEventListener('click', function () {
+    if (audio.currentTime > 0 || playBtn.disabled) return;
+    audio.play(); playBtn.disabled = true;
+  });
+
+  // ---------- audio progress + lock scrubbing ----------
+  audio.addEventListener('loadedmetadata', function () { durEl.textContent = fmt(audio.duration); });
+  var lastT = 0;
+  audio.addEventListener('timeupdate', function () {
+    nowEl.textContent = fmt(audio.currentTime);
+    if (audio.duration) fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    lastT = audio.currentTime;
+    updateActiveSection(audio.currentTime);
+  });
+  audio.addEventListener('seeking', function () {
+    if (Math.abs(audio.currentTime - lastT) > 0.4) audio.currentTime = lastT;
+  });
+
+  // ---------- auto-highlight + auto-scroll the current section ----------
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.pt-lsec'));
+  var segs = {};
+  document.querySelectorAll('.pt-seg').forEach(function (s) { segs[s.dataset.seg] = s; });
+  var activeSec = 0;
+  function markSection(num) {
+    sections.forEach(function (sec) { sec.classList.toggle('is-active', sec.dataset.section == num); });
+    Object.keys(segs).forEach(function (k) {
+      segs[k].classList.toggle('is-active', k == num);
+      if (k < num) segs[k].classList.add('is-done');
+    });
+  }
+  function updateActiveSection(t) {
+    if (!timing.length) return;
+    var cur = timing[0].number;
+    for (var i = 0; i < timing.length; i++) { if (t >= timing[i].start) cur = timing[i].number; }
+    if (cur !== activeSec) {
+      activeSec = cur;
+      markSection(cur);
+      var sec = document.getElementById('pt-section-' + cur);
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+  // Fallback highlight on manual scroll (no timing or paused).
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && audio.paused) markSection(e.target.dataset.section);
+      });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    sections.forEach(function (s) { io.observe(s); });
+  }
+
+  // ---------- ended -> review countdown -> lock ----------
+  audio.addEventListener('ended', function () {
+    statEl.textContent = 'Recording finished.';
+    phaseEl.textContent = 'REVIEW';
+    timerWrap.classList.add('is-review');
+    reviewBox.removeAttribute('hidden');
+    submitBtn.classList.add('is-ready');
+    startReview(parseInt(timerWrap.dataset.review, 10) || 120);
+  });
+
+  function lockAnswers(reason) {
+    phaseEl.textContent = 'TIME UP';
+    timerWrap.classList.remove('is-review');
+    timerWrap.classList.add('is-locked');
+    reviewBox.removeAttribute('hidden');
+    reviewBox.textContent = reason || 'Time is up — answers are locked. Submit your test.';
+    setAnswering(false);
+  }
+
+  function startReview(secs) {
+    function tick() {
+      reviewClk.textContent = fmt(secs);
+      if (secs <= 0) {
+        lockAnswers('Review time is over — answers are locked. Submit your test.');
+        return;
+      }
+      secs--; setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  // ---------- bottom navigator ----------
+  var dots = Array.prototype.slice.call(document.querySelectorAll('.pt-dot'));
   var counter = document.getElementById('pt-answered');
-  var dots = document.querySelectorAll('.pt-listen-dot');
-  var dotByName = {};
-  dots.forEach(function(d){ dotByName[d.dataset.qname] = d; d.addEventListener('click', function(){
-    var t = document.getElementById(d.dataset.target);
-    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }); });
-
-  function recount(){
-    var names = new Set();
-    form.querySelectorAll('input[type=text]').forEach(function(i){ if (i.value.trim()) names.add(i.name); });
-    form.querySelectorAll('input[type=radio]:checked').forEach(function(i){ names.add(i.name); });
-    counter.textContent = names.size;
-    dots.forEach(function(d){
-      d.classList.toggle('is-done', names.has(d.dataset.qname));
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () {
+      var t = document.getElementById(d.dataset.target);
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      dots.forEach(function (x) { x.classList.remove('is-current'); });
+      d.classList.add('is-current');
     });
+  });
+  function recount() {
+    var done = new Set();
+    form.querySelectorAll('input[type=text]').forEach(function (i) { if (i.value.trim()) done.add(i.name); });
+    form.querySelectorAll('select').forEach(function (s) { if (s.value) done.add(s.name); });
+    form.querySelectorAll('input[type=radio]:checked').forEach(function (i) { done.add(i.name); });
+    counter.textContent = done.size;
+    dots.forEach(function (d) { d.classList.toggle('is-done', done.has(d.dataset.qname)); });
   }
   form.addEventListener('input', recount);
   form.addEventListener('change', recount);
 
-  // ---------- Timer ----------
-  var el = document.getElementById('pt-timer');
-  if (el){
-    var mins = parseInt(el.dataset.minutes, 10) || 30;
-    var seconds = mins * 60;
-    function tick(){
-      var m = Math.floor(seconds / 60), s = seconds % 60;
-      el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-      if (seconds <= 0) { el.style.color = '#c0392b'; return; }
-      seconds--; setTimeout(tick, 1000);
-    }
-    tick();
-  }
+  markSection(1);
 })();
 </script>
 {% endblock %}
