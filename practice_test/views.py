@@ -260,6 +260,120 @@ def _grade_listening(post) -> dict:
 # Standalone single-section practice (no shared state with the full test)
 # =============================================================================
 
+# =============================================================================
+# Exam intro / "Start exam" screens (real IELTS-style instructions per section)
+# =============================================================================
+
+EXAM_INTROS = {
+    "listening": {
+        "name": "Listening",
+        "accent": "navy",
+        "duration": "≈ 30 minutes",
+        "format": "4 sections · 40 questions",
+        "intro": (
+            "The Listening test has four sections and 40 questions in total. "
+            "You will hear the recording once only, so listen carefully and "
+            "answer as you go."
+        ),
+        "instructions": [
+            "Put on your headphones and find a quiet place.",
+            "The audio plays once from start to finish — you cannot pause or rewind.",
+            "Answer each question while you listen.",
+            "Spelling matters in gap-fill answers.",
+        ],
+        "notes": [
+            "Press play only when you are ready — the recording does not stop.",
+            "All four sections play in one continuous track.",
+        ],
+        "start_url": ("practice_test:listening", {}),
+    },
+    "reading": {
+        "name": "Academic Reading",
+        "accent": "orange",
+        "duration": "60 minutes",
+        "format": "3 passages · 40 questions",
+        "intro": (
+            "The Academic Reading test has three passages with a total of 40 "
+            "questions. You have 60 minutes to read the passages and answer "
+            "every question."
+        ),
+        "instructions": [
+            "Read each passage carefully, then answer the questions that follow.",
+            "Answer all 40 questions — there is no penalty for guessing.",
+            "Write answers exactly; spelling and grammar are marked.",
+            "You can move freely between passages and questions.",
+        ],
+        "notes": [
+            "The 60-minute timer starts as soon as you begin.",
+            "There is no extra time to transfer answers.",
+        ],
+        "start_url": ("reading:academic_test_session", {"test_number": 1}),
+    },
+    "writing": {
+        "name": "Academic Writing",
+        "accent": "purple",
+        "duration": "60 minutes",
+        "format": "Task 1 + Task 2",
+        "intro": (
+            "The Academic Writing test has two tasks. Spend about 20 minutes on "
+            "Task 1 and 40 minutes on Task 2. Your responses are assessed by AI "
+            "for a band score."
+        ),
+        "instructions": [
+            "Task 1: describe the visual information in at least 150 words.",
+            "Task 2: write an essay answering the prompt in at least 250 words.",
+            "Task 2 carries more marks than Task 1 — plan your time.",
+            "Write in full, formal English.",
+        ],
+        "notes": [
+            "You will receive an AI band score with feedback after you submit.",
+            "Spend roughly 20 min on Task 1 and 40 min on Task 2.",
+        ],
+        "start_url": ("practice_test:writing", {}),
+    },
+    "speaking": {
+        "name": "Speaking",
+        "accent": "green",
+        "duration": "≈ 11–15 minutes",
+        "format": "3 parts · recorded",
+        "intro": (
+            "The Speaking test has three parts led by a video examiner. Your "
+            "answers are recorded and assessed by AI for fluency, vocabulary, "
+            "grammar and pronunciation."
+        ),
+        "instructions": [
+            "Part 1: short questions about familiar topics.",
+            "Part 2: speak for 1–2 minutes on a cue-card topic.",
+            "Part 3: a discussion of more abstract questions.",
+            "Speak naturally and clearly into your microphone.",
+        ],
+        "notes": [
+            "You will check your headphones and microphone before starting.",
+            "Recording begins automatically after each examiner question.",
+        ],
+        "start_url": ("practice_test:speaking", {}),
+    },
+}
+
+
+@login_required
+def exam_intro(request, section):
+    """Professional IELTS-style instructions screen with a 'Start exam' button."""
+    cfg = EXAM_INTROS.get(section)
+    if cfg is None:
+        return redirect("reading:academic_tests_index")
+    url_name, kwargs = cfg["start_url"]
+    return render(
+        request,
+        "practice_test/exam_intro.html",
+        {
+            "section": section,
+            "cfg": cfg,
+            "start_url": reverse(url_name, kwargs=kwargs),
+        },
+    )
+
+
 @login_required
 def listening(request):
     if not tts.audio_exists():

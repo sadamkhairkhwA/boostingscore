@@ -7,6 +7,9 @@ app_name = "practice_test"
 urlpatterns = [
     path("", views.hub, name="hub"),
 
+    # Exam intro / "Start exam" instructions screen (one per section)
+    path("start/<slug:section>/", views.exam_intro, name="exam_intro"),
+
     # --- Standalone single-section practice (no shared state with the full test) ---
     path("listening/",          views.listening,         name="listening"),
     path("listening/prepare/",  views.listening_prepare, name="listening_prepare"),

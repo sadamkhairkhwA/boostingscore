@@ -63,43 +63,42 @@
   <h1 class="bs-page-title">IELTS Practice Test</h1>
   <p class="bs-page-sub">All four sections — pick one to practise. Each attempt is saved to your history.</p>
 
-  {# All 4 sections are rendered immediately. Reading is the active section on
-     this page; the other three link straight to their own practice pages. #}
+  {# Every section opens its own "Start exam" instructions screen first. #}
   <nav class="art-sections" aria-label="Practice test sections">
-    <a class="art-section art-section--active" href="{% url 'reading:academic_test_session' test_number=1 %}" aria-current="true">
+    <a class="art-section" href="{% url 'practice_test:exam_intro' section='reading' %}">
       <span class="art-section__ico art-section__ico--orange" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       </span>
       <span class="art-section__name">Reading</span>
       <span class="art-section__meta">3 passages · 40 questions · 60 min</span>
-      <span class="art-section__badge">Active</span>
+      <span class="art-section__cta">Start →</span>
     </a>
 
-    <a class="art-section" href="{% url 'practice_test:writing' %}">
+    <a class="art-section" href="{% url 'practice_test:exam_intro' section='writing' %}">
       <span class="art-section__ico art-section__ico--purple" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></svg>
       </span>
       <span class="art-section__name">Writing</span>
       <span class="art-section__meta">Task 1 + Task 2 · AI band score</span>
-      <span class="art-section__cta">Practise →</span>
+      <span class="art-section__cta">Start →</span>
     </a>
 
-    <a class="art-section" href="{% url 'practice_test:listening' %}">
+    <a class="art-section" href="{% url 'practice_test:exam_intro' section='listening' %}">
       <span class="art-section__ico art-section__ico--navy" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 1 18 0v5a3 3 0 0 1-3 3h-1v-7h4M3 12v5a3 3 0 0 0 3 3h1v-7H3"/></svg>
       </span>
       <span class="art-section__name">Listening</span>
       <span class="art-section__meta">4 sections · 40 questions · 30 min</span>
-      <span class="art-section__cta">Practise →</span>
+      <span class="art-section__cta">Start →</span>
     </a>
 
-    <a class="art-section" href="{% url 'practice_test:speaking' %}">
+    <a class="art-section" href="{% url 'practice_test:exam_intro' section='speaking' %}">
       <span class="art-section__ico art-section__ico--green" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 1 3 3v8a3 3 0 1 1-6 0V4a3 3 0 0 1 3-3zM19 10a7 7 0 0 1-14 0M12 17v5M8 22h8"/></svg>
       </span>
       <span class="art-section__name">Speaking</span>
       <span class="art-section__meta">3 parts · record + AI checks · ~15 min</span>
-      <span class="art-section__cta">Practise →</span>
+      <span class="art-section__cta">Start →</span>
     </a>
   </nav>
 
@@ -163,7 +162,7 @@
     <p class="art-history-card__empty">No completed attempts yet. Finish a run and submit — it will appear here. You can retake anytime.</p>
     {% endif %}
 
-    <a class="art-history-card__cta" href="{% url 'reading:academic_test_session' test_number=1 %}">{% if academic_attempt_count %}Take test again →{% else %}Start test →{% endif %}</a>
+    <a class="art-history-card__cta" href="{% url 'practice_test:exam_intro' section='reading' %}">{% if academic_attempt_count %}Take test again →{% else %}Start test →{% endif %}</a>
   </section>
 
   <div class="art-hub-grid">
@@ -213,7 +212,7 @@
           <a class="art-hub-btn art-hub-btn--primary" href="{% url 'practice_test:hub' %}">Take again →</a>
           <a class="art-hub-btn art-hub-btn--outline" href="{% url 'reading:academic_tests_index' %}#art-history-heading">Review last attempt →</a>
           {% else %}
-          <a class="art-hub-btn art-hub-btn--primary art-hub-btn--block" href="{% url 'reading:academic_test_session' test_number=1 %}">Start test →</a>
+          <a class="art-hub-btn art-hub-btn--primary art-hub-btn--block" href="{% url 'practice_test:exam_intro' section='reading' %}">Start test →</a>
           {% endif %}
         </div>
       </article>
