@@ -1,8 +1,8 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.views.static import serve as media_serve
 
 import views as home_views
 from boosting_score.landing import landing_view
@@ -20,7 +20,16 @@ urlpatterns = [
     path("reading/", include("reading.urls", namespace="reading")),
     path("writing/", include("writing.urls", namespace="writing")),
     path("test/", include("practice_test.urls", namespace="practice_test")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Serve user-generated media (e.g. the generated listening MP3) in BOTH
+    # dev and production. Django's static() helper only serves media when
+    # DEBUG=True, which left /media/ 404ing on Railway — so we wire the serve
+    # view explicitly here instead.
+    re_path(
+        r"^media/(?P<path>.*)$",
+        media_serve,
+        {"document_root": settings.MEDIA_ROOT},
+    ),
+]
 
 if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()

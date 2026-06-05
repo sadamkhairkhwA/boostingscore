@@ -11,6 +11,7 @@ from pathlib import Path
 
 import httpx
 from django.conf import settings
+from django.templatetags.static import static
 
 from boostingscore.openai_key import resolve_openai_api_key
 
@@ -18,6 +19,17 @@ from .listening_content import LISTENING_TEST, OPENING_NARRATION, SECTION_BREAK
 
 AUDIO_DIR_NAME = "listening_audio"
 AUDIO_FILE_NAME = "main_test.mp3"
+BUNDLED_AUDIO_FILE_NAME = "main_test.mp3"
+
+
+def bundled_audio_path() -> Path:
+    """A pre-generated MP3 committed under static/ for production use.
+
+    Generating listening audio inside a web request is too slow for Railway and
+    can trigger "Application failed to respond" 502s. If this file exists, the
+    app serves it directly and never calls OpenAI from the Generate button.
+    """
+    return Path(settings.BASE_DIR) / "static" / AUDIO_DIR_NAME / BUNDLED_AUDIO_FILE_NAME
 
 
 def audio_dir() -> Path:
@@ -31,12 +43,17 @@ def audio_path() -> Path:
 
 
 def audio_url() -> str:
+    if bundled_audio_path().is_file() and bundled_audio_path().stat().st_size > 0:
+        return static(f"{AUDIO_DIR_NAME}/{BUNDLED_AUDIO_FILE_NAME}")
     return f"{settings.MEDIA_URL}{AUDIO_DIR_NAME}/{AUDIO_FILE_NAME}"
 
 
 def audio_exists() -> bool:
     p = audio_path()
-    return p.is_file() and p.stat().st_size > 0
+    if p.is_file() and p.stat().st_size > 0:
+        return True
+    bundled = bundled_audio_path()
+    return bundled.is_file() and bundled.stat().st_size > 0
 
 
 def _client():
