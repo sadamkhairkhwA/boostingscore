@@ -31,6 +31,12 @@
         <div class="pt-listen-player__bar"><div class="pt-listen-player__fill" id="pt-audio-bar"></div></div>
         <div class="pt-listen-player__time"><span id="pt-audio-now">0:00</span> / <span id="pt-audio-dur">—:—</span></div>
       </div>
+      <a class="pt-listen-player__download" href="{{ audio_url }}" download="ielts-listening.mp3" title="Download audio">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>
+        </svg>
+        <span>Download</span>
+      </a>
       <audio id="pt-audio" preload="auto" src="{{ audio_url }}"></audio>
     </section>
 
