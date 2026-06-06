@@ -1,0 +1,109 @@
+{% extends "practice_test/_shell.html" %}
+{% load static %}
+
+{% block pt_title %}Practice Tests{% endblock %}
+
+{% block pt_head %}
+<style>
+  .tc-wrap { max-width: 980px; margin: 0 auto; padding: 6px 0 50px; }
+  .tc-back { font-size: 13px; color: #6b6b66; text-decoration: none; }
+  .tc-back:hover { color: #1a1a1a; }
+  .tc-head { margin: 10px 0 22px; }
+  .tc-title { font-size: 28px; font-weight: 800; color: #14110d; margin: 0 0 6px; font-family: Georgia, "Times New Roman", serif; }
+  .tc-sub { font-size: 14.5px; color: #6b6b66; margin: 0; }
+
+  .tc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .tc-card {
+    position: relative;
+    display: flex; flex-direction: column;
+    background: #fff; border: 1px solid #e7e7e4; border-radius: 16px;
+    padding: 20px 20px 18px; text-decoration: none; color: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  .tc-card--live:hover {
+    border-color: #2d6a0a; transform: translateY(-2px);
+    box-shadow: 0 16px 38px -24px rgba(0,0,0,.45);
+  }
+  .tc-card--soon { opacity: .72; cursor: not-allowed; background: #faf9f7; }
+
+  .tc-card__top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .tc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 11px;
+    background: #14110d; color: #fff; font-weight: 800; font-size: 17px;
+  }
+  .tc-card--soon .tc-num { background: #c9c9c4; }
+
+  .tc-pill { font-size: 11px; font-weight: 800; letter-spacing: .05em; padding: 4px 10px; border-radius: 999px; }
+  .tc-pill--live { color: #fff; background: #2d6a0a; }
+  .tc-pill--soon { color: #8a7a3a; background: #f4ecd6; }
+
+  .tc-card__name { font-size: 18px; font-weight: 800; color: #14110d; margin: 0 0 6px; }
+  .tc-card__blurb { font-size: 13.5px; color: #5f5f5a; line-height: 1.5; margin: 0 0 14px; flex: 1; }
+
+  .tc-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .tc-chip {
+    font-size: 12px; font-weight: 600; color: #44423d;
+    background: #f3f3f0; border: 1px solid #e7e7e4; border-radius: 999px; padding: 5px 11px;
+  }
+
+  .tc-card__foot { display: flex; align-items: center; justify-content: space-between; }
+  .tc-cta { font-size: 14px; font-weight: 700; color: #2d6a0a; }
+  .tc-sections { font-size: 12px; color: #9a9a93; }
+
+  @media (max-width: 560px) { .tc-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block pt_content %}
+<div class="tc-wrap">
+  <a href="{% url 'home' %}" class="tc-back">← Back to dashboard</a>
+  <div class="tc-head">
+    <h1 class="tc-title">IELTS Practice Tests</h1>
+    <p class="tc-sub">Choose a full practice test. Each one covers all four sections — Reading, Writing, Listening and Speaking.</p>
+  </div>
+
+  <div class="tc-grid">
+    {% for t in tests %}
+      {% if t.active %}
+      <a class="tc-card tc-card--live" href="{% url 'practice_test:hub' %}">
+        <div class="tc-card__top">
+          <span class="tc-num">{{ t.number }}</span>
+          <span class="tc-pill tc-pill--live">LIVE</span>
+        </div>
+        <h2 class="tc-card__name">{{ t.title }}</h2>
+        <p class="tc-card__blurb">{{ t.blurb }}</p>
+        <div class="tc-meta">
+          <span class="tc-chip">{{ t.difficulty }}</span>
+          <span class="tc-chip">Band {{ t.band_range }}</span>
+        </div>
+        <div class="tc-card__foot">
+          <span class="tc-cta">Open test →</span>
+          <span class="tc-sections">4 sections</span>
+        </div>
+      </a>
+      {% else %}
+      <div class="tc-card tc-card--soon" aria-disabled="true">
+        <div class="tc-card__top">
+          <span class="tc-num">{{ t.number }}</span>
+          <span class="tc-pill tc-pill--soon">COMING SOON</span>
+        </div>
+        <h2 class="tc-card__name">{{ t.title }}</h2>
+        <p class="tc-card__blurb">{{ t.blurb }}</p>
+        <div class="tc-meta">
+          <span class="tc-chip">{{ t.difficulty }}</span>
+          <span class="tc-chip">Band {{ t.band_range }}</span>
+        </div>
+        <div class="tc-card__foot">
+          <span class="tc-sections">Content being prepared</span>
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

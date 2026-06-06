@@ -32,6 +32,17 @@ from .scoring import (
 # =============================================================================
 
 @login_required
+def tests(request):
+    """Chooser page: lists Practice Tests 1–5 as cards (active or coming soon)."""
+    from . import papers
+    return render(
+        request,
+        "practice_test/tests_chooser.html",
+        {"tests": papers.list_tests()},
+    )
+
+
+@login_required
 def hub(request):
     history = (
         TestSession.objects.filter(user=request.user)

@@ -5,7 +5,8 @@ from . import views
 app_name = "practice_test"
 
 urlpatterns = [
-    path("", views.hub, name="hub"),
+    path("", views.tests, name="tests"),
+    path("hub/", views.hub, name="hub"),
 
     # Exam intro / "Start exam" instructions screen (one per section)
     path("start/<slug:section>/", views.exam_intro, name="exam_intro"),
