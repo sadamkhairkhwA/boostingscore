@@ -284,22 +284,26 @@ _P2_FOLLOWUP_MAX = 90
 _P3_MAX = 180   # 3 min per Part 3 answer
 
 SPEAKING_VIDEO_FLOW = [
-    {"kind": "intro", "video": "intro.mp4",    "label": "Welcome"},
+    # The opening clip greets the candidate and asks their name, so it records
+    # an answer just like a question (it is not a passive intro).
+    {"kind": "question", "video": "intro.mp4", "part": 1, "index": 0,
+     "max_seconds": _P1_MAX,
+     "text": "Can you tell me your full name, please?"},
     {"kind": "intro", "video": "intro_p1.mp4", "label": "Part 1 introduction"},
 
-    {"kind": "question", "video": "p1_q1.mp4", "part": 1, "index": 0,
+    {"kind": "question", "video": "p1_q1.mp4", "part": 1, "index": 1,
      "max_seconds": _P1_MAX,
      "text": "Can you tell me your full name and where you are from?"},
-    {"kind": "question", "video": "p1_q2.mp4", "part": 1, "index": 1,
+    {"kind": "question", "video": "p1_q2.mp4", "part": 1, "index": 2,
      "max_seconds": _P1_MAX,
      "text": "Do you work or are you a student? Could you describe what you do?"},
-    {"kind": "question", "video": "p1_q3.mp4", "part": 1, "index": 2,
+    {"kind": "question", "video": "p1_q3.mp4", "part": 1, "index": 3,
      "max_seconds": _P1_MAX,
      "text": "What do you usually do in your free time?"},
-    {"kind": "question", "video": "p1_q4.mp4", "part": 1, "index": 3,
+    {"kind": "question", "video": "p1_q4.mp4", "part": 1, "index": 4,
      "max_seconds": _P1_MAX,
      "text": "How often do you read books or articles in English?"},
-    {"kind": "question", "video": "p1_q5.mp4", "part": 1, "index": 4,
+    {"kind": "question", "video": "p1_q5.mp4", "part": 1, "index": 5,
      "max_seconds": _P1_MAX,
      "text": "What kind of weather do you prefer, and why?"},
 
