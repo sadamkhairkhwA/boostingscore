@@ -79,7 +79,7 @@ def hub(request):
             "latest": latest,
             "active_test": n,
             "is_test_one": n == 1,
-            "speaking_available": n == 1,
+            "speaking_available": n in SPEAKING_TESTS,
             "listening_available": tts.audio_exists() if n == 1 else True,
             "listening_total": sum(len(s["questions"]) for s in ldict.get("sections", [])),
             "reading_total": sum(len(p["questions"]) for p in passages),
@@ -215,6 +215,17 @@ def _grade_writing(post, tasks=None) -> dict:
 # =============================================================================
 # Speaking helpers (shared between standalone + full)
 # =============================================================================
+
+# Which static folder each test's examiner videos live in. The flow itself
+# (filenames, order, recording, transcription, scoring) is shared from Test 1;
+# only the folder differs. Tests without their own folder fall back to Test 1.
+SPEAKING_VIDEO_FOLDERS = {
+    1: "speaking_videos",
+    2: "speaking_videos2",
+}
+
+# Tests that currently have a playable Speaking section.
+SPEAKING_TESTS = set(SPEAKING_VIDEO_FOLDERS)
 
 def _get_or_create_speaking_session(user):
     """Return the most recent in-progress speaking session, or create one."""
@@ -711,12 +722,16 @@ def speaking(request):
     """
     from django.templatetags.static import static
 
+    # The examiner-video flow, recording, transcription and scoring are shared
+    # across all tests — only the folder the videos load from differs per test.
+    folder = SPEAKING_VIDEO_FOLDERS.get(_active_test(request), "speaking_videos")
+
     session = TestSession.objects.create(
         user=request.user,
         kind=TestSession.KIND_SPEAKING,
     )
     flow_with_urls = [
-        {**step, "url": static("speaking_videos/" + step["video"])}
+        {**step, "url": static(f"{folder}/" + step["video"])}
         for step in C.SPEAKING_VIDEO_FLOW
     ]
     return render(
@@ -725,6 +740,7 @@ def speaking(request):
         {
             "session": session,
             "flow": flow_with_urls,
+            "sample_video_url": static(f"{folder}/intro.mp4"),
             "total_questions": C.speaking_video_questions_total(),
         },
     )

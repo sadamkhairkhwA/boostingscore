@@ -12,7 +12,7 @@
   {# Hidden form data the JS reads #}
   <input type="hidden" id="pt-session-id" value="{{ session.id }}">
   <input type="hidden" id="pt-csrf" value="{{ csrf_token }}">
-  <input type="hidden" id="pt-sample-url" value="{% static 'speaking_videos/intro.mp4' %}">
+  <input type="hidden" id="pt-sample-url" value="{{ sample_video_url }}">
   <input type="hidden" id="pt-submit-url" value="{% url 'practice_test:speaking_submit_answer' %}">
   <input type="hidden" id="pt-finish-url" value="{% url 'practice_test:speaking_finish' %}">
 
