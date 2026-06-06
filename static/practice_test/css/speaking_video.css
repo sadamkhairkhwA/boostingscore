@@ -154,33 +154,34 @@ body.pt-spkv-active .pt-main{ padding: 0; max-width: none; }
 .pt-spkv-video-wrap{
   position: relative;
   width: 100%; max-width: 640px;
+  margin: 0 auto;
   border-radius: var(--spkv-radius);
   overflow: hidden;
   background: #000;
   box-shadow: 0 18px 50px -22px rgba(0,0,0,.35);
 }
-/* Both players sit in the same box, stacked. The .is-front one is visible;
-   the other buffers the next clip behind it (still decoded, so swapping to it
-   shows a real frame instantly — never black). The wrap keeps its own height
-   via the first player being in normal flow. */
+/* Both players sit in the same box, stacked. The .is-front one is visible and
+   sits in normal flow, so the container's height follows the video's natural
+   aspect ratio (no forced crop). The other buffers the next clip behind it,
+   absolutely positioned to overlap, still decoded so swapping shows a real
+   frame instantly — never black. */
 .pt-spkv-video{
   display: block;
-  width: 100%; height: 100%;
+  width: 100%; max-width: 640px;
   background: transparent; border-radius: var(--spkv-radius);
+  /* idle player: overlay the visible one and stay hidden */
   position: absolute; inset: 0;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;   /* show the whole frame, never crop or zoom */
   opacity: 0;
   z-index: 1;
 }
 .pt-spkv-video.is-front{
+  /* visible player drives the container size at the video's real ratio */
+  position: relative; inset: auto;
+  height: auto;
   opacity: 1;
   z-index: 2;
-}
-/* Give the wrap an intrinsic height even though both players are absolute. */
-.pt-spkv-video-wrap::before{
-  content: "";
-  display: block;
-  padding-top: 56.25%; /* 16:9 */
 }
 
 /* Subtle loading overlay shown over the CURRENT video while the next clip
