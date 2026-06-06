@@ -43,6 +43,16 @@ def tests(request):
 
 
 @login_required
+def enter_test(request, n: int):
+    """Select a practice test, remember it for the session, open its hub."""
+    from . import papers
+    if not papers.is_active(n):
+        return redirect("practice_test:tests")
+    request.session["pt_test"] = int(n)
+    return redirect("practice_test:hub")
+
+
+@login_required
 def hub(request):
     history = (
         TestSession.objects.filter(user=request.user)
@@ -58,15 +68,21 @@ def hub(request):
         )
         if last is not None:
             latest[kind] = last
+    n = _active_test(request)
+    passages = _reading_passages_for(n)
+    ldict = _listening_dict_for(n)
     return render(
         request,
         "practice_test/hub.html",
         {
             "history": history,
             "latest": latest,
-            "listening_available": tts.audio_exists(),
-            "listening_total": LC.total_questions(),
-            "reading_total": C.reading_total_questions(),
+            "active_test": n,
+            "is_test_one": n == 1,
+            "speaking_available": n == 1,
+            "listening_available": tts.audio_exists() if n == 1 else True,
+            "listening_total": sum(len(s["questions"]) for s in ldict.get("sections", [])),
+            "reading_total": sum(len(p["questions"]) for p in passages),
             "speaking_total": C.speaking_total_questions(),
         },
     )
@@ -76,33 +92,71 @@ def hub(request):
 # Reading content helper (shared between standalone + full)
 # =============================================================================
 
-def _annotated_passages():
-    """Return READING_PASSAGES with each question carrying a running `number`."""
+# --- Per-test content selection (Test 1 = shipped modules; 2–5 = registry) ---
+
+def _active_test(request) -> int:
+    """The Practice Test number the user is currently in (default 1)."""
+    try:
+        n = int(request.session.get("pt_test", 1))
+    except (TypeError, ValueError):
+        n = 1
+    return n if n in (1, 2, 3, 4, 5) else 1
+
+
+def _reading_passages_for(n: int):
+    from . import papers
+    if n == 1:
+        return C.READING_PASSAGES
+    bundle = papers.get_content(n)
+    return (bundle or {}).get("reading") or []
+
+
+def _writing_tasks_for(n: int):
+    from . import papers
+    if n == 1:
+        return C.WRITING_TASKS
+    bundle = papers.get_content(n)
+    return (bundle or {}).get("writing") or C.WRITING_TASKS
+
+
+def _listening_dict_for(n: int):
+    from . import papers
+    if n == 1:
+        return LC.LISTENING_TEST
+    bundle = papers.get_content(n)
+    return (bundle or {}).get("listening") or {"sections": []}
+
+
+def _annotated_passages(passages=None):
+    """Return passages with each question carrying a running `number`."""
+    if passages is None:
+        passages = C.READING_PASSAGES
     n = 0
-    passages = []
-    for p in C.READING_PASSAGES:
+    out = []
+    for p in passages:
         qs = []
         for q in p["questions"]:
             n += 1
             qs.append({**q, "number": n})
-        passages.append({**p, "questions": qs})
-    return passages
+        out.append({**p, "questions": qs})
+    return out
 
 
-def _grade_reading(post) -> dict:
+def _grade_reading(post, passages=None) -> dict:
     """Read POST data + score it against the reading answer key."""
+    if passages is None:
+        passages = C.READING_PASSAGES
     answers: dict[str, str] = {}
     correct = 0
     total = 0
     by_passage: list[dict] = []
-    for p in C.READING_PASSAGES:
+    for p in passages:
         p_correct = 0
         for q in p["questions"]:
             total += 1
             raw = (post.get(q["id"]) or "").strip()
             answers[q["id"]] = raw
-            expected = (q["answer"] or "").strip()
-            if raw and raw.lower() == expected.lower():
+            if raw and _norm_answer(raw) in _acceptable_set(q):
                 correct += 1
                 p_correct += 1
         by_passage.append({
@@ -129,12 +183,14 @@ def _wc(text: str) -> int:
     return len([w for w in (text or "").split() if w.strip()])
 
 
-def _grade_writing(post) -> dict:
+def _grade_writing(post, tasks=None) -> dict:
+    if tasks is None:
+        tasks = C.WRITING_TASKS
     t1 = (post.get("task1_response") or "").strip()
     t2 = (post.get("task2_response") or "").strip()
     t1_wc, t2_wc = _wc(t1), _wc(t2)
-    fb1 = score_writing("task1", C.WRITING_TASKS["task1"]["instructions"], t1, t1_wc)
-    fb2 = score_writing("task2", C.WRITING_TASKS["task2"]["instructions"], t2, t2_wc)
+    fb1 = score_writing("task1", tasks["task1"]["instructions"], t1, t1_wc)
+    fb2 = score_writing("task2", tasks["task2"]["instructions"], t2, t2_wc)
     b1 = float(fb1.get("band_score") or 0)
     b2 = float(fb2.get("band_score") or 0)
     # IELTS weighting: Task 2 worth twice as much as Task 1.
@@ -212,7 +268,7 @@ def _finalise_speaking_session(session) -> float:
 # Listening helpers (shared between standalone + full)
 # =============================================================================
 
-def _listening_sections_with_numbers():
+def _listening_sections_with_numbers(sections=None):
     """Return sections with running question numbers + template-friendly groups.
 
     Each section gets:
@@ -223,9 +279,11 @@ def _listening_sections_with_numbers():
                        the question object + number, or plain text)
       flow_questions - the remaining questions, rendered as normal rows
     """
+    if sections is None:
+        sections = LC.LISTENING_TEST["sections"]
     out = []
     n = 0
-    for s in LC.LISTENING_TEST["sections"]:
+    for s in sections:
         qs = []
         for q in s["questions"]:
             n += 1
@@ -299,13 +357,15 @@ def _acceptable_set(q: dict) -> set[str]:
     return {x for x in out if x}
 
 
-def _grade_listening(post) -> dict:
+def _grade_listening(post, sections=None) -> dict:
     """Score POST data against the listening answer key."""
+    if sections is None:
+        sections = LC.LISTENING_TEST["sections"]
     answers: dict[str, str] = {}
     correct = 0
     total = 0
     by_section: list[dict] = []
-    for s in LC.LISTENING_TEST["sections"]:
+    for s in sections:
         s_correct = 0
         for q in s["questions"]:
             total += 1
@@ -464,25 +524,55 @@ def exam_intro(request, section):
 
 @login_required
 def listening(request):
-    if not tts.audio_exists():
+    n = _active_test(request)
+    ldict = _listening_dict_for(n)
+    sections_raw = ldict.get("sections", [])
+    total = sum(len(s["questions"]) for s in sections_raw)
+
+    # Test 1 uses one stitched track generated by tts; Tests 2–5 use four
+    # separate per-section audio files served from static/.
+    if n == 1:
+        if not tts.audio_exists():
+            return render(
+                request,
+                "practice_test/listening_setup.html",
+                {
+                    "section_count": len(sections_raw),
+                    "question_count": total,
+                },
+            )
         return render(
             request,
-            "practice_test/listening_setup.html",
+            "practice_test/listening.html",
             {
-                "section_count": len(LC.LISTENING_TEST["sections"]),
-                "question_count": LC.total_questions(),
+                "sections": _listening_sections_with_numbers(sections_raw),
+                "total": total,
+                "minutes": ldict.get("minutes", 30),
+                "review_seconds": 120,
+                "audio_url": tts.audio_url(),
+                "audio_timing": tts.audio_timing(),
+                "section_audios": [],
+                "test_number": n,
             },
         )
+
+    from django.templatetags.static import static as _static
+    section_audios = [
+        {"number": s["number"], "url": _static(f"listening_audio/{s['audio']}")}
+        for s in sections_raw if s.get("audio")
+    ]
     return render(
         request,
         "practice_test/listening.html",
         {
-            "sections": _listening_sections_with_numbers(),
-            "total": LC.total_questions(),
-            "minutes": 30,
+            "sections": _listening_sections_with_numbers(sections_raw),
+            "total": total,
+            "minutes": ldict.get("minutes", 30),
             "review_seconds": 120,
-            "audio_url": tts.audio_url(),
-            "audio_timing": tts.audio_timing(),
+            "audio_url": "",
+            "audio_timing": [],
+            "section_audios": section_audios,
+            "test_number": n,
         },
     )
 
@@ -512,7 +602,8 @@ def listening_prepare(request):
 @login_required
 @require_POST
 def listening_submit(request):
-    g = _grade_listening(request.POST)
+    n = _active_test(request)
+    g = _grade_listening(request.POST, _listening_dict_for(n).get("sections", []))
     session = TestSession.objects.create(
         user=request.user,
         kind=TestSession.KIND_LISTENING,
@@ -532,13 +623,16 @@ def listening_submit(request):
 
 @login_required
 def reading(request):
+    n = _active_test(request)
+    passages = _reading_passages_for(n)
     return render(
         request,
         "practice_test/reading.html",
         {
-            "passages": _annotated_passages(),
-            "total": C.reading_total_questions(),
+            "passages": _annotated_passages(passages),
+            "total": sum(len(p["questions"]) for p in passages),
             "minutes": 60,
+            "test_number": n,
         },
     )
 
@@ -546,7 +640,8 @@ def reading(request):
 @login_required
 @require_POST
 def reading_submit(request):
-    g = _grade_reading(request.POST)
+    n = _active_test(request)
+    g = _grade_reading(request.POST, _reading_passages_for(n))
     session = TestSession.objects.create(
         user=request.user,
         kind=TestSession.KIND_READING,
@@ -566,12 +661,15 @@ def reading_submit(request):
 
 @login_required
 def writing(request):
+    n = _active_test(request)
+    tasks = _writing_tasks_for(n)
     return render(
         request,
         "practice_test/writing.html",
         {
-            "task1": C.WRITING_TASKS["task1"],
-            "task2": C.WRITING_TASKS["task2"],
+            "task1": tasks["task1"],
+            "task2": tasks["task2"],
+            "test_number": n,
         },
     )
 
@@ -579,7 +677,8 @@ def writing(request):
 @login_required
 @require_POST
 def writing_submit(request):
-    g = _grade_writing(request.POST)
+    n = _active_test(request)
+    g = _grade_writing(request.POST, _writing_tasks_for(n))
     session = TestSession.objects.create(
         user=request.user,
         kind=TestSession.KIND_WRITING,

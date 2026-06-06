@@ -6,6 +6,7 @@ app_name = "practice_test"
 
 urlpatterns = [
     path("", views.tests, name="tests"),
+    path("enter/<int:n>/", views.enter_test, name="enter_test"),
     path("hub/", views.hub, name="hub"),
 
     # Exam intro / "Start exam" instructions screen (one per section)

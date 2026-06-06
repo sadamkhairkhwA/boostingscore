@@ -9,10 +9,11 @@
 
 {% block pt_content %}
 {{ audio_timing|json_script:"pt-timing" }}
+{{ section_audios|json_script:"pt-playlist" }}
 
 <div class="pt-lwrap">
   <div class="pt-lhead">
-    <a href="{% url 'reading:academic_tests_index' %}" class="pt-lhead__back">← Back to tests</a>
+    <a href="{% url 'practice_test:hub' %}" class="pt-lhead__back">← Back to test</a>
   </div>
 
   <form method="post" action="{% url 'practice_test:listening_submit' %}" id="pt-listen-form">
@@ -39,11 +40,13 @@
           <div class="pt-aud__bar"><div class="pt-aud__fill" id="pt-audio-fill"></div></div>
           <div class="pt-aud__time"><span id="pt-audio-now">0:00</span> / <span id="pt-audio-dur">—:—</span></div>
         </div>
+        {% if audio_url %}
         <a class="pt-aud__dl" href="{{ audio_url }}" download="ielts-listening.mp3" title="Download audio">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
           <span>Download</span>
         </a>
-        <audio id="pt-audio" preload="auto" src="{{ audio_url }}"></audio>
+        {% endif %}
+        <audio id="pt-audio" preload="auto"{% if audio_url %} src="{{ audio_url }}"{% endif %}></audio>
       </div>
     </div>
 
@@ -112,6 +115,12 @@
   var timing = [];
   try { timing = JSON.parse(document.getElementById('pt-timing').textContent || '[]'); } catch (e) {}
 
+  // Playlist mode (Tests 2–5): one audio file per section, played in order.
+  var playlist = [];
+  try { playlist = JSON.parse(document.getElementById('pt-playlist').textContent || '[]'); } catch (e) {}
+  var isPlaylist = playlist.length > 0;
+  var plIndex = 0;
+
   function fmt(s) {
     if (!isFinite(s) || s < 0) return '0:00';
     var m = Math.floor(s / 60), r = Math.floor(s % 60);
@@ -160,13 +169,35 @@
     tick();
   }
 
+  // Load + play one section's file (playlist mode).
+  function loadAndPlay(i) {
+    plIndex = i;
+    var item = playlist[i];
+    audio.src = item.url;
+    markSection(item.number);
+    statEl.textContent = 'Playing Section ' + item.number + ' of ' + playlist.length + ' — listen carefully.';
+    if (i > 0) {
+      var sec = document.getElementById('pt-section-' + item.number);
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    var p = audio.play();
+    if (p && p.catch) p.catch(function () {
+      statEl.textContent = 'Your browser blocked audio. Click the play button.';
+      playBtn.disabled = false;
+    });
+  }
+
   beginBtn.addEventListener('click', function () {
     beginCard.setAttribute('hidden', '');
     runCountdown(function () {
-      statEl.textContent = 'Playing — the recording will not rewind. Listen carefully.';
       setAnswering(true);
       startExamTimer();
       playBtn.disabled = true;
+      if (isPlaylist) {
+        loadAndPlay(0);
+        return;
+      }
+      statEl.textContent = 'Playing — the recording will not rewind. Listen carefully.';
       audio.play().catch(function () {
         statEl.textContent = 'Your browser blocked audio. Click the play button.';
         playBtn.disabled = false;
@@ -225,8 +256,12 @@
     sections.forEach(function (s) { io.observe(s); });
   }
 
-  // ---------- ended -> review countdown -> lock ----------
+  // ---------- ended -> next section (playlist) or review countdown -> lock ----------
   audio.addEventListener('ended', function () {
+    if (isPlaylist && plIndex < playlist.length - 1) {
+      loadAndPlay(plIndex + 1);
+      return;
+    }
     statEl.textContent = 'Recording finished.';
     phaseEl.textContent = 'REVIEW';
     timerWrap.classList.add('is-review');

@@ -2,6 +2,16 @@
 
 {% block pt_title %}Reading Test{% endblock %}
 
+{% block pt_head %}
+<style>
+  .pt-q__select {
+    width: 100%; max-width: 420px; margin-top: 6px;
+    padding: 9px 11px; font-size: 14px;
+    border: 1px solid var(--pt-border); border-radius: 9px; background: #fff;
+  }
+</style>
+{% endblock %}
+
 {% block pt_content %}
 
   <a href="{% url 'practice_test:hub' %}" class="pt-back">← Back to tests</a>
@@ -64,6 +74,13 @@
                     <label><input type="radio" name="{{ q.id }}" value="{{ opt }}"> {{ opt }}</label>
                   {% endfor %}
                 </div>
+              {% elif q.type == "match" %}
+                <select name="{{ q.id }}" class="pt-q__select">
+                  <option value="">— choose a heading —</option>
+                  {% for opt in q.options %}
+                    <option value="{{ opt }}">{{ opt }}</option>
+                  {% endfor %}
+                </select>
               {% elif q.type == "gap" %}
                 <input type="text" name="{{ q.id }}" placeholder="Your answer" autocomplete="off">
               {% endif %}
@@ -107,6 +124,9 @@
     });
     form.querySelectorAll('input[type=radio]:checked').forEach(function(i){
       names.add(i.name);
+    });
+    form.querySelectorAll('select').forEach(function(s){
+      if (s.value.trim()) names.add(s.name);
     });
     counter.textContent = names.size;
   }

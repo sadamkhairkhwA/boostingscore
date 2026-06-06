@@ -64,26 +64,22 @@
   <a href="{% url 'home' %}" class="tc-back">← Back to dashboard</a>
   <div class="tc-head">
     <h1 class="tc-title">IELTS Practice Tests</h1>
-    <p class="tc-sub">Choose a full practice test. Each one covers all four sections — Reading, Writing, Listening and Speaking.</p>
+    <p class="tc-sub">Choose a practice test. Each is a full IELTS-level paper — Reading, Writing and Listening are ready to take now.</p>
   </div>
 
   <div class="tc-grid">
     {% for t in tests %}
       {% if t.active %}
-      <a class="tc-card tc-card--live" href="{% url 'practice_test:hub' %}">
+      <a class="tc-card tc-card--live" href="{% url 'practice_test:enter_test' t.number %}">
         <div class="tc-card__top">
           <span class="tc-num">{{ t.number }}</span>
           <span class="tc-pill tc-pill--live">LIVE</span>
         </div>
         <h2 class="tc-card__name">{{ t.title }}</h2>
         <p class="tc-card__blurb">{{ t.blurb }}</p>
-        <div class="tc-meta">
-          <span class="tc-chip">{{ t.difficulty }}</span>
-          <span class="tc-chip">Band {{ t.band_range }}</span>
-        </div>
         <div class="tc-card__foot">
           <span class="tc-cta">Open test →</span>
-          <span class="tc-sections">4 sections</span>
+          <span class="tc-sections">Reading · Writing · Listening</span>
         </div>
       </a>
       {% else %}
@@ -94,10 +90,6 @@
         </div>
         <h2 class="tc-card__name">{{ t.title }}</h2>
         <p class="tc-card__blurb">{{ t.blurb }}</p>
-        <div class="tc-meta">
-          <span class="tc-chip">{{ t.difficulty }}</span>
-          <span class="tc-chip">Band {{ t.band_range }}</span>
-        </div>
         <div class="tc-card__foot">
           <span class="tc-sections">Content being prepared</span>
         </div>

@@ -5,10 +5,15 @@
 {% block pt_content %}
 
   <a href="{% url 'practice_test:tests' %}" class="pt-back">← All practice tests</a>
-  <h1 class="pt-h1">Practice Test 1</h1>
+  <h1 class="pt-h1">Practice Test {{ active_test }}</h1>
+  {% if is_test_one %}
   <p class="pt-sub">Take a full IELTS-format mock exam, or practise a single section.</p>
+  {% else %}
+  <p class="pt-sub">Practise each section of this IELTS paper. Reading, Writing and Listening are ready — Speaking is coming soon.</p>
+  {% endif %}
 
-  {# ===================== PRIMARY: Take the IELTS Test ===================== #}
+  {# ===================== PRIMARY: Take the IELTS Test (Test 1 only) ===================== #}
+  {% if is_test_one %}
   <section class="pt-take-hero" aria-label="Take the IELTS practice test">
     <div class="pt-take-hero__main">
       <span class="pt-take-hero__eyebrow">Full mock exam</span>
@@ -44,14 +49,15 @@
       </div>
     </div>
   </section>
+  {% endif %}
 
   {# ===================== SECONDARY: Practise individually ===================== #}
-  <h2 class="pt-section-title">Or practise one section</h2>
+  <h2 class="pt-section-title">{% if is_test_one %}Or practise one section{% else %}Sections{% endif %}</h2>
   <p style="margin: 0 0 14px; color: var(--pt-muted); font-size: 13.5px;">Focus on a single skill — your section bands are still saved to your test history.</p>
 
   <section class="pt-hub-grid" aria-label="Single-section practice">
 
-    <a href="{% url 'practice_test:exam_intro' section='reading' %}" class="pt-card">
+    <a href="{% if is_test_one %}{% url 'practice_test:exam_intro' section='reading' %}{% else %}{% url 'practice_test:reading' %}{% endif %}" class="pt-card">
       <span class="pt-card__ico pt-card__ico--orange">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       </span>
@@ -87,6 +93,7 @@
       </div>
     </a>
 
+    {% if speaking_available %}
     <a href="{% url 'practice_test:exam_intro' section='speaking' %}" class="pt-card">
       <span class="pt-card__ico pt-card__ico--green">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 1 3 3v8a3 3 0 1 1-6 0V4a3 3 0 0 1 3-3zM19 10a7 7 0 0 1-14 0M12 17v5M8 22h8"/></svg>
@@ -98,6 +105,19 @@
         <span class="pt-card__meta">~15 min</span>
       </div>
     </a>
+    {% else %}
+    <div class="pt-card" aria-disabled="true" style="opacity:.62;cursor:not-allowed;">
+      <span class="pt-card__ico pt-card__ico--green">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 1 3 3v8a3 3 0 1 1-6 0V4a3 3 0 0 1 3-3zM19 10a7 7 0 0 1-14 0M12 17v5M8 22h8"/></svg>
+      </span>
+      <div class="pt-card__name">Speaking</div>
+      <p class="pt-card__desc">3 parts. Coming soon for this test.</p>
+      <div class="pt-card__foot">
+        <span class="pt-card__cta" style="color:#9a9a93;">Coming soon</span>
+        <span class="pt-card__meta">~15 min</span>
+      </div>
+    </div>
+    {% endif %}
 
   </section>
 
