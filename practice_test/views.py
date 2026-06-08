@@ -224,21 +224,29 @@ SPEAKING_VIDEO_FOLDERS = {
     1: "speaking_videos",
     2: "speaking_videos2",
     3: "speaking_videos3",
+    4: "speaking_videos4",
 }
 
 # Tests that currently have a playable Speaking section.
 SPEAKING_TESTS = set(SPEAKING_VIDEO_FOLDERS)
 
+# Some tests ship clips with a letter prefix and a ``_1080p`` suffix
+# (e.g. ``p1_q1.mp4`` -> ``ap1_q1_1080p.mp4``). Map test number -> prefix.
+SPEAKING_VIDEO_PREFIXES = {
+    3: "a",
+    4: "b",
+}
+
 
 def _speaking_video_file(test_n: int, canonical: str) -> str:
     """Map a canonical flow filename to the actual file for a given test.
 
-    Test 3's clips are named with an ``a`` prefix and a ``_1080p`` suffix
-    (e.g. ``p1_q1.mp4`` -> ``ap1_q1_1080p.mp4``); all other tests use the
-    canonical names directly.
+    For tests in ``SPEAKING_VIDEO_PREFIXES`` the clips carry that prefix and a
+    ``_1080p`` suffix; all other tests use the canonical names directly.
     """
-    if test_n == 3:
-        return "a" + canonical[:-4] + "_1080p.mp4"  # strip ".mp4", re-add suffix
+    prefix = SPEAKING_VIDEO_PREFIXES.get(test_n)
+    if prefix:
+        return f"{prefix}{canonical[:-4]}_1080p.mp4"  # strip ".mp4", re-add suffix
     return canonical
 
 def _get_or_create_speaking_session(user):
