@@ -217,15 +217,29 @@ def _grade_writing(post, tasks=None) -> dict:
 # =============================================================================
 
 # Which static folder each test's examiner videos live in. The flow itself
-# (filenames, order, recording, transcription, scoring) is shared from Test 1;
-# only the folder differs. Tests without their own folder fall back to Test 1.
+# (order, recording, transcription, scoring) is shared from Test 1; only the
+# folder — and, for some tests, the filename scheme — differs. Tests without
+# their own folder fall back to Test 1.
 SPEAKING_VIDEO_FOLDERS = {
     1: "speaking_videos",
     2: "speaking_videos2",
+    3: "speaking_videos3",
 }
 
 # Tests that currently have a playable Speaking section.
 SPEAKING_TESTS = set(SPEAKING_VIDEO_FOLDERS)
+
+
+def _speaking_video_file(test_n: int, canonical: str) -> str:
+    """Map a canonical flow filename to the actual file for a given test.
+
+    Test 3's clips are named with an ``a`` prefix and a ``_1080p`` suffix
+    (e.g. ``p1_q1.mp4`` -> ``ap1_q1_1080p.mp4``); all other tests use the
+    canonical names directly.
+    """
+    if test_n == 3:
+        return "a" + canonical[:-4] + "_1080p.mp4"  # strip ".mp4", re-add suffix
+    return canonical
 
 def _get_or_create_speaking_session(user):
     """Return the most recent in-progress speaking session, or create one."""
@@ -723,15 +737,17 @@ def speaking(request):
     from django.templatetags.static import static
 
     # The examiner-video flow, recording, transcription and scoring are shared
-    # across all tests — only the folder the videos load from differs per test.
-    folder = SPEAKING_VIDEO_FOLDERS.get(_active_test(request), "speaking_videos")
+    # across all tests — only the folder (and, for some tests, the filename
+    # scheme) the videos load from differs per test.
+    n = _active_test(request)
+    folder = SPEAKING_VIDEO_FOLDERS.get(n, "speaking_videos")
 
     session = TestSession.objects.create(
         user=request.user,
         kind=TestSession.KIND_SPEAKING,
     )
     flow_with_urls = [
-        {**step, "url": static(f"{folder}/" + step["video"])}
+        {**step, "url": static(f"{folder}/" + _speaking_video_file(n, step["video"]))}
         for step in C.SPEAKING_VIDEO_FLOW
     ]
     return render(
@@ -740,7 +756,7 @@ def speaking(request):
         {
             "session": session,
             "flow": flow_with_urls,
-            "sample_video_url": static(f"{folder}/intro.mp4"),
+            "sample_video_url": static(f"{folder}/" + _speaking_video_file(n, "intro.mp4")),
             "total_questions": C.speaking_video_questions_total(),
         },
     )
