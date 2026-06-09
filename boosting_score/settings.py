@@ -64,6 +64,17 @@ DATABASES = {
     )
 }
 
+# SQLite locks the entire database file on every write. Under multiple gunicorn
+# workers (as on Railway) concurrent writes — e.g. session saves on every
+# request — surface as "database is locked" / SessionInterrupted. Giving writers
+# up to 30s to wait for the lock (instead of failing instantly) plus WAL mode
+# (enabled in practice_test.apps.ready, so reads don't block the writer) makes
+# SQLite safe for this level of concurrency. For heavy traffic, set DATABASE_URL
+# to a Postgres instance and these options are simply ignored.
+if DATABASES["default"].get("ENGINE", "").endswith("sqlite3"):
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"]["timeout"] = 30
+
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
