@@ -234,6 +234,11 @@ LISTENING = {
 }
 
 
+# Use the richer IELTS-style listening set (map labelling, matching, tables,
+# form/note/sentence completion and MCQ) while keeping Reading/Writing intact.
+from .listening_variety import TEST2_LISTENING as LISTENING
+
+
 # ===================== WRITING =====================
 
 WRITING = {
