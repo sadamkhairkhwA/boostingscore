@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -125,6 +126,27 @@ def _listening_dict_for(n: int):
         return LC.LISTENING_TEST
     bundle = papers.get_content(n)
     return (bundle or {}).get("listening") or {"sections": []}
+
+
+def _static_audio_missing(filenames: list[str]) -> list[str]:
+    """Return static listening-audio filenames that are not present locally.
+
+    Tests 2-5 use pre-recorded per-section MP3 files. If the files are not in
+    static/listening_audio/, the browser receives 404s and reports a misleading
+    "blocked audio" state. Check before rendering the player so the user gets a
+    clear list of files to add.
+    """
+    from pathlib import Path
+
+    roots = [Path(p) for p in getattr(settings, "STATICFILES_DIRS", [])]
+    if getattr(settings, "STATIC_ROOT", None):
+        roots.append(Path(settings.STATIC_ROOT))
+    missing = []
+    for name in filenames:
+        rel = Path("listening_audio") / name
+        if not any((root / rel).exists() for root in roots):
+            missing.append(str(rel))
+    return missing
 
 
 def _annotated_passages(passages=None):
@@ -592,6 +614,20 @@ def listening(request):
         )
 
     from django.templatetags.static import static as _static
+    audio_files = [s["audio"] for s in sections_raw if s.get("audio")]
+    missing_audio = _static_audio_missing(audio_files)
+    if missing_audio:
+        return render(
+            request,
+            "practice_test/listening_setup.html",
+            {
+                "section_count": len(sections_raw),
+                "question_count": total,
+                "test_number": n,
+                "missing_audio_files": missing_audio,
+            },
+        )
+
     section_audios = [
         {"number": s["number"], "url": _static(f"listening_audio/{s['audio']}")}
         for s in sections_raw if s.get("audio")

@@ -10,6 +10,23 @@
 
   <section class="pt-listen-card">
 
+    {% if missing_audio_files %}
+      <div class="pt-listen-soon" style="background:#fff7ed; color:#9a3412; border-color:#fed7aa;">
+        <strong>Listening audio is missing for Practice Test {{ test_number }}.</strong><br>
+        Add these MP3 files to <code>static/listening_audio/</code>, then redeploy:
+      </div>
+
+      <ul style="margin: 12px 0 18px; padding-left: 22px; color: var(--pt-body); font-size: 13.5px; line-height: 1.7;">
+        {% for file in missing_audio_files %}
+          <li><code>{{ file }}</code></li>
+        {% endfor %}
+      </ul>
+
+      <div class="pt-result-actions">
+        <a class="pt-btn pt-btn--ghost" href="{% url 'practice_test:hub' %}">Back to test</a>
+      </div>
+    {% else %}
+
     {% if error %}
       <div class="pt-listen-soon" style="background: var(--pt-red-sf); color: var(--pt-red); border-color:#f3c5c0;">
         <strong>Audio generation failed.</strong> {{ error }}<br>
@@ -42,15 +59,20 @@
       Prefer the command line? Run <code>python manage.py prepare_listening_audio</code> on the server.
     </p>
 
+    {% endif %}
+
   </section>
 
 {% endblock %}
 
 {% block pt_scripts %}
 <script>
-  document.querySelector('form').addEventListener('submit', function(){
-    var b = document.getElementById('pt-gen-btn');
-    b.disabled = true; b.textContent = 'Generating audio… please wait (30–60s)';
-  });
+  var setupForm = document.querySelector('form');
+  if (setupForm) {
+    setupForm.addEventListener('submit', function(){
+      var b = document.getElementById('pt-gen-btn');
+      b.disabled = true; b.textContent = 'Generating audio… please wait (30–60s)';
+    });
+  }
 </script>
 {% endblock %}
