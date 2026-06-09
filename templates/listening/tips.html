@@ -1,0 +1,83 @@
+{% extends "listening/_base.html" %}
+
+{% block title %}Listening tips{% endblock %}
+
+{% block content %}
+<section class="ll-hero ll-hero--compact">
+  <a href="{% url 'listening:home' %}" class="ll-back">← Listening practice</a>
+  <h1 class="ll-hero__title">Tips &amp; how to improve</h1>
+  <p class="ll-hero__sub">Professional IELTS listening strategies for every question type, plus general advice to build your score over time.</p>
+</section>
+
+{# ---------------- Per-type strategy guides ---------------- #}
+<section class="ll-sec">
+  <header class="ll-sec__hd">
+    <h2 class="ll-sec__title">By question type</h2>
+    <p class="ll-sec__sub">Click a type to jump to its guide.</p>
+  </header>
+
+  <nav class="ll-tipsnav" aria-label="Question types">
+    {% for t in type_tips %}
+    <a href="#tip-{{ t.slug }}" class="ll-tipsnav__link">{{ t.name }}</a>
+    {% endfor %}
+  </nav>
+
+  {% for t in type_tips %}
+  <article class="ll-tip" id="tip-{{ t.slug }}">
+    <h3 class="ll-tip__title">{{ t.name }}</h3>
+    <p class="ll-tip__intro">{{ t.intro }}</p>
+
+    <div class="ll-tip__cols">
+      <div class="ll-tip__col">
+        <h4>How to approach it</h4>
+        <ul>
+          {% for item in t.approach %}<li>{{ item }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div class="ll-tip__col">
+        <h4>Common mistakes</h4>
+        <ul>
+          {% for item in t.mistakes %}<li>{{ item }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div class="ll-tip__col">
+        <h4>How to improve</h4>
+        <ul>
+          {% for item in t.improve %}<li>{{ item }}</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <a href="{% url 'listening:practice' t.slug %}" class="ll-tip__cta">Practise {{ t.name|lower }} <span class="ll-arrow">→</span></a>
+  </article>
+  {% endfor %}
+</section>
+
+{# ---------------- General listening advice ---------------- #}
+<section class="ll-sec">
+  <header class="ll-sec__hd">
+    <h2 class="ll-sec__title">General listening advice</h2>
+    <p class="ll-sec__sub">Habits that help across every section of the test.</p>
+  </header>
+
+  <div class="ll-general">
+    <div class="ll-general__block">
+      <h3>Before you listen</h3>
+      <ul>{% for item in general.before %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    <div class="ll-general__block">
+      <h3>While you listen</h3>
+      <ul>{% for item in general.during %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    <div class="ll-general__block">
+      <h3>After the recording</h3>
+      <ul>{% for item in general.after %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    <div class="ll-general__block ll-general__block--wide">
+      <h3>Long-term improvement</h3>
+      <ul>{% for item in general.longterm %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

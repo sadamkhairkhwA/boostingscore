@@ -20,6 +20,7 @@ urlpatterns = [
     path("reading/", include("reading.urls", namespace="reading")),
     path("writing/", include("writing.urls", namespace="writing")),
     path("test/", include("practice_test.urls", namespace="practice_test")),
+    path("listening/", include("listening.urls", namespace="listening")),
     # Serve user-generated media (e.g. the generated listening MP3) in BOTH
     # dev and production. Django's static() helper only serves media when
     # DEBUG=True, which left /media/ 404ing on Railway — so we wire the serve

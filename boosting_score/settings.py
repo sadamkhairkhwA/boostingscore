@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "reading",
     "writing",
     "practice_test.apps.PracticeTestConfig",
+    "listening.apps.ListeningConfig",
 ]
 
 MIDDLEWARE = [

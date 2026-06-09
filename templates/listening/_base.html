@@ -1,0 +1,30 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Listening{% endblock %} — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'listening/css/listen_learn.css' %}?v=1">
+  {% block head %}{% endblock %}
+</head>
+<body class="ll-body">
+
+<header class="ll-nav">
+  <div class="ll-nav__inner">
+    <a href="{% url 'home' %}" class="ll-logo">Boosting<span>Score</span></a>
+    <div class="ll-nav__right">
+      <a href="{% url 'listening:home' %}" class="ll-pill">Practice</a>
+      <a href="{% url 'listening:tips' %}" class="ll-pill">Tips</a>
+      <span class="ll-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
+      <a href="{% url 'logout' %}" class="ll-nav__logout">Log out</a>
+    </div>
+  </div>
+</header>
+
+<main class="ll-main">
+  {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,187 @@
+{% extends "listening/_base.html" %}
+{% load static %}
+
+{% block title %}{{ type_label }} — Listening{% endblock %}
+
+{% block content %}
+<div class="ll-practice">
+
+  <div class="ll-practice__head">
+    <a href="{% url 'listening:home' %}" class="ll-back">← All question types</a>
+    <span class="ll-practice__tag">{{ type_label }}</span>
+  </div>
+  <h1 class="ll-practice__title">{{ pset.title }}</h1>
+
+  {% if mode == "results" %}
+  {# ============================ RESULTS ============================ #}
+  <div class="ll-score">
+    <div class="ll-score__ring ll-score__ring--{% if percent >= 80 %}good{% elif percent >= 50 %}ok{% else %}low{% endif %}">
+      <span class="ll-score__num">{{ score }}/{{ total }}</span>
+      <span class="ll-score__pct">{{ percent }}%</span>
+    </div>
+    <div class="ll-score__txt">
+      <h2>Nice work — here's how you did</h2>
+      <p>Each question below shows your answer, the correct answer and a short explanation. Saved to your history.</p>
+    </div>
+  </div>
+
+  <ol class="ll-results">
+    {% for r in results %}
+    <li class="ll-result {% if r.correct %}is-correct{% else %}is-wrong{% endif %}">
+      <div class="ll-result__top">
+        <span class="ll-result__badge">{% if r.correct %}✓{% else %}✗{% endif %}</span>
+        <span class="ll-result__q"><b>{{ r.number }}.</b> {{ r.text }}</span>
+      </div>
+      <div class="ll-result__ans">
+        <span class="ll-result__given">Your answer: <b>{{ r.given|default:"—" }}</b></span>
+        {% if not r.correct %}<span class="ll-result__correct">Correct: <b>{{ r.correct_answer }}</b></span>{% endif %}
+      </div>
+      {% if r.explanation %}<p class="ll-result__exp">{{ r.explanation }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  <div class="ll-practice__actions">
+    <a href="{% url 'listening:practice' qtype %}" class="ll-btn ll-btn--primary">Try again</a>
+    <a href="{% url 'listening:home' %}" class="ll-btn">Another question type</a>
+    <a href="{% url 'listening:tips' %}" class="ll-btn ll-btn--ghost">Tips for {{ type_label|lower }}</a>
+  </div>
+
+  {% else %}
+  {# ============================ PLAY ============================ #}
+  <p class="ll-practice__instr">{{ pset.instructions }}</p>
+
+  {% if audio_missing %}
+  <div class="ll-warn">
+    <b>Audio not found.</b> Add <code>static/listening_practice/{{ pset.audio }}</code>
+    (or run <code>python manage.py prepare_listening_practice_audio</code>) and reload.
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'listening:practice' qtype %}" id="ll-form">
+    {% csrf_token %}
+    <input type="hidden" name="set_id" value="{{ pset.id }}">
+
+    {# ---- audio player (plays once) ---- #}
+    <div class="ll-aud">
+      <button type="button" class="ll-aud__btn" id="ll-play" aria-label="Play audio" disabled>
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7L8 5z"/></svg>
+      </button>
+      <div class="ll-aud__main">
+        <div class="ll-aud__status" id="ll-status">Press “Begin” to play the recording.</div>
+        <div class="ll-aud__bar"><div class="ll-aud__fill" id="ll-fill"></div></div>
+        <div class="ll-aud__time"><span id="ll-now">0:00</span> / <span id="ll-dur">—:—</span></div>
+      </div>
+      <span class="ll-aud__once">Plays once</span>
+      <audio id="ll-audio" preload="auto" src="{{ audio_url }}"></audio>
+    </div>
+
+    {# ---- begin overlay ---- #}
+    <div class="ll-begin" id="ll-begin">
+      <p class="ll-begin__txt">The clip plays <b>once only</b> — no pausing or rewinding, just like the real exam. Answer as you listen.</p>
+      <button type="button" class="ll-btn ll-btn--primary" id="ll-begin-btn" {% if audio_missing %}disabled{% endif %}>Begin</button>
+    </div>
+
+    {# ---- map (if any) ---- #}
+    {% if pset.map_svg %}
+    <div class="ll-map">{{ pset.map_svg|safe }}</div>
+    {% endif %}
+
+    {# ---- questions ---- #}
+    <ol class="ll-qs" id="ll-qs">
+      {% for q in questions %}
+      <li class="ll-q" id="ll-q-{{ q.number }}">
+        <div class="ll-q__text"><span class="ll-q__num">{{ q.number }}</span> {{ q.text }}</div>
+        {% if q.render == "radio" %}
+          <div class="ll-q__opts">
+            {% for opt in q.options %}
+            <label class="ll-opt"><input type="radio" name="{{ q.id }}" value="{{ opt }}" disabled> <span>{{ opt }}</span></label>
+            {% endfor %}
+          </div>
+        {% elif q.render == "select" %}
+          <select name="{{ q.id }}" class="ll-select" disabled aria-label="Question {{ q.number }}">
+            <option value="">— choose —</option>
+            {% for opt in q.options %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+          </select>
+        {% else %}
+          <input type="text" name="{{ q.id }}" class="ll-input" placeholder="Your answer" autocomplete="off" disabled>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+
+    <div class="ll-practice__actions">
+      <button type="submit" class="ll-btn ll-btn--primary" id="ll-submit">Submit answers</button>
+      <a href="{% url 'listening:home' %}" class="ll-btn ll-btn--ghost">Cancel</a>
+    </div>
+  </form>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if mode == "play" %}
+<script>
+(function () {
+  var form   = document.getElementById('ll-form');
+  var audio  = document.getElementById('ll-audio');
+  var playBtn= document.getElementById('ll-play');
+  var fill   = document.getElementById('ll-fill');
+  var nowEl  = document.getElementById('ll-now');
+  var durEl  = document.getElementById('ll-dur');
+  var statEl = document.getElementById('ll-status');
+  var begin  = document.getElementById('ll-begin');
+  var beginBtn = document.getElementById('ll-begin-btn');
+
+  function fmt(s){ if(!isFinite(s)||s<0) return '0:00'; var m=Math.floor(s/60),r=Math.floor(s%60); return m+':'+(r<10?'0':'')+r; }
+
+  function setAnswering(on){
+    form.querySelectorAll('input, select').forEach(function(el){
+      if(el.type==='hidden'||el.type==='submit') return;
+      el.disabled = !on;
+    });
+  }
+  setAnswering(false);
+
+  function runCountdown(done){
+    var ov=document.createElement('div'); ov.className='ll-count';
+    ov.innerHTML='<div class="ll-count__n" id="ll-cn">3</div>';
+    document.body.appendChild(ov);
+    var n=3, el=ov.querySelector('#ll-cn');
+    var iv=setInterval(function(){ n--; if(n<=0){clearInterval(iv); ov.remove(); done(); return;} el.textContent=n; el.style.animation='none'; void el.offsetWidth; el.style.animation=''; },1000);
+  }
+
+  beginBtn.addEventListener('click', function(){
+    begin.setAttribute('hidden','');
+    begin.style.display='none';
+    runCountdown(function(){
+      setAnswering(true);
+      playBtn.disabled = true;
+      statEl.textContent = 'Playing — the recording will not rewind. Listen carefully.';
+      audio.play().catch(function(){ statEl.textContent='Your browser blocked audio — click the play button.'; playBtn.disabled=false; });
+    });
+  });
+
+  playBtn.addEventListener('click', function(){
+    if(audio.currentTime>0 || playBtn.disabled) return;
+    audio.play(); playBtn.disabled=true;
+  });
+
+  audio.addEventListener('loadedmetadata', function(){ durEl.textContent=fmt(audio.duration); });
+  var lastT=0;
+  audio.addEventListener('timeupdate', function(){
+    nowEl.textContent=fmt(audio.currentTime);
+    if(audio.duration) fill.style.width=(audio.currentTime/audio.duration*100)+'%';
+    lastT=audio.currentTime;
+  });
+  audio.addEventListener('seeking', function(){
+    if(Math.abs(audio.currentTime-lastT)>0.4) audio.currentTime=lastT;
+  });
+  audio.addEventListener('ended', function(){
+    statEl.textContent='Recording finished — check your answers and submit.';
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "listening/_base.html" %}
+{% load static %}
+
+{% block title %}Listening{% endblock %}
+
+{% block content %}
+<section class="ll-hero">
+  <a href="{% url 'home' %}" class="ll-back">← Dashboard</a>
+  <div class="ll-hero__ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="26" height="26"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 14v-2a8 8 0 0 1 16 0v2M4 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2zM20 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2z"/></svg>
+  </div>
+  <h1 class="ll-hero__title">Listening</h1>
+  <p class="ll-hero__sub">Train one IELTS question type at a time, then learn the strategies that lift your score.</p>
+</section>
+
+{# ---------------- Part 1: Practice by question type ---------------- #}
+<section class="ll-sec">
+  <header class="ll-sec__hd">
+    <h2 class="ll-sec__title">Practice by question type</h2>
+    <p class="ll-sec__sub">Choose a type. You'll get a short audio clip — it plays once — and questions of only that type. Answers and explanations come at the end.</p>
+  </header>
+
+  <div class="ll-grid">
+    {% for t in types %}
+    <a href="{% url 'listening:practice' t.slug %}" class="ll-card {% if not t.set_count %}is-soon{% endif %}">
+      <span class="ll-card__ico">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+      <div class="ll-card__name">{{ t.name }}</div>
+      <p class="ll-card__desc">{{ t.blurb }}</p>
+      <div class="ll-card__foot">
+        {% if t.set_count %}
+          <span class="ll-card__cta">Practise <span class="ll-arrow">→</span></span>
+        {% else %}
+          <span class="ll-card__cta ll-card__cta--soon">Coming soon</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+{# ---------------- Part 2: Tips & how to improve ---------------- #}
+<section class="ll-tipsbanner">
+  <div class="ll-tipsbanner__txt">
+    <h2 class="ll-tipsbanner__title">Tips &amp; how to improve</h2>
+    <p class="ll-tipsbanner__sub">Strategy guides for every question type — how to approach it, the common mistakes, and how to get better — plus general listening advice.</p>
+  </div>
+  <a href="{% url 'listening:tips' %}" class="ll-tipsbanner__btn">Read the tips <span class="ll-arrow">→</span></a>
+</section>
+
+{# ---------------- Recent attempts ---------------- #}
+{% if recent %}
+<section class="ll-sec">
+  <header class="ll-sec__hd">
+    <h2 class="ll-sec__title">Your recent practice</h2>
+  </header>
+  <ul class="ll-recent">
+    {% for a in recent %}
+    <li class="ll-recent__row">
+      <div class="ll-recent__main">
+        <span class="ll-recent__type">{{ a.type_label|default:a.question_type }}</span>
+        <span class="ll-recent__set">{{ a.set_title }}</span>
+      </div>
+      <span class="ll-recent__score">{{ a.score }}/{{ a.total }}</span>
+      <span class="ll-recent__pct ll-recent__pct--{% if a.percent >= 80 %}good{% elif a.percent >= 50 %}ok{% else %}low{% endif %}">{{ a.percent }}%</span>
+      <a href="{% url 'listening:practice' a.question_type %}" class="ll-recent__again">Retry</a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% endblock %}
