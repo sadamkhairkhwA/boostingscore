@@ -1,0 +1,277 @@
+/* ===================== BoostingScore standalone auth pages =====================
+   Used by /accounts/login/ and /accounts/signup/.
+   These pages do NOT extend base.html — they are self-contained so the main
+   app nav/footer never bleeds into them. */
+
+:root{
+  --bg:        #f0ede8;
+  --card:      #ffffff;
+  --border:    #e2e8f0;
+  --green:     #2d6a0a;
+  --green-dk:  #245608;
+  --green-soft:#eaf5e2;
+  --navy:      #1e3a5f;
+  --ink:       #1a2a3a;
+  --body:      #3a5070;
+  --muted:     #64748b;
+  --err:       #c62828;
+  --radius:    13px;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.04);
+  --shadow:    0 8px 24px rgba(15,23,42,.08);
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+
+.auth-body{
+  margin:0;
+  background:var(--bg);
+  color:var(--body);
+  font-family:"Segoe UI", Arial, sans-serif;
+  font-size:15px;
+  line-height:1.55;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+/* ---------- Top bar ---------- */
+.auth-top{
+  position:sticky; top:0; z-index:10;
+  background:#fff;
+  border-bottom:.5px solid var(--border);
+}
+.auth-top__inner{
+  max-width:1180px; margin:0 auto;
+  padding:14px 22px;
+  display:flex; align-items:center; justify-content:space-between; gap:18px;
+}
+.auth-logo{
+  font-weight:800; color:var(--ink);
+  text-decoration:none; letter-spacing:-.2px; font-size:18px;
+}
+.auth-logo span{ color:var(--green); }
+
+.auth-top__right{
+  display:flex; align-items:center; gap:14px;
+  color:var(--muted); font-size:13.5px;
+}
+.auth-top__right a{ color:var(--ink); text-decoration:none; font-weight:600; }
+.auth-top__right a:hover{ color:var(--green); }
+
+/* ---------- Layout ---------- */
+.auth-shell{
+  display:grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: calc(100vh - 57px);
+}
+
+.auth-shell--single{
+  grid-template-columns: 1fr;
+  place-items:center;
+  padding: 48px 22px;
+}
+
+/* Left side (promo) */
+.auth-promo{
+  position:relative;
+  background:linear-gradient(135deg,#f6f2eb 0%, #eef0e3 60%, #e6efd6 100%);
+  border-right:.5px solid var(--border);
+  padding: 48px 44px;
+  display:flex; align-items:center;
+  overflow:hidden;
+}
+.auth-promo__inner{
+  position:relative; z-index:1;
+  max-width:520px; margin:0 auto;
+  width:100%;
+}
+
+.auth-promo__eyebrow{
+  display:inline-block;
+  background:var(--green-soft); color:var(--green-dk);
+  border:1px solid #d6e9c7;
+  font-size:12px; font-weight:700;
+  padding:5px 11px; border-radius:999px;
+  letter-spacing:.02em;
+  margin-bottom:14px;
+}
+.auth-promo__h1{
+  font-size:30px; line-height:1.18; letter-spacing:-.4px;
+  color:var(--ink); margin:0 0 12px; font-weight:800;
+}
+.auth-promo__h1 .g{ color:var(--green); }
+.auth-promo__sub{
+  color:var(--body); font-size:15.5px; margin:0 0 22px;
+}
+
+.auth-promo__list{
+  list-style:none; padding:0; margin:0 0 24px;
+  display:grid; gap:10px;
+}
+.auth-promo__list li{
+  position:relative; padding-left:30px; color:var(--body);
+}
+.auth-promo__list li::before{
+  content:"✓";
+  position:absolute; left:0; top:1px;
+  width:20px; height:20px; border-radius:50%;
+  background:var(--green-soft); color:var(--green-dk);
+  font-weight:800; font-size:12px;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.auth-promo__stats{
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  background:#fff;
+  border:.5px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px;
+  box-shadow:var(--shadow-sm);
+}
+.auth-promo__stat{ text-align:center; }
+.auth-promo__stat b{
+  display:block; color:var(--green);
+  font-size:20px; font-weight:800; letter-spacing:-.2px;
+}
+.auth-promo__stat span{
+  font-size:12px; color:var(--muted);
+}
+
+/* Right side (form) */
+.auth-formwrap{
+  display:flex; align-items:center; justify-content:center;
+  padding: 56px 24px;
+  background:var(--bg);
+}
+.auth-card{
+  width:100%; max-width:420px;
+  background:#fff;
+  border:.5px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:32px 32px 28px;
+}
+.auth-card__brand{
+  font-weight:800; color:var(--ink);
+  font-size:18px; letter-spacing:-.2px;
+  text-align:center;
+  margin-bottom:6px;
+}
+.auth-card__brand span{ color:var(--green); }
+.auth-card__title{
+  text-align:center;
+  font-size:22px; font-weight:800; color:var(--ink);
+  margin:6px 0 4px; letter-spacing:-.3px;
+}
+.auth-card__sub{
+  text-align:center;
+  color:var(--muted); font-size:14px; margin:0 0 22px;
+}
+
+.auth-card__error{
+  background:#fde2e2; color:#7a1717;
+  border:1px solid #f5b5b5;
+  border-radius:10px;
+  padding:10px 12px;
+  font-size:13.5px;
+  margin-bottom:14px;
+}
+
+.auth-label{
+  display:block;
+  font-size:13px; font-weight:600;
+  color:var(--ink);
+  margin: 12px 0 6px;
+}
+
+.auth-input{
+  width:100%;
+  background:#fff;
+  border:1px solid #d4dbe4;
+  border-radius:10px;
+  padding:11px 13px;
+  font-size:14.5px; color:var(--ink);
+  font-family:inherit;
+  outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.auth-input::placeholder{ color:#9aa3b1; }
+.auth-input:focus{
+  border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(45,106,10,.14);
+}
+
+.auth-btn{
+  width:100%;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--green); color:#fff;
+  border:0; border-radius:10px;
+  padding:12px 16px;
+  font-size:15px; font-weight:700;
+  cursor:pointer;
+  margin-top:18px;
+  transition: background .15s, transform .08s;
+}
+.auth-btn:hover{ background:var(--green-dk); }
+.auth-btn:active{ transform:translateY(1px); }
+
+.auth-card__footer{
+  text-align:center;
+  color:var(--muted); font-size:13.5px;
+  margin-top:18px;
+}
+.auth-card__footer a{
+  color:var(--green); text-decoration:none; font-weight:700;
+}
+.auth-card__footer a:hover{ color:var(--green-dk); text-decoration:underline; }
+
+.auth-tiny{
+  text-align:center;
+  font-size:12px; color:var(--muted);
+  margin-top:10px;
+}
+
+/* ---------- Mini footer (single thin line) ---------- */
+.auth-footerline{
+  text-align:center;
+  padding:14px 18px;
+  font-size:12.5px; color:var(--muted);
+  border-top:.5px solid var(--border);
+  background:#fff;
+}
+.auth-footerline a{
+  color:var(--muted); text-decoration:none; margin:0 6px;
+}
+.auth-footerline a:hover{ color:var(--ink); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px){
+  .auth-shell{ grid-template-columns:1fr; }
+  .auth-promo{
+    display:none;        /* hide promo on tablet/mobile so form gets full attention */
+  }
+  .auth-formwrap{ padding:32px 18px; }
+}
+@media (max-width: 480px){
+  .auth-card{ padding:24px 22px 22px; border-radius:12px; }
+  .auth-card__title{ font-size:20px; }
+  .auth-top__inner{ padding:12px 16px; }
+}
+
+/* When using the showcase column (login page) we hide the simple promo */
+.auth-shell.has-showcase .auth-promo{ display:none; }
+.auth-shell.has-showcase{ grid-template-columns: 1.1fr 1fr; }
+@media (max-width: 980px){
+  .auth-shell.has-showcase{ grid-template-columns: 1fr; }
+  .auth-shell.has-showcase .bs-auth-showcase{ display:none; }
+}
+
+/* Bridge: the showcase CSS was authored for a body that had the app nav.
+   Now that auth pages are standalone, normalize sizing here so the
+   split layout fills the viewport without any leftover gap. */
+.bs-auth-split{
+  min-height: calc(100vh - 57px - 41px); /* viewport - topbar - footerline */
+  background: transparent;
+}
+.bs-auth-formwrap{ background: var(--bg); }

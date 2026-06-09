@@ -775,6 +775,86 @@ button { font-family: inherit; cursor: pointer; }
   color: #9ca3af;
   margin-top: 4px;
 }
+.bs-fc-topic-level--form {
+  flex-wrap: wrap;
+}
+.bs-fc-topic-start-form {
+  margin-top: 12px;
+  width: 100%;
+}
+.bs-fc-topic-limit-lbl,
+.bs-studio-due-lbl {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+.bs-fc-topic-start-row,
+.bs-studio-custom-start-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.bs-fc-session-limit-select {
+  min-width: 140px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  background: #fff;
+}
+.bs-fc-topic-start-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #3b6d11;
+  color: #fff;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.12s;
+}
+.bs-fc-topic-start-btn:hover {
+  background: #325c0e;
+}
+.bs-fc-topic-start-btn:active {
+  transform: scale(0.98);
+}
+.bs-fc-topic-empty-lvl {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.bs-studio-due-row--form {
+  flex-wrap: wrap;
+}
+.bs-studio-due-controls {
+  margin-top: 10px;
+  width: 100%;
+}
+.bs-studio-due-btn--submit {
+  cursor: pointer;
+  font: inherit;
+  align-self: flex-end;
+}
+.bs-studio-due-row--empty {
+  cursor: default;
+}
+.bs-studio-card--custom-form {
+  cursor: default;
+}
+.bs-studio-custom-start-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
 
 /* FLASHCARD SESSION — full-page study UI, opacity flip (reliable across browsers) */
 .bs-page-flashcard { background: linear-gradient(180deg, #F1F5F9 0%, #F7F6F3 35%, #EEF2F6 100%); }

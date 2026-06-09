@@ -1,0 +1,222 @@
+/* =============================================================================
+   Speaking results page — strict design spec
+   - Background: #f5f5f3
+   - White cards, 0.5px #e8e8e6 border, border-radius 12px
+   - Headings: #1a1a1a, weight 600
+   - Body:    #444,    13–14px
+   - Mobile friendly, single column on small screens
+   ========================================================================== */
+
+body.pt-body {
+  background: #f5f5f3;
+}
+
+.spkr {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+  color: #444;
+  font-size: 14px;
+  line-height: 1.55;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- 1. Score header ---------- */
+.spkr-hero {
+  background: #ffffff;
+  border: 0.5px solid #e8e8e6;
+  border-radius: 12px;
+  padding: 44px 24px 36px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.spkr-hero__band {
+  font-size: 72px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+  letter-spacing: -1.5px;
+}
+.spkr-hero__msg {
+  margin: 16px auto 0;
+  max-width: 480px;
+  font-size: 14px;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* ---------- Generic card ---------- */
+.spkr-card {
+  background: #ffffff;
+  border: 0.5px solid #e8e8e6;
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.spkr-card__title {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+.spkr-empty {
+  margin: 0;
+  color: #777;
+  font-style: italic;
+}
+
+/* ---------- 2. Full transcript ---------- */
+.spkr-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.spkr-line__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.spkr-line__text {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 3. Errors & corrections ---------- */
+.spkr-errors {
+  display: flex;
+  flex-direction: column;
+}
+.spkr-errors__head {
+  display: grid;
+  grid-template-columns: 1fr 22px 1fr;
+  gap: 16px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid #f0f0ec;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.spkr-errors__head > div:nth-child(2) { display: none; }
+.spkr-errors__row {
+  display: grid;
+  grid-template-columns: 1fr 22px 1fr;
+  align-items: start;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f0;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.spkr-errors__row:last-child { border-bottom: 0; }
+.spkr-errors__original {
+  color: #8a2a1d;
+}
+.spkr-errors__corrected {
+  color: #2d6a0a;
+}
+.spkr-errors__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b9b9b3;
+  padding-top: 2px;
+}
+
+/* ---------- 4 & 5. Lists ---------- */
+.spkr-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spkr-list li {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.65;
+  padding-left: 4px;
+}
+.spkr-list li::marker {
+  color: #b9b9b3;
+}
+
+/* ---------- Action buttons ---------- */
+.spkr-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 26px;
+  flex-wrap: wrap;
+}
+.spkr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 0.5px solid #e8e8e6;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.spkr-btn--primary {
+  background: #1a1a1a;
+  color: #ffffff;
+  border-color: #1a1a1a;
+}
+.spkr-btn--primary:hover {
+  background: #000000;
+  border-color: #000000;
+}
+.spkr-btn--ghost {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+.spkr-btn--ghost:hover {
+  background: #f0f0ec;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 600px) {
+  .spkr {
+    padding: 18px 14px 48px;
+  }
+  .spkr-hero {
+    padding: 36px 18px 28px;
+  }
+  .spkr-hero__band {
+    font-size: 56px;
+  }
+  .spkr-card {
+    padding: 18px 18px;
+  }
+  /* Stack the error rows into a clear before/after layout on small screens. */
+  .spkr-errors__head { display: none; }
+  .spkr-errors__row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 14px 0;
+  }
+  .spkr-errors__arrow {
+    transform: rotate(90deg);
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+  .spkr-actions {
+    flex-direction: column;
+  }
+  .spkr-btn {
+    width: 100%;
+  }
+}

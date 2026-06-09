@@ -280,11 +280,15 @@
     setTimeout(function () {
       if (inp) inp.focus();
     }, 50);
-    document.getElementById("qqfb-check").addEventListener("click", function () {
+    function doFbCheck() {
       var ok = (inp.value || "").trim().toLowerCase() === wtxt.toLowerCase();
       fb.textContent = ok ? "✓ Correct!" : "✗ The correct answer is: " + wtxt;
       fb.className = "qqfb-feedback " + (ok ? "is-ok" : "is-bad");
       enableNext();
+    }
+    document.getElementById("qqfb-check").addEventListener("click", doFbCheck);
+    inp.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") doFbCheck();
     });
   }
 
