@@ -204,6 +204,65 @@ def _compute_timing(plan: list[dict], durations: list[float]) -> list[dict]:
     return sorted(timing, key=lambda x: x["number"])
 
 
+def generate_lines_to_file(
+    lines: list[tuple[str, str]],
+    dest: Path,
+    *,
+    verbose: bool = False,
+) -> Path:
+    """Synthesise a list of ``(speaker, text)`` lines into a single mastered MP3.
+
+    Reuses the exact Test 1 pipeline: each line is generated with its speaker's
+    voice, stitched with natural pauses, and loudness-normalised. Used to build
+    the per-section files (testN_sX.mp3) for Practice Tests 2-5.
+    """
+    client = _client()
+    ffmpeg = _ffmpeg_exe()
+
+    def log(msg: str) -> None:
+        if verbose:
+            print(f"[listening tts] {msg}")
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="listening_tts_") as tmp:
+        tmp_path = Path(tmp)
+        line_files: list[Path] = []
+
+        for i, (speaker, text) in enumerate(lines, start=1):
+            voice = _voice_for(speaker)
+            line_path = tmp_path / f"line_{i:03d}.mp3"
+            log(f"[{i}/{len(lines)}] {speaker} ({voice}): {text[:48]}…")
+            _tts_to_file(
+                client, text=text, voice=voice,
+                instructions=_instructions_for(speaker), out_path=line_path,
+            )
+            line_files.append(line_path)
+
+        pause = tmp_path / "pause.mp3"
+        _make_silence(ffmpeg, pause, PAUSE_LINE_MS)
+
+        concat_lines: list[str] = []
+        for idx, lf in enumerate(line_files):
+            concat_lines.append(_concat_line(lf))
+            if idx < len(line_files) - 1:
+                concat_lines.append(_concat_line(pause))
+        concat_path = tmp_path / "concat.txt"
+        concat_path.write_text("\n".join(concat_lines) + "\n")
+
+        log("Stitching + mastering (loudnorm)…")
+        subprocess.run(
+            [ffmpeg, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
+             "-i", str(concat_path),
+             "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+             "-acodec", "libmp3lame", "-q:a", "2", str(dest)],
+            check=True,
+        )
+
+    log(f"Wrote {dest} ({dest.stat().st_size / 1024:.1f} KB)")
+    return dest
+
+
 def generate_audio(verbose: bool = False) -> Path:
     """Generate the full multi-voice listening audio + timing. Returns the path."""
     client = _client()

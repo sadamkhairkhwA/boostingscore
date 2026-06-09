@@ -25,16 +25,15 @@ DISCOVERY_CENTRE_MAP_SVG = """
   <rect x="14" y="14" width="492" height="272" rx="18" fill="#f7fbff" stroke="#93a4b8" stroke-width="2"/>
   <path d="M70 240 H450" stroke="#9aa8b5" stroke-width="20" stroke-linecap="round"/>
   <path d="M260 240 V70" stroke="#9aa8b5" stroke-width="18" stroke-linecap="round"/>
-  <rect x="48" y="188" width="112" height="54" rx="8" fill="#fff" stroke="#345c7a"/><text x="104" y="218" text-anchor="middle" font-size="13">Entrance</text>
-  <rect x="190" y="36" width="140" height="56" rx="8" fill="#eaf6ff" stroke="#345c7a"/><text x="260" y="68" text-anchor="middle" font-size="13">Space Gallery</text>
-  <rect x="352" y="86" width="118" height="58" rx="8" fill="#fff5e8" stroke="#9b6630"/><text x="411" y="119" text-anchor="middle" font-size="13">Cafe</text>
-  <rect x="52" y="82" width="118" height="58" rx="8" fill="#eef8ec" stroke="#3d7a3b"/><text x="111" y="115" text-anchor="middle" font-size="13">Theatre</text>
-  <circle cx="260" cy="172" r="38" fill="#f2efff" stroke="#5f4fa3"/><text x="260" y="176" text-anchor="middle" font-size="13">Lab</text>
-  <rect x="350" y="192" width="112" height="52" rx="8" fill="#fff" stroke="#345c7a"/><text x="406" y="222" text-anchor="middle" font-size="13">Gift shop</text>
-  <text x="55" y="40" font-size="18" font-weight="700">A</text><text x="250" y="32" font-size="18" font-weight="700">B</text>
-  <text x="480" y="104" font-size="18" font-weight="700">C</text><text x="128" y="76" font-size="18" font-weight="700">D</text>
-  <text x="308" y="166" font-size="18" font-weight="700">E</text><text x="466" y="238" font-size="18" font-weight="700">F</text>
-  <text x="176" y="248" font-size="18" font-weight="700">G</text><text x="260" y="270" font-size="18" font-weight="700">H</text>
+  <rect x="48" y="188" width="112" height="54" rx="8" fill="#e8edf2" stroke="#345c7a"/><text x="104" y="219" text-anchor="middle" font-size="12" fill="#345c7a">ENTRANCE</text>
+  <rect x="190" y="36" width="140" height="56" rx="8" fill="#eaf6ff" stroke="#345c7a"/><text x="260" y="70" text-anchor="middle" font-size="20" font-weight="700">B</text>
+  <rect x="352" y="86" width="118" height="58" rx="8" fill="#fff5e8" stroke="#9b6630"/><text x="411" y="122" text-anchor="middle" font-size="20" font-weight="700">C</text>
+  <rect x="52" y="82" width="118" height="58" rx="8" fill="#eef8ec" stroke="#3d7a3b"/><text x="111" y="118" text-anchor="middle" font-size="20" font-weight="700">D</text>
+  <circle cx="260" cy="172" r="38" fill="#f2efff" stroke="#5f4fa3"/><text x="260" y="179" text-anchor="middle" font-size="20" font-weight="700">E</text>
+  <rect x="350" y="192" width="112" height="52" rx="8" fill="#fff" stroke="#345c7a"/><text x="406" y="225" text-anchor="middle" font-size="20" font-weight="700">F</text>
+  <rect x="40" y="40" width="80" height="40" rx="8" fill="#fff" stroke="#777"/><text x="80" y="66" text-anchor="middle" font-size="20" font-weight="700">A</text>
+  <rect x="372" y="36" width="80" height="40" rx="8" fill="#fff" stroke="#777"/><text x="412" y="62" text-anchor="middle" font-size="20" font-weight="700">G</text>
+  <rect x="150" y="150" width="64" height="40" rx="8" fill="#fff" stroke="#777"/><text x="182" y="176" text-anchor="middle" font-size="20" font-weight="700">H</text>
 </svg>
 """
 
@@ -42,15 +41,15 @@ FESTIVAL_MAP_SVG = """
 <svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Festival site map">
   <rect x="16" y="16" width="488" height="268" rx="18" fill="#fffdf5" stroke="#bca56c" stroke-width="2"/>
   <path d="M55 238 C170 180 285 250 445 175" fill="none" stroke="#78a6cf" stroke-width="18" stroke-linecap="round"/>
-  <rect x="50" y="48" width="105" height="58" rx="8" fill="#fff" stroke="#6f6f6f"/><text x="102" y="82" text-anchor="middle" font-size="13">Main gate</text>
-  <rect x="190" y="44" width="120" height="58" rx="8" fill="#fff1e6" stroke="#b36b30"/><text x="250" y="78" text-anchor="middle" font-size="13">Chef stage</text>
-  <rect x="360" y="54" width="100" height="58" rx="8" fill="#eef8ec" stroke="#4a8847"/><text x="410" y="88" text-anchor="middle" font-size="13">Picnic area</text>
-  <rect x="70" y="150" width="120" height="56" rx="8" fill="#f4f1ff" stroke="#6b5fb5"/><text x="130" y="183" text-anchor="middle" font-size="13">Kids tent</text>
-  <rect x="265" y="148" width="112" height="56" rx="8" fill="#fff" stroke="#6f6f6f"/><text x="321" y="181" text-anchor="middle" font-size="13">Info desk</text>
-  <text x="36" y="46" font-size="18" font-weight="700">A</text><text x="238" y="35" font-size="18" font-weight="700">B</text>
-  <text x="467" y="54" font-size="18" font-weight="700">C</text><text x="48" y="164" font-size="18" font-weight="700">D</text>
-  <text x="385" y="164" font-size="18" font-weight="700">E</text><text x="444" y="205" font-size="18" font-weight="700">F</text>
-  <text x="210" y="232" font-size="18" font-weight="700">G</text><text x="94" y="256" font-size="18" font-weight="700">H</text>
+  <rect x="50" y="48" width="105" height="58" rx="8" fill="#e8e8e8" stroke="#6f6f6f"/><text x="102" y="83" text-anchor="middle" font-size="12" fill="#555">MAIN GATE</text>
+  <rect x="190" y="44" width="110" height="58" rx="8" fill="#fff1e6" stroke="#b36b30"/><text x="245" y="81" text-anchor="middle" font-size="20" font-weight="700">B</text>
+  <rect x="360" y="54" width="100" height="58" rx="8" fill="#eef8ec" stroke="#4a8847"/><text x="410" y="91" text-anchor="middle" font-size="20" font-weight="700">C</text>
+  <rect x="70" y="150" width="110" height="56" rx="8" fill="#f4f1ff" stroke="#6b5fb5"/><text x="125" y="186" text-anchor="middle" font-size="20" font-weight="700">D</text>
+  <rect x="265" y="148" width="112" height="56" rx="8" fill="#fff" stroke="#6f6f6f"/><text x="321" y="184" text-anchor="middle" font-size="20" font-weight="700">E</text>
+  <rect x="190" y="120" width="60" height="40" rx="8" fill="#fff" stroke="#777"/><text x="220" y="146" text-anchor="middle" font-size="20" font-weight="700">A</text>
+  <rect x="410" y="170" width="60" height="40" rx="8" fill="#fff" stroke="#777"/><text x="440" y="196" text-anchor="middle" font-size="20" font-weight="700">F</text>
+  <rect x="120" y="230" width="60" height="40" rx="8" fill="#fff" stroke="#777"/><text x="150" y="256" text-anchor="middle" font-size="20" font-weight="700">G</text>
+  <rect x="330" y="225" width="60" height="40" rx="8" fill="#fff" stroke="#777"/><text x="360" y="251" text-anchor="middle" font-size="20" font-weight="700">H</text>
 </svg>
 """
 
@@ -58,14 +57,14 @@ NATURE_RESERVE_MAP_SVG = """
 <svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nature reserve route map">
   <rect x="15" y="15" width="490" height="270" rx="18" fill="#f6fbf2" stroke="#7fa56b" stroke-width="2"/>
   <path d="M65 235 C120 135 230 245 310 120 S430 75 455 175" fill="none" stroke="#8b6d42" stroke-width="12" stroke-dasharray="12 9" stroke-linecap="round"/>
-  <ellipse cx="185" cy="82" rx="82" ry="38" fill="#b9d9ff" stroke="#4d7aa3"/><text x="185" y="86" text-anchor="middle" font-size="13">Lake</text>
-  <rect x="50" y="205" width="102" height="50" rx="8" fill="#fff" stroke="#56724b"/><text x="101" y="235" text-anchor="middle" font-size="13">Car park</text>
-  <rect x="315" y="190" width="116" height="50" rx="8" fill="#fff8e8" stroke="#9b773c"/><text x="373" y="220" text-anchor="middle" font-size="13">Bird hide</text>
-  <circle cx="355" cy="72" r="36" fill="#eaf6df" stroke="#5c874d"/><text x="355" y="76" text-anchor="middle" font-size="13">Oak wood</text>
-  <text x="42" y="206" font-size="18" font-weight="700">A</text><text x="255" y="72" font-size="18" font-weight="700">B</text>
-  <text x="390" y="68" font-size="18" font-weight="700">C</text><text x="445" y="170" font-size="18" font-weight="700">D</text>
-  <text x="300" y="225" font-size="18" font-weight="700">E</text><text x="205" y="232" font-size="18" font-weight="700">F</text>
-  <text x="130" y="142" font-size="18" font-weight="700">G</text><text x="73" y="270" font-size="18" font-weight="700">H</text>
+  <ellipse cx="200" cy="86" rx="84" ry="40" fill="#b9d9ff" stroke="#4d7aa3"/><text x="200" y="92" text-anchor="middle" font-size="20" font-weight="700">B</text>
+  <rect x="50" y="205" width="96" height="50" rx="8" fill="#e8efe4" stroke="#56724b"/><text x="98" y="236" text-anchor="middle" font-size="20" font-weight="700">A</text>
+  <rect x="315" y="190" width="100" height="50" rx="8" fill="#fff8e8" stroke="#9b773c"/><text x="365" y="221" text-anchor="middle" font-size="20" font-weight="700">E</text>
+  <circle cx="360" cy="74" r="38" fill="#eaf6df" stroke="#5c874d"/><text x="360" y="81" text-anchor="middle" font-size="20" font-weight="700">C</text>
+  <rect x="430" y="150" width="56" height="40" rx="8" fill="#fff" stroke="#777"/><text x="458" y="176" text-anchor="middle" font-size="20" font-weight="700">D</text>
+  <rect x="175" y="205" width="56" height="40" rx="8" fill="#fff" stroke="#777"/><text x="203" y="231" text-anchor="middle" font-size="20" font-weight="700">F</text>
+  <rect x="95" y="120" width="56" height="40" rx="8" fill="#fff" stroke="#777"/><text x="123" y="146" text-anchor="middle" font-size="20" font-weight="700">G</text>
+  <rect x="270" y="235" width="56" height="40" rx="8" fill="#fff" stroke="#777"/><text x="298" y="261" text-anchor="middle" font-size="20" font-weight="700">H</text>
 </svg>
 """
 
@@ -73,15 +72,14 @@ COMMUNITY_CENTRE_MAP_SVG = """
 <svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Community centre plan">
   <rect x="18" y="20" width="484" height="260" rx="16" fill="#fbfbff" stroke="#9090aa" stroke-width="2"/>
   <path d="M82 225 H445 M255 225 V58" stroke="#b5b5c8" stroke-width="18" stroke-linecap="round"/>
-  <rect x="50" y="190" width="105" height="54" rx="8" fill="#fff" stroke="#555"/><text x="102" y="222" text-anchor="middle" font-size="13">Reception</text>
-  <rect x="190" y="52" width="130" height="56" rx="8" fill="#eef8ff" stroke="#406d91"/><text x="255" y="85" text-anchor="middle" font-size="13">Studio</text>
-  <rect x="350" y="72" width="112" height="56" rx="8" fill="#f5f0ff" stroke="#6b5ca9"/><text x="406" y="105" text-anchor="middle" font-size="13">Computer room</text>
-  <rect x="185" y="148" width="140" height="55" rx="8" fill="#fff8e8" stroke="#9b7130"/><text x="255" y="181" text-anchor="middle" font-size="13">Cafe</text>
-  <rect x="348" y="194" width="112" height="50" rx="8" fill="#eef8ec" stroke="#4c8148"/><text x="404" y="224" text-anchor="middle" font-size="13">Garden</text>
-  <text x="36" y="190" font-size="18" font-weight="700">A</text><text x="252" y="45" font-size="18" font-weight="700">B</text>
-  <text x="466" y="80" font-size="18" font-weight="700">C</text><text x="328" y="180" font-size="18" font-weight="700">D</text>
-  <text x="465" y="226" font-size="18" font-weight="700">E</text><text x="260" y="250" font-size="18" font-weight="700">F</text>
-  <text x="145" y="150" font-size="18" font-weight="700">G</text><text x="82" y="265" font-size="18" font-weight="700">H</text>
+  <rect x="50" y="190" width="100" height="54" rx="8" fill="#eaeaf0" stroke="#555"/><text x="100" y="223" text-anchor="middle" font-size="20" font-weight="700">A</text>
+  <rect x="190" y="52" width="120" height="56" rx="8" fill="#eef8ff" stroke="#406d91"/><text x="250" y="88" text-anchor="middle" font-size="20" font-weight="700">B</text>
+  <rect x="350" y="72" width="112" height="56" rx="8" fill="#f5f0ff" stroke="#6b5ca9"/><text x="406" y="108" text-anchor="middle" font-size="20" font-weight="700">C</text>
+  <rect x="185" y="148" width="120" height="55" rx="8" fill="#fff8e8" stroke="#9b7130"/><text x="245" y="184" text-anchor="middle" font-size="20" font-weight="700">D</text>
+  <rect x="348" y="194" width="112" height="50" rx="8" fill="#eef8ec" stroke="#4c8148"/><text x="404" y="227" text-anchor="middle" font-size="20" font-weight="700">E</text>
+  <rect x="360" y="150" width="56" height="36" rx="8" fill="#fff" stroke="#777"/><text x="388" y="174" text-anchor="middle" font-size="20" font-weight="700">F</text>
+  <rect x="60" y="120" width="56" height="36" rx="8" fill="#fff" stroke="#777"/><text x="88" y="144" text-anchor="middle" font-size="20" font-weight="700">G</text>
+  <rect x="150" y="235" width="56" height="36" rx="8" fill="#fff" stroke="#777"/><text x="178" y="259" text-anchor="middle" font-size="20" font-weight="700">H</text>
 </svg>
 """
 
