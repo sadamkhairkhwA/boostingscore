@@ -225,6 +225,7 @@ SPEAKING_VIDEO_FOLDERS = {
     2: "speaking_videos2",
     3: "speaking_videos3",
     4: "speaking_videos4",
+    5: "speaking_videos5",
 }
 
 # Tests that currently have a playable Speaking section.
@@ -235,6 +236,7 @@ SPEAKING_TESTS = set(SPEAKING_VIDEO_FOLDERS)
 SPEAKING_VIDEO_PREFIXES = {
     3: "a",
     4: "b",
+    5: "c",
 }
 
 
