@@ -213,29 +213,59 @@ ANCHOR_SYNONYMS: dict[str, list[str]] = {
 }
 
 
+def _model_has_field(model, name: str) -> bool:
+    try:
+        model._meta.get_field(name)
+        return True
+    except Exception:
+        return False
+
+
 def bulk_create_words(WordModel, skip_if_exists: bool = True):
     """
     WordModel: historical Word from migration or concrete Word model.
     Returns (created_count, skipped_count).
+
+    Idempotent: when ``skip_if_exists`` is True, rows that already match
+    (topic, level, word) are left alone (except empty synonyms are backfilled
+    when the schema supports it). ``synonyms`` is only set on create when the
+    model includes that field (migration 0002 runs before 0013).
     """
     created = 0
     skipped = 0
+    supports_synonyms = _model_has_field(WordModel, "synonyms")
     for row in INITIAL_WORD_ROWS:
         word, topic, level, definition, example, collocs, pos, phon = row[:8]
         syns = ANCHOR_SYNONYMS.get(word.lower(), [])
-        if skip_if_exists and WordModel.objects.filter(topic=topic, level=level, word__iexact=word).exists():
+        existing = None
+        if skip_if_exists:
+            existing = (
+                WordModel.objects.filter(topic=topic, level=level, word__iexact=word)
+                .order_by("id")
+                .first()
+            )
+        if existing is not None:
+            if (
+                supports_synonyms
+                and syns
+                and not (getattr(existing, "synonyms", None) or [])
+            ):
+                existing.synonyms = list(syns)
+                existing.save(update_fields=["synonyms"])
             skipped += 1
             continue
-        WordModel.objects.create(
-            word=word[:100],
-            topic=topic,
-            level=level,
-            definition=definition,
-            example_sentence=example,
-            collocations=list(collocs),
-            part_of_speech=pos[:50],
-            phonetic=phon[:100],
-            synonyms=list(syns),
-        )
+        payload = {
+            "word": word[:100],
+            "topic": topic,
+            "level": level,
+            "definition": definition,
+            "example_sentence": example,
+            "collocations": list(collocs),
+            "part_of_speech": pos[:50],
+            "phonetic": phon[:100],
+        }
+        if supports_synonyms:
+            payload["synonyms"] = list(syns)
+        WordModel.objects.create(**payload)
         created += 1
     return created, skipped

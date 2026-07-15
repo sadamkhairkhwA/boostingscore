@@ -71,6 +71,7 @@ class Word(models.Model):
     definition = models.TextField()
     example_sentence = models.TextField()
     collocations = models.JSONField(default=list, blank=True)
+    synonyms = models.JSONField(default=list, blank=True)
     part_of_speech = models.CharField(max_length=50, blank=True)
     phonetic = models.CharField(max_length=100, blank=True)
     ielts_note = models.TextField(
