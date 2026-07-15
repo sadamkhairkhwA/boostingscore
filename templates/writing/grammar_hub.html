@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static bs_icons %}
+{% block title %}Writing grammar — Boosting Score{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'writing/css/grammar_course.css' %}?v=1">
+{% endblock %}
+{% block content %}
+<div class="wt1-page wg-page">
+  <section class="wt1-wrap">
+    <a class="wg-back" href="{% url 'writing:home' %}">← Writing</a>
+    <h1 class="wt1-title wt1-title--hero">Writing grammar</h1>
+    <p class="wt1-sub">
+      The grammar IELTS rewards in Task 1 and Task 2.
+      <a href="{% url 'writing:grammar_mistakes' %}">Common grammar mistakes checklist →</a>
+    </p>
+
+    <div class="wg-hub-progress">
+      <div class="wg-hub-progress__bar">
+        <span style="width:{% if grammar_total %}{% widthratio grammar_done grammar_total 100 %}{% else %}0{% endif %}%"></span>
+      </div>
+      <span class="wg-hub-progress__count">{{ grammar_done }} / {{ grammar_total }} read</span>
+    </div>
+
+    <div class="wg-hub-list">
+      {% for t in topics %}
+      <a class="wg-hub-card{% if t.id in done_ids %} is-done{% endif %}" href="{% url 'writing:grammar_topic' t.id %}">
+        <span class="wg-hub-card__icon" aria-hidden="true">{% bs_icon t.icon "green" "sm" %}</span>
+        <span class="wg-hub-card__body">
+          <strong>{{ t.title }}</strong>
+          <span>{{ t.subtitle }}</span>
+        </span>
+        <span class="wg-hub-card__cta">
+          {% if t.id in done_ids %}
+          <span class="wg-badge wg-badge--done">Read</span>
+          {% else %}
+          <span class="wg-hub-arrow" aria-hidden="true">→</span>
+          {% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

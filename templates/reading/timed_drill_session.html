@@ -1,0 +1,49 @@
+{% load static bs_icons %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timed drill — Part {{ part }}</title>
+  <link rel="stylesheet" href="{% static 'css/bs-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=8">
+</head>
+<body class="art-body">
+  {% csrf_token %}
+  <div id="art-app" class="art-app art-app--drill"
+       data-submit-url="{{ submit_url }}"
+       data-index-url="{{ index_url }}"
+       data-auto-submit="1">
+    <header class="art-topbar">
+      <div class="art-topbar__left">
+        <span class="art-topbar__title">Timed drill — Part {{ part }}</span>
+      </div>
+      <div class="art-topbar__center">
+        <span class="art-topbar__timer-label">Time remaining</span>
+        <div class="art-topbar__timer-box" id="art-timer-box" role="timer" aria-live="polite">
+          <span id="art-timer">20:00</span>
+        </div>
+      </div>
+      <div class="art-topbar__right">
+        <a href="{{ index_url }}" class="art-btn art-btn--ghost">Exit</a>
+        <button type="button" class="art-btn art-btn--danger" id="art-submit">Submit</button>
+      </div>
+    </header>
+
+    <div class="art-instruction" id="art-instruction"></div>
+    <div class="art-main" id="art-main">
+      <aside class="art-passage-col" id="art-passage-col">
+        <div class="art-passage-scroll" id="art-passage"></div>
+      </aside>
+      <section class="art-questions-col" id="art-questions-col">
+        <div class="art-questions-scroll" id="art-questions"></div>
+      </section>
+    </div>
+    <nav class="art-qnav" id="art-qnav" aria-label="Question numbers"></nav>
+  </div>
+  <div id="art-results" class="art-results art-results--hidden"></div>
+  {{ test_payload|json_script:"art-data" }}
+  <script src="{% static 'js/bs-icons.js' %}"></script>
+  <script src="{% static 'reading/js/academic_reading_test.js' %}?v=9" defer></script>
+</body>
+</html>

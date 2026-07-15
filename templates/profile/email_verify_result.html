@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if ok %}Email confirmed{% else %}Link invalid{% endif %} — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1">
+</head>
+<body class="pf-body">
+<main class="pf-main pf-main--center">
+  <article class="pf-card">
+    <h1 class="pf-h1">{% if ok %}Email updated{% else %}Couldn’t confirm{% endif %}</h1>
+    <p class="pf-help">{{ message }}</p>
+    {% if ok and logged_in %}
+    <a href="{% url 'profile_settings' %}" class="pf-btn pf-btn--primary">Back to profile</a>
+    {% elif ok %}
+    <a href="{% url 'login' %}" class="pf-btn pf-btn--primary">Log in</a>
+    {% else %}
+    <a href="{% url 'profile_settings' %}" class="pf-btn pf-btn--ghost">Back to profile</a>
+    {% endif %}
+  </article>
+</main>
+</body>
+</html>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ deck.title }} · Select words — Type it{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'vocabulary/css/type_it_full.css' %}?v=4">
@@ -31,7 +31,7 @@
       <button class="ti-ws-filter ti-ws-filter--on" data-filter="all" type="button">All</button>
       <button class="ti-ws-filter" data-filter="new" type="button">Not started</button>
       <button class="ti-ws-filter" data-filter="retry" type="button">Retry</button>
-      <button class="ti-ws-filter" data-filter="done" type="button">Done ✓</button>
+      <button class="ti-ws-filter" data-filter="done" type="button">Done {% bs_icon "check" "green" "sm" %}</button>
     </div>
     <div class="ti-ws-actions">
       <button id="ti-select-all" type="button" class="ti-ws-mini">Select all</button>

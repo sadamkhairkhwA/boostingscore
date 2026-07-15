@@ -1,37 +1,70 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block title %}Paraphrase — Boosting Score{% endblock %}
+{% extends "base.html" %}
+{% load static bs_icons %}
+{% block title %}Paraphrase practice — Boosting Score{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'writing/css/paraphrase.css' %}?v=2">
+{% endblock %}
 {% block content %}
-<div class="bs-page">
-  <div class="bs-sec-hd">
-    <div>
-      <h1 class="bs-page-title">Paraphrase practice</h1>
-      <p class="bs-page-sub">Rewrite the meaning using different vocabulary and grammar. Avoid copying phrases.</p>
+<div class="wt1-page wp-page">
+  <section class="wt1-wrap" id="wp-root"
+    data-sentence-url="{% url 'writing:paraphrase_sentence_api' %}"
+    data-check-url="{% url 'writing:paraphrase_check' %}"
+    data-csrf="{{ csrf_token }}"
+    data-initial-topic="{{ initial_topic }}"
+    data-initial-topic-label="{{ initial_topic_label }}">
+
+    <a class="wt1-back" href="{% url 'writing:home' %}">← Writing</a>
+    <h1 class="wt1-title wt1-title--hero">Paraphrase practice</h1>
+    <p class="wt1-sub">Rewrite the meaning using different vocabulary and grammar. Avoid copying phrases from the source.</p>
+
+    <div class="wr-tabs wp-mode-tabs" role="tablist" aria-label="Sentence source">
+      <button class="wt1-btn wt1-btn--dark" type="button" data-mode="bank" role="tab" aria-selected="true">Practice sentence</button>
+      <button class="wt1-btn wt1-btn--outline" type="button" data-mode="own" role="tab" aria-selected="false">My own sentence</button>
     </div>
-    <a class="bs-btn-dark" href="{% url 'writing:home' %}">Back</a>
-  </div>
 
-  <form method="post">
-    {% csrf_token %}
-    <label class="bs-auth-label" for="source_text">Source sentence</label>
-    <textarea id="source_text" name="source_text" class="bs-auth-input" style="min-height:90px;resize:vertical;">{{ source_text }}</textarea>
-
-    <label class="bs-auth-label" for="paraphrase_text">Your paraphrase</label>
-    <textarea id="paraphrase_text" name="paraphrase_text" class="bs-auth-input" style="min-height:120px;resize:vertical;">{{ paraphrase_text }}</textarea>
-
-    <button type="submit" class="bs-btn-green">Get feedback</button>
-  </form>
-
-  {% if tip %}
-  <div style="margin-top:16px;background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px;">
-      <div>
-        <div class="bs-muted" style="font-size:11px;">Score</div>
-        <div style="font-size:26px;font-weight:900;color:#3B6D11;line-height:1;">{{ tip.score|default:"—" }}</div>
+    <div class="wp-topic-panel" id="wp-topic-panel">
+      <div class="wp-topic-pills" id="wp-topic-pills" role="group" aria-label="Topic">
+        {% for code, label in topics %}
+        <button type="button" class="wp-topic-pill{% if code == 'all' %} is-on{% endif %}" data-topic="{{ code }}">{{ label }}</button>
+        {% endfor %}
       </div>
+      <button type="button" class="wt1-btn wt1-btn--outline wp-new-btn" id="wp-new-sentence">
+        <span aria-hidden="true">{% bs_icon "refresh" "green" "sm" %}</span>
+        New sentence
+      </button>
     </div>
-    <div style="font-size:13px;color:#374151;line-height:1.65;">{{ tip.feedback|default:"" }}</div>
-  </div>
-  {% endif %}
+
+    <div class="wp-card">
+      <div class="wp-source-head">
+        <label class="wp-label" for="wp-source">Source sentence</label>
+        <span class="wp-topic-tag" id="wp-topic-tag">{{ initial_topic_label }}</span>
+      </div>
+      <textarea id="wp-source" class="wp-textarea" rows="3" readonly>{{ initial_sentence }}</textarea>
+    </div>
+
+    <div class="wp-card">
+      <label class="wp-label" for="wp-paraphrase">Your paraphrase</label>
+      <div id="wp-prev-attempt" class="wp-prev-attempt wp-hidden" hidden>
+        <p class="wp-label" style="margin-bottom:6px">Your previous attempt</p>
+        <div id="wp-prev-text" class="wp-prev-text"></div>
+      </div>
+      <textarea id="wp-paraphrase" class="wp-textarea" rows="4" placeholder="Rewrite the sentence in your own words…"></textarea>
+    </div>
+
+    <div id="wp-error" class="wt1-ai-error wp-hidden" role="alert" hidden></div>
+
+    <div data-ai-check-wrap>
+    <button type="button" class="wt1-btn wt1-btn--green wt1-btn--full" id="wp-feedback-btn" data-ai-check-btn>Get feedback</button>
+    </div>
+
+    <div id="wp-ai-loading" class="wt1-ai-loading wp-hidden" hidden></div>
+
+    <div id="wp-feedback" class="wp-feedback wp-hidden" hidden aria-live="polite"></div>
+  </section>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/ai_feedback_loading.js' %}?v=1" defer></script>
+<script src="{% static 'writing/js/paraphrase_practice.js' %}?v=2" defer></script>
 {% endblock %}

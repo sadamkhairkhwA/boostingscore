@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=13">
+  <link rel="stylesheet" href="{% static 'css/bs-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'css/plan_limits.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/avatar_menu.css' %}?v=1">
+</head>
+<body class="pf-body">
+
+{% include 'partials/nav.html' %}
+
+<main class="pf-main">
+  <header class="pf-head">
+    <h1 class="pf-h1">Profile</h1>
+    <p class="pf-sub">Manage your account, level, and plan.</p>
+  </header>
+
+  {% if messages %}
+  <div class="pf-flash" role="status">
+    {% for message in messages %}
+    <p class="pf-flash__item{% if message.tags %} pf-flash__item--{{ message.tags }}{% endif %}">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ---- Account ---- #}
+  <section class="pf-card">
+    <h2 class="pf-card__title">Account info</h2>
+
+    <form method="post" class="pf-form" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="display_name">
+      <label class="pf-label" for="id_display_name">Display name</label>
+      <p class="pf-help">Used in greetings like “Good morning, …”.</p>
+      <div class="pf-row">
+        <input id="id_display_name" class="pf-input" type="text" name="display_name" maxlength="30" value="{{ display_name }}" placeholder="Your name" autocomplete="nickname">
+        <button type="submit" class="pf-btn pf-btn--primary">Save</button>
+      </div>
+      {% if errors.display_name %}<p class="pf-error">{{ errors.display_name }}</p>{% endif %}
+    </form>
+
+    <hr class="pf-rule">
+
+    <div class="pf-block">
+      <p class="pf-label">Email</p>
+      <p class="pf-value">{{ request.user.email|default:"No email on file" }}</p>
+      {% if pending_email %}
+      <p class="pf-pending">Pending confirmation: <strong>{{ pending_email }}</strong>. Check that inbox for a link.</p>
+      <form method="post" class="pf-inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel_pending_email">
+        <button type="submit" class="pf-link-btn">Cancel pending change</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <details class="pf-details"{% if active_form == 'change_email' %} open{% endif %}>
+      <summary>Change email</summary>
+      <form method="post" class="pf-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change_email">
+        <p class="pf-help">We’ll send a confirmation link to the new address. Your current email stays active until you confirm.</p>
+        <label class="pf-label" for="id_new_email">New email</label>
+        <input id="id_new_email" class="pf-input" type="email" name="new_email" autocomplete="email" required>
+        <label class="pf-label" for="id_current_password_email">Current password</label>
+        <input id="id_current_password_email" class="pf-input" type="password" name="current_password_email" autocomplete="current-password" required>
+        {% if errors.change_email %}<p class="pf-error">{{ errors.change_email }}</p>{% endif %}
+        <button type="submit" class="pf-btn pf-btn--primary">Send confirmation</button>
+      </form>
+    </details>
+
+    <hr class="pf-rule">
+
+    <details class="pf-details"{% if active_form == 'change_password' %} open{% endif %}>
+      <summary>Change password</summary>
+      <form method="post" class="pf-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change_password">
+        <label class="pf-label" for="id_current_password">Current password</label>
+        <input id="id_current_password" class="pf-input" type="password" name="current_password" autocomplete="current-password" required>
+        <label class="pf-label" for="id_new_password1">New password</label>
+        <input id="id_new_password1" class="pf-input" type="password" name="new_password1" autocomplete="new-password" minlength="8" required>
+        <p class="pf-help">At least 8 characters.</p>
+        <label class="pf-label" for="id_new_password2">Confirm new password</label>
+        <input id="id_new_password2" class="pf-input" type="password" name="new_password2" autocomplete="new-password" minlength="8" required>
+        {% if errors.change_password %}<p class="pf-error">{{ errors.change_password }}</p>{% endif %}
+        <button type="submit" class="pf-btn pf-btn--primary">Update password</button>
+      </form>
+    </details>
+  </section>
+
+  {# ---- Level ---- #}
+  <section class="pf-card">
+    <h2 class="pf-card__title">My level</h2>
+    {% if show_placement_prompt %}
+      <p class="pf-help">You haven’t taken the placement test yet.</p>
+      <a href="{% url 'placement' %}" class="pf-btn pf-btn--primary">Find your level</a>
+    {% else %}
+      <p class="pf-label">Estimated level</p>
+      <p class="pf-band">{{ placement.band_range }}</p>
+      {% if placement_taken_at %}
+      <p class="pf-help">Taken {{ placement_taken_at|date:"j M Y" }}</p>
+      {% endif %}
+      <div class="pf-bars">
+        <div class="pf-bar">
+          <div class="pf-bar__meta"><span>Vocabulary</span><strong>{{ placement.sections.vocabulary.label|default:"—" }}</strong></div>
+          <div class="pf-bar__track"><div class="pf-bar__fill" style="width: {{ placement.sections.vocabulary.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="pf-bar">
+          <div class="pf-bar__meta"><span>Grammar</span><strong>{{ placement.sections.grammar.label|default:"—" }}</strong></div>
+          <div class="pf-bar__track"><div class="pf-bar__fill" style="width: {{ placement.sections.grammar.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="pf-bar">
+          <div class="pf-bar__meta"><span>Reading</span><strong>{{ placement.sections.reading.label|default:"—" }}</strong></div>
+          <div class="pf-bar__track"><div class="pf-bar__fill" style="width: {{ placement.sections.reading.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="pf-bar">
+          <div class="pf-bar__meta"><span>Writing</span><strong>{{ placement.sections.writing.label|default:"—" }}</strong></div>
+          <div class="pf-bar__track"><div class="pf-bar__fill" style="width: {{ placement.sections.writing.pct|default:0 }}%"></div></div>
+        </div>
+      </div>
+      <div class="pf-row pf-row--gap">
+        {% if placement_retake_ok %}
+        <form method="post" action="{% url 'placement_retake' %}">
+          {% csrf_token %}
+          <button type="submit" class="pf-btn pf-btn--ghost">Retake</button>
+        </form>
+        {% else %}
+        <span class="pf-help">Retake available in {{ placement_days_left }} day{{ placement_days_left|pluralize }}.</span>
+        {% endif %}
+        <a href="{% url 'placement_results' %}" class="pf-link">View full results</a>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ---- Stats ---- #}
+  <section class="pf-card">
+    <h2 class="pf-card__title">My stats</h2>
+    <div class="pf-stats">
+      <div class="pf-stat"><div class="pf-stat__num">{{ stats.words_learned }}</div><div class="pf-stat__lbl">Words learned</div></div>
+      <div class="pf-stat"><div class="pf-stat__num">{{ stats.streak }}</div><div class="pf-stat__lbl">Day streak</div></div>
+      <div class="pf-stat"><div class="pf-stat__num">{{ stats.mastered_pct }}%</div><div class="pf-stat__lbl">Mastered</div></div>
+      <div class="pf-stat"><div class="pf-stat__num">{{ stats.tests_taken }}</div><div class="pf-stat__lbl">Tests taken</div></div>
+      <div class="pf-stat"><div class="pf-stat__num">{% if stats.best_band_score %}{{ stats.best_band_score }}{% else %}—{% endif %}</div><div class="pf-stat__lbl">Best writing band</div></div>
+    </div>
+  </section>
+
+  {# ---- Plan ---- #}
+  <section class="pf-card">
+    <h2 class="pf-card__title">Plan</h2>
+    <p class="pf-value">{{ plan_label }}</p>
+    <p class="pf-help">{{ free_plan_blurb }}</p>
+    <p class="pf-note">Paid plans coming soon</p>
+  </section>
+
+  {# ---- Danger ---- #}
+  <section class="pf-card pf-card--danger">
+    <h2 class="pf-card__title">Danger zone</h2>
+    <p class="pf-help">Permanently delete your account and all study data. This cannot be undone.</p>
+    <a href="{% url 'profile_delete' %}" class="pf-btn pf-btn--danger">Delete my account</a>
+  </section>
+</main>
+
+<script src="{% static 'js/avatar_menu.js' %}?v=1"></script>
+</body>
+</html>

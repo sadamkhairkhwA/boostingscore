@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static bs_icons %}
+{% block title %}{{ topic.title }} — Writing grammar{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'writing/css/grammar_course.css' %}?v=1">
+{% endblock %}
+{% block content %}
+<div class="wt1-page wg-page">
+  <section class="wt1-wrap">
+    <a class="wg-back" href="{% url 'writing:grammar_hub' %}">← Writing grammar</a>
+    <h1 class="wt1-title wt1-title--hero">{{ topic.title }}</h1>
+    <p class="wt1-sub">{{ topic.subtitle }}</p>
+
+    <article class="wg-card">
+      <h2 class="wg-card__title">The rule</h2>
+      {% for para in topic.rule.paragraphs %}
+      <p class="wg-card__text">{{ para|safe }}</p>
+      {% endfor %}
+      <div class="wg-golden">
+        <div class="wg-golden__lbl">{{ topic.rule.key_point_label }}</div>
+        <p class="wg-golden__txt">{{ topic.rule.key_point }}</p>
+      </div>
+    </article>
+
+    <article class="wg-card">
+      <h2 class="wg-card__title">Right vs wrong</h2>
+      <div class="wg-pairs">
+        {% for pair in topic.pairs %}
+        <div class="wg-pair">
+          <div class="wg-pair__row wg-pair__row--bad">
+            <span class="wg-pill wg-pill--bad">Incorrect</span>
+            <span class="wg-pair__text">{{ pair.wrong }}</span>
+          </div>
+          <div class="wg-pair__row wg-pair__row--ok">
+            <span class="wg-pill wg-pill--ok">Correct</span>
+            <span class="wg-pair__text">{{ pair.correct_html|safe }}</span>
+          </div>
+          <p class="wg-pair__fix">{{ pair.fix }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="wg-card">
+      <h2 class="wg-card__title">Common IELTS mistakes</h2>
+      <ul class="wg-mistakes">
+        {% for item in topic.ielts_mistakes %}
+        <li>
+          <span class="wg-mistakes__bad">{{ item.mistake }}</span>
+          <span class="wg-mistakes__fix">{{ item.fix }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+
+    <nav class="wg-topic-nav" aria-label="Topic navigation">
+      {% if prev_topic %}
+      <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:grammar_topic' prev_topic.id %}">← {{ prev_topic.title }}</a>
+      {% else %}
+      <span></span>
+      {% endif %}
+      {% if next_topic %}
+      <a class="wt1-btn wt1-btn--green" href="{% url 'writing:grammar_topic' next_topic.id %}">{{ next_topic.title }} →</a>
+      {% endif %}
+    </nav>
+  </section>
+</div>
+{% endblock %}

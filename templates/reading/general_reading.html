@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}General reading — Boosting Score{% endblock %}
 {% block body_class %}general-reading-page{% endblock %}
 {% block extra_css %}
@@ -36,7 +36,7 @@
     <article class="gr-streak-card">
       <div>
         <p class="gr-kicker">Reading streak</p>
-        <h2 id="gr-streak-title" class="gr-streak-title">0-day reading streak 🔥</h2>
+        <h2 id="gr-streak-title" class="gr-streak-title">0-day reading streak</h2>
         <p class="gr-muted">Read today's article to keep it going</p>
       </div>
       <div id="gr-streak-dots" class="gr-dots" aria-hidden="true"></div>
@@ -89,7 +89,7 @@
   <section class="gr-panel" data-panel="reading">
     <div class="gr-row-between">
       <button id="gr-reading-back" class="gr-btn-light" type="button">← Back</button>
-      <span id="gr-reading-timer" class="gr-timer">⏱ 0:00</span>
+      <span id="gr-reading-timer" class="gr-timer"><span class="gr-timer__ic" aria-hidden="true"></span> 0:00</span>
     </div>
     <article class="gr-card">
       <h2 id="gr-reading-title"></h2>
@@ -166,9 +166,9 @@
     <article class="gr-card">
       <h3>What affects your reading speed?</h3>
       <ul class="gr-tip-list">
-        <li>📖 <strong>Sub-vocalising</strong> — saying words in your head slows you down.</li>
-        <li>👁️ <strong>Eye fixations</strong> — read 3–4 word chunks, not one word at a time.</li>
-        <li>🔄 <strong>Re-reading</strong> — scan for answers; avoid full-passage re-reads.</li>
+        <li><span class="gr-tip-ic" aria-hidden="true">{% bs_icon "book" "green" "sm" %}</span> <strong>Sub-vocalising</strong> — saying words in your head slows you down.</li>
+        <li><span class="gr-tip-ic" aria-hidden="true">{% bs_icon "eye" "blue" "sm" %}</span> <strong>Eye fixations</strong> — read 3–4 word chunks, not one word at a time.</li>
+        <li><span class="gr-tip-ic" aria-hidden="true">{% bs_icon "refresh" "navy" "sm" %}</span> <strong>Re-reading</strong> — scan for answers; avoid full-passage re-reads.</li>
       </ul>
     </article>
     <article class="gr-card">

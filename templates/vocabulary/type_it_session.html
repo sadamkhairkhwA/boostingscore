@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Type it session — Boosting Score{% endblock %}
 {% block content %}
 <div class="bs-page">
@@ -13,7 +13,7 @@
 
   {% if not word_obj %}
   <div class="bs-empty">
-    <div class="bs-empty-icon">🧩</div>
+    <div class="bs-empty-icon">{% bs_icon "puzzle" "purple" "lg" %}</div>
     <div class="bs-empty-title">No word found</div>
     <div class="bs-empty-sub">Seed the vocabulary bank or pick another topic/level.</div>
     <a class="bs-btn-primary" href="{% url 'vocabulary:type_it_deck' %}">Choose another deck</a>
@@ -28,7 +28,9 @@
   <label class="bs-auth-label" for="student_text">Your sentence</label>
   <textarea id="student_text" class="bs-auth-input" style="min-height:120px;resize:vertical;" placeholder="Write a clear, accurate sentence using the word."></textarea>
 
-  <button id="type-submit" class="bs-btn-green" type="button">Get AI feedback</button>
+  <div data-ai-check-wrap>
+  <button id="type-submit" class="bs-btn-green" type="button" data-ai-check-btn>Get AI feedback</button>
+  </div>
   <div id="type-status" class="bs-muted" style="font-size:12px;margin-top:10px;"></div>
 
   <div id="type-result" style="display:none;margin-top:16px;background:#fff;border:.5px solid #E5E7EB;border-radius:12px;padding:16px;">
@@ -101,9 +103,14 @@ function getCookie(name) {
       })
     }).then(function(r){ return r.json(); }).then(function(data){
       if(!data.ok){
-        status.textContent = data.error || 'Something went wrong.';
+        if (data.error === 'ai_limit') {
+          status.textContent = data.message || 'Daily limit reached — resets tomorrow.';
+          return;
+        }
+        status.textContent = data.error || data.message || 'Something went wrong.';
         return;
       }
+      if (window.BSPlanNotifyAiUsed) window.BSPlanNotifyAiUsed();
       status.textContent = '';
       var res = data.result || {};
       document.getElementById('type-result').style.display = 'block';

@@ -53,8 +53,9 @@ html:has(body.art-body) {
 }
 
 .art-topbar__left {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  padding-left: 2px;
 }
 
 .art-topbar__title {
@@ -63,6 +64,7 @@ html:has(body.art-body) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0;
 }
 
 .art-topbar__center {
@@ -1482,7 +1484,7 @@ html:has(body.art-body) {
   text-align: center;
   padding: 12px 16px;
   border-radius: 10px;
-  background: #0d2140;
+  background: #3b6d11;
   color: #fff !important;
   font-weight: 700;
   font-size: 15px;
@@ -1490,7 +1492,7 @@ html:has(body.art-body) {
 }
 
 .art-history-card__cta:hover {
-  background: #1e3a5f;
+  background: #2d5209;
 }
 
 /* ——— Tests hub: main test cards ——— */
@@ -1558,6 +1560,11 @@ html:has(body.art-body) {
 .art-diff--intermediate {
   background: #faeeda;
   color: #633806;
+}
+
+.art-diff--standard {
+  background: #eaf3de;
+  color: #27500a;
 }
 
 .art-diff--upper {
@@ -1763,24 +1770,24 @@ html:has(body.art-body) {
 }
 
 .art-hub-btn--primary {
-  background: #0d2140;
+  background: #3b6d11;
   color: #fff !important;
-  border-color: #0d2140;
+  border-color: #3b6d11;
 }
 
 .art-hub-btn--primary:hover {
-  background: #1e3a5f;
-  border-color: #1e3a5f;
+  background: #2d5209;
+  border-color: #2d5209;
 }
 
 .art-hub-btn--outline {
   background: #fff;
-  color: #0d2140 !important;
-  border-color: #1e3a5f;
+  color: #27500a !important;
+  border-color: #c5ddb0;
 }
 
 .art-hub-btn--outline:hover {
-  background: #f8fafc;
+  background: #f7fbf3;
 }
 
 .art-hub-btn--block {
@@ -1842,6 +1849,10 @@ html:has(body.art-body) {
 
 .art-scale__dot--intermediate {
   background: #d97706;
+}
+
+.art-scale__dot--standard {
+  background: #3b6d11;
 }
 
 .art-scale__dot--upper {

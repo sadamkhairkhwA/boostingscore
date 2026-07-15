@@ -1,0 +1,75 @@
+{% extends "legal/_base.html" %}
+{% block title %}Privacy — BoostingScore{% endblock %}
+{% block legal_content %}
+<p class="legal-eyebrow">Privacy</p>
+<h1 class="legal-h1">Privacy policy</h1>
+<p class="legal-lead">This page explains what BoostingScore collects, how we use it, and your choices. Written in plain language. Last updated: July 2026.</p>
+
+<section class="legal-sec">
+  <h2>Who we are</h2>
+  <p>BoostingScore is an IELTS preparation platform operated from Turkey. You create an account with an email address and password to practise Reading, Writing, Listening, Speaking, and vocabulary.</p>
+</section>
+
+<section class="legal-sec">
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Account details</strong> — your email address and a hashed password (we cannot read your password).</li>
+    <li><strong>Study progress</strong> — vocabulary progress, streaks, lesson completion, and similar learning records.</li>
+    <li><strong>Writing</strong> — essay text you submit and the AI feedback we return.</li>
+    <li><strong>Speaking</strong> — transcripts of your spoken answers and scores/feedback. See “Speaking audio” below.</li>
+    <li><strong>Usage logs</strong> — which features you use and when (for example AI check counts), so we can run the product and apply free-plan limits.</li>
+  </ul>
+</section>
+
+<section class="legal-sec">
+  <h2>Speaking audio</h2>
+  <p>When you record a speaking answer for AI scoring (practice test), the recording is sent to OpenAI’s Whisper API for transcription and then used to generate feedback. We keep the <strong>transcript and scores</strong> in your account.</p>
+  <p><strong>Important:</strong> Self-practice recording in the Speaking study section stays in your browser and is not uploaded. For practice-test Speaking, recordings are currently uploaded to our servers for transcription and optional rescoring. If you want audio deleted from your account, email us (see Contact).</p>
+</section>
+
+<section class="legal-sec">
+  <h2>How we use your data</h2>
+  <ul>
+    <li>To run your account and show your progress, history, and feedback.</li>
+    <li>To score writing and speaking practice with AI and display results to you.</li>
+    <li>To apply plan limits (for example daily AI checks) and keep the service secure.</li>
+    <li>To respond when you ask for support, access, or deletion of your data.</li>
+  </ul>
+  <p>We do not sell your personal data. We do not use advertising cookies or analytics cookies. We do not use your writing or speaking content to train our own AI models.</p>
+</section>
+
+<section class="legal-sec">
+  <h2>Third parties</h2>
+  <ul>
+    <li><strong>OpenAI (United States)</strong> — processes writing and speaking submissions through their API to generate transcriptions and feedback. OpenAI’s API terms state that API data is not used to train their models.</li>
+    <li><strong>Railway</strong> — hosts the BoostingScore application and database.</li>
+  </ul>
+  <p>We only share what is needed for these services to work. No payment processors are connected yet; if paid plans launch later, we will update this page.</p>
+</section>
+
+<section class="legal-sec">
+  <h2>What we don’t do</h2>
+  <ul>
+    <li>We don’t sell your data.</li>
+    <li>We don’t show ads or use advertising trackers.</li>
+    <li>We don’t use analytics cookies.</li>
+    <li>We don’t keep self-practice browser recordings on our servers (study section).</li>
+    <li>We don’t use your submissions to train OpenAI models via the API.</li>
+  </ul>
+</section>
+
+<section class="legal-sec">
+  <h2>Cookies</h2>
+  <p>We only use essential cookies needed to keep you logged in and to run the site securely (session cookies). We do not use analytics or advertising cookies.</p>
+</section>
+
+<section class="legal-sec">
+  <h2>Access and deletion</h2>
+  <p>You can delete your account and all related data yourself from <strong>Profile → Danger zone</strong> (avatar menu → Profile). You can also email <a href="mailto:support@boostingscore.com">support@boostingscore.com</a> to access or delete your personal data. We handle requests under applicable data protection law, including Türkiye’s KVKK and, where it applies, the GDPR.</p>
+</section>
+
+<section class="legal-sec">
+  <h2>Contact</h2>
+  <p>Privacy and data questions: <a href="mailto:support@boostingscore.com">support@boostingscore.com</a> — or see our <a href="{% url 'contact' %}">Contact</a> page.</p>
+</section>
+{% endblock %}

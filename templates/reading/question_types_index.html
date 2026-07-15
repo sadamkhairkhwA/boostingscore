@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static bs_icons %}
+{% block title %}Question types — Reading{% endblock %}
+{% block body_class %}reading-strategies-page{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'reading/css/question_type_flow.css' %}?v=1" />
+{% endblock %}
+{% block content %}
+<div class="bs-page rqt-page">
+  <header class="rqt-head">
+    <a class="rqt-back" href="{% url 'reading:home' %}">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
+      Back to Reading
+    </a>
+    <h1 class="bs-page-title">Question types</h1>
+    <p class="bs-page-sub">Learn how each IELTS reading format works, then practise it with a focused set.</p>
+  </header>
+
+  <section class="rqt-grid" aria-label="Reading question types">
+    {% for card in question_type_cards %}
+    <article class="rqt-card">
+      <div class="rqt-card-top">
+        <span class="rqt-icon" aria-hidden="true">{% bs_icon card.icon "green" "md" %}</span>
+        <div>
+          <h2 class="rqt-card-title">{{ card.title }}</h2>
+          <p class="rqt-card-sub">{{ card.description }}</p>
+        </div>
+      </div>
+      <div class="rqt-card-meta">
+        <span class="rqt-card-sets">
+          {% if card.practice_set_count %}
+            {{ card.practice_set_count }} set{{ card.practice_set_count|pluralize }} available
+          {% else %}
+            Practice coming soon
+          {% endif %}
+        </span>
+      </div>
+      <div class="rqt-actions">
+        <a class="rqt-btn-secondary" href="{% url 'reading:question_type_learn' question_type_slug=card.slug %}">Learn</a>
+        <a class="rqt-btn" href="{% url 'reading:question_type_practice' question_type_slug=card.slug set_number=card.first_set_number %}">Practice</a>
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

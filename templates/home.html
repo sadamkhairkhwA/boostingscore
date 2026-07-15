@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home — BoostingScore</title>
-  <link rel="stylesheet" href="{% static 'css/home_dash.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/home_dash.css' %}?v=6">
+  <link rel="stylesheet" href="{% static 'css/avatar_menu.css' %}?v=1">
 </head>
 <body class="dash-body">
 
-{# ---------------- Navbar (logo · pills · avatar · logout) ---------------- #}
+{# ---------------- Navbar (logo · pills · avatar menu) ---------------- #}
 <header class="dash-nav">
   <div class="dash-nav__inner">
     <a href="{% url 'home' %}" class="dash-logo">Boosting<span>Score</span></a>
@@ -18,7 +19,7 @@
         <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
           <path fill="currentColor" d="M12 2l2.6 6.3L21 9l-5 4.4L17.5 20 12 16.8 6.5 20 8 13.4 3 9l6.4-.7z"/>
         </svg>
-        {% if request.user.profile.level == 1 %}Beginner{% elif request.user.profile.level == 2 %}Standard{% else %}Advanced{% endif %}
+        {{ level_badge_text|default:"Beginner" }}
       </span>
       <span class="dash-pill dash-pill--streak">
         <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
@@ -26,8 +27,7 @@
         </svg>
         {% if streak %}{{ streak }} day streak{% else %}Day 1{% endif %}
       </span>
-      <span class="dash-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
-      <a href="{% url 'logout' %}" class="dash-nav__logout">Log out</a>
+      {% include "includes/avatar_menu.html" with avatar_class="bs-avatar-menu__btn--dash" %}
     </div>
   </div>
 </header>
@@ -39,9 +39,99 @@
     <div class="dash-greet__date">{% now "l, F j" %}</div>
     <h1 class="dash-greet__title">{{ greeting }}, {{ request.user.first_name|default:request.user.username|title }}</h1>
     <p class="dash-greet__sub">
-      {% if due_count > 0 %}You have {{ due_count }} vocabulary word{{ due_count|pluralize }} due for review.{% elif words_learned == 0 %}You haven't started yet — pick any section below to begin.{% else %}No words due today. Keep your streak going.{% endif %}
+      {% if due_reviews %}
+        {% for item in due_reviews %}{% if forloop.first %}{{ item.detail }}{% endif %}{% endfor %}
+        {% if due_reviews|length > 1 %} — plus {{ due_reviews|length|add:"-1" }} more review item{{ due_reviews|length|add:"-1"|pluralize }}.{% endif %}
+      {% elif due_count > 0 %}You have {{ due_count }} vocabulary word{{ due_count|pluralize }} due for review.
+      {% elif words_learned == 0 %}You haven't started yet — pick any section below to begin.
+      {% else %}No words due today. Keep your streak going.{% endif %}
     </p>
   </section>
+
+  {% if show_placement_card %}
+  <section class="dash-place-nudge" aria-label="Placement test">
+    <div class="dash-place-nudge__card">
+      <div class="dash-place-nudge__body">
+        <h2 class="dash-place-nudge__title">Find your level</h2>
+        <p class="dash-place-nudge__sub">About 20 questions — takes most people under 10 minutes. Fully auto-graded — no AI checks used.</p>
+        <div class="dash-place-nudge__actions">
+          <a href="{% url 'placement' %}" class="dash-place-nudge__start">Start placement test</a>
+          <form method="post" action="{% url 'placement_dismiss' %}">
+            {% csrf_token %}
+            <button type="submit" class="dash-place-nudge__dismiss">Dismiss</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% elif placement %}
+  <section class="dash-place" aria-label="Placement result">
+    <div class="dash-place__card">
+      <div class="dash-place__head">
+        <div>
+          <div class="dash-place__lbl">Estimated level</div>
+          <div class="dash-place__band">{{ placement.band_range }}</div>
+        </div>
+        <div class="dash-place__retake">
+          {% if placement_retake_ok %}
+          <form method="post" action="{% url 'placement_retake' %}">
+            {% csrf_token %}
+            <button type="submit" class="dash-place__retake-btn">Retake</button>
+          </form>
+          {% else %}
+          <span class="dash-place__cooldown">Retake in {{ placement_days_left }}d</span>
+          {% endif %}
+          <a href="{% url 'placement_results' %}" class="dash-place__link">Details</a>
+        </div>
+      </div>
+      <div class="dash-place__bars">
+        <div class="dash-place__bar">
+          <div class="dash-place__bar-meta"><span>Vocabulary</span><strong>{{ placement.sections.vocabulary.label|default:"—" }}</strong></div>
+          <div class="dash-place__track"><div class="dash-place__fill" style="width: {{ placement.sections.vocabulary.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="dash-place__bar">
+          <div class="dash-place__bar-meta"><span>Grammar</span><strong>{{ placement.sections.grammar.label|default:"—" }}</strong></div>
+          <div class="dash-place__track"><div class="dash-place__fill" style="width: {{ placement.sections.grammar.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="dash-place__bar">
+          <div class="dash-place__bar-meta"><span>Reading</span><strong>{{ placement.sections.reading.label|default:"—" }}</strong></div>
+          <div class="dash-place__track"><div class="dash-place__fill" style="width: {{ placement.sections.reading.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="dash-place__bar">
+          <div class="dash-place__bar-meta"><span>Writing</span><strong>{{ placement.sections.writing.label|default:"—" }}</strong></div>
+          <div class="dash-place__track"><div class="dash-place__fill" style="width: {{ placement.sections.writing.pct|default:0 }}%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if band_estimate.overall %}
+  <section class="dash-band" aria-label="Overall band estimate">
+    <div class="dash-band__main">
+      <div class="dash-band__overall">{{ band_estimate.overall }}</div>
+      <div class="dash-band__lbl">Estimated overall band</div>
+      <p class="dash-band__meta">Based on {{ band_estimate.skills_with_data }} of {{ band_estimate.skills_total }} skills with scores</p>
+    </div>
+    <div class="dash-band__skills">
+      <div class="dash-band__skill"><span>Reading</span><strong>{% if band_estimate.skills.reading %}{{ band_estimate.skills.reading }}{% else %}—{% endif %}</strong></div>
+      <div class="dash-band__skill"><span>Writing</span><strong>{% if band_estimate.skills.writing %}{{ band_estimate.skills.writing }}{% else %}—{% endif %}</strong></div>
+      <div class="dash-band__skill"><span>Listening</span><strong>{% if band_estimate.skills.listening %}{{ band_estimate.skills.listening }}{% else %}—{% endif %}</strong></div>
+      <div class="dash-band__skill"><span>Speaking</span><strong>{% if band_estimate.skills.speaking %}{{ band_estimate.skills.speaking }}{% else %}—{% endif %}</strong></div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if due_reviews %}
+  <section class="dash-due" aria-label="Due for review">
+    <h2 class="dash-due__title">Due for review</h2>
+    <ul class="dash-due__list">
+      {% for item in due_reviews %}
+      <li><a href="{% url item.url_name %}">{{ item.label }}</a> <span class="dash-due__detail">{{ item.detail }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
 
   {# ---------------- 4 stat cards ---------------- #}
   <section class="dash-stats">
@@ -69,7 +159,7 @@
     <p class="dash-sec__sub">Pick a section and begin.</p>
   </header>
 
-  {# ---------------- 6 feature cards ---------------- #}
+  {# ---------------- Feature cards ---------------- #}
   <section class="dash-grid">
 
     <a href="{% url 'vocabulary:home' %}" class="dash-fcard">
@@ -81,18 +171,6 @@
       <div class="dash-fcard__foot">
         <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
         <span class="dash-fcard__meta">1,400+ words</span>
-      </div>
-    </a>
-
-    <a href="{% url 'vocabulary:type_it_deck' %}" class="dash-fcard">
-      <span class="dash-fcard__ico dash-fcard__ico--navy">
-        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10-4-4L4 16v4zM14 6l4 4"/></svg>
-      </span>
-      <div class="dash-fcard__name">Type-it</div>
-      <p class="dash-fcard__desc">Write from memory. AI scores you instantly.</p>
-      <div class="dash-fcard__foot">
-        <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
-        <span class="dash-fcard__meta">AI feedback</span>
       </div>
     </a>
 
@@ -132,15 +210,15 @@
       </div>
     </a>
 
-    <a href="{% url 'writing:lessons_hub' %}" class="dash-fcard">
+    <a href="{% url 'speaking:home' %}" class="dash-fcard">
       <span class="dash-fcard__ico dash-fcard__ico--green">
-        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 9 12 5 2 9l10 4 10-4zM6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
       </span>
-      <div class="dash-fcard__name">Writing Lessons</div>
-      <p class="dash-fcard__desc">The exact structure examiners expect — Task 1 and Task 2.</p>
+      <div class="dash-fcard__name">Speaking</div>
+      <p class="dash-fcard__desc">Common questions, phrases, pronunciation notes, and examiner tips.</p>
       <div class="dash-fcard__foot">
         <span class="dash-fcard__cta">Start <span class="dash-arrow">→</span></span>
-        <span class="dash-fcard__meta">18 lessons</span>
+        <span class="dash-fcard__meta">Study guide</span>
       </div>
     </a>
 
@@ -276,5 +354,6 @@
   </section>
 
 </main>
+<script src="{% static 'js/avatar_menu.js' %}?v=1"></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+{% load bs_icons %}
 <div class="wt1-topbar">
   <div class="wt1-topbar__left">{{ task1_topbar_title }}</div>
   <div class="wt1-topbar__timer" id="wt1-timer" data-seed="{{ task1_timer_seed }}" data-fixed="{{ time_used_mmss|default:'' }}">{{ time_used_mmss|default:"20:00" }}</div>
@@ -5,7 +6,7 @@
     {% if show_try_again_top %}
     <a class="wt1-btn wt1-btn--submit" href="{{ try_again_url|default:'#' }}">Try again</a>
     {% endif %}
-    <a class="wt1-btn wt1-btn--ghost" href="{{ questions_url|default:'#' }}">☰ Questions</a>
+    <a class="wt1-btn wt1-btn--ghost" href="{{ questions_url|default:'#' }}"><span aria-hidden="true">{% bs_icon "list" "navy" "sm" %}</span> Questions</a>
     {% if show_submit %}
     <button type="submit" form="wt1-response-form" class="wt1-btn wt1-btn--submit">Submit →</button>
     {% endif %}

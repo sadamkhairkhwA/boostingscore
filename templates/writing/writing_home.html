@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Writing — Boosting Score{% endblock %}
 {% block content %}
 <div class="bs-page">
@@ -47,7 +47,7 @@
     {% endfor %}
   {% else %}
   <div class="bs-empty">
-    <div class="bs-empty-icon">✍️</div>
+    <div class="bs-empty-icon">{% bs_icon "pen" "purple" "lg" %}</div>
     <div class="bs-empty-title">No essays yet</div>
     <div class="bs-empty-sub">Submit Task 1 or Task 2 to generate band estimates and structured feedback.</div>
     <a class="bs-btn-primary" href="{% url 'writing:task2' %}">Start with Task 2</a>

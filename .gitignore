@@ -3,5 +3,17 @@ __pycache__/
 *.py[cod]
 .env
 db.sqlite3
+db.sqlite3-*
 *.sqlite3
+.DS_Store
+**/.DS_Store
 media/
+
+# Large local media — keep on disk, do not push to GitHub
+static/speaking_tips/
+static/speaking_videos/
+static/speaking_videos2/
+static/speaking_videos3/
+static/speaking_videos4/
+static/speaking_videos5/
+static/listening_audio/

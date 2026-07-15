@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
-from django.contrib.auth.forms import UserCreationForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.utils import timezone
+
+from boosting_score.auth_forms import SignupForm
 
 
 def get_streak(user):
@@ -249,10 +252,42 @@ def home_view(request):
     # ---------------- Writing % (rough, for the progress card) ----------------
     writing_pct = min((essays_done or 0) * 10, 100)
     vocab_pct = mastered_pct  # already computed
-    lessons_total = 18
+    from writing.content import LESSONS
+
+    lessons_total = len(LESSONS)
 
     sessions_done_total = words_learned + (1 if type_it_done else 0) + essays_done + lessons_done
     show_new_tip = sessions_done_total < 5
+
+    band_estimate = {"overall": None, "skills": {}, "skills_with_data": 0, "skills_total": 4}
+    due_reviews = []
+    try:
+        from boostingscore.band_estimate import get_overall_band_estimate
+        from boostingscore.review_schedule import get_due_review_items
+
+        band_estimate = get_overall_band_estimate(user)
+        due_reviews = get_due_review_items(user, vocab_due_count=due_count)
+    except Exception:
+        pass
+
+    placement = None
+    show_placement_card = False
+    placement_retake_ok = False
+    placement_days_left = 0
+    level_badge_text = "Beginner"
+    try:
+        from boostingscore.placement_content import can_retake
+        from vocabulary.models import UserProfile
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        level_badge_text = profile.level_badge_text
+        if profile.placement_completed and isinstance(profile.placement_results, dict):
+            placement = profile.placement_results
+            placement_retake_ok, placement_days_left = can_retake(profile)
+        else:
+            show_placement_card = not request.session.get("placement_card_dismissed", False)
+    except Exception:
+        pass
 
     return render(
         request,
@@ -285,6 +320,13 @@ def home_view(request):
             "writing_pct": writing_pct,
             "tests_taken": tests_taken,
             "tests_pct": tests_pct,
+            "band_estimate": band_estimate,
+            "due_reviews": due_reviews,
+            "level_badge_text": level_badge_text,
+            "placement": placement,
+            "show_placement_card": show_placement_card,
+            "placement_retake_ok": placement_retake_ok,
+            "placement_days_left": placement_days_left,
         },
     )
 
@@ -299,7 +341,7 @@ def signup_view(request):
     if request.user.is_authenticated:
         return redirect("home")
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = SignupForm(request.POST)
         # No AUTH_PASSWORD_VALIDATORS are configured, so enforce our own
         # minimums here (mirrors the inline rules shown on the form):
         # username >= 3 characters, password >= 8 characters.
@@ -313,30 +355,20 @@ def signup_view(request):
             if not form.errors:
                 user = form.save()
                 login(request, user)
-                return redirect("welcome")
+                return redirect("placement")
     else:
-        form = UserCreationForm()
+        form = SignupForm()
     return render(request, "registration/signup.html", {"form": form})
 
 
 @login_required
-def profile_settings(request):
+@require_POST
+def speaking_ai_notice_ack(request):
+    """Remember that the user has seen the one-time speaking AI notice."""
     from vocabulary.models import UserProfile
-    from reading.models import ReadingTestResult
 
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    level_label = {1: "Beginner", 2: "Standard", 3: "Advanced"}.get(profile.level, "Beginner")
-    reading_history = (
-        ReadingTestResult.objects.filter(user=request.user)
-        .select_related("test")
-        .order_by("-completed_at")[:25]
-    )
-    return render(
-        request,
-        "profile_settings.html",
-        {
-            "profile": profile,
-            "level_label": level_label,
-            "reading_history": reading_history,
-        },
-    )
+    if not profile.speaking_ai_notice_seen:
+        profile.speaking_ai_notice_seen = True
+        profile.save(update_fields=["speaking_ai_notice_seen"])
+    return JsonResponse({"ok": True})

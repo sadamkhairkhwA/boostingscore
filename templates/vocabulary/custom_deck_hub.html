@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ deck.name }} — Custom deck{% endblock %}
+{% block body_class %}bs-page-studio bs-customdeck-body{% endblock %}
+
+{% block content %}
+<div class="bs-page bs-studio bs-customdeck">
+  <nav class="bs-customdeck__crumbs" aria-label="Breadcrumb">
+    <a href="{% url 'vocabulary:index' %}">Flashcard studio</a>
+    <span aria-hidden="true">›</span>
+    <span>{{ deck.name }}</span>
+  </nav>
+
+  <header class="bs-customdeck__hero">
+    <div class="bs-customdeck__hero-main">
+      <div class="bs-customdeck__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 6.5h11a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z"/>
+          <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 9H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10"/>
+        </svg>
+      </div>
+      <div class="bs-customdeck__titleblock">
+        <h1 class="bs-customdeck__title">{{ deck.name }}</h1>
+        <p class="bs-customdeck__sub">Custom deck · {{ card_count }} card{{ card_count|pluralize }} · {{ mastered_count }} mastered</p>
+      </div>
+    </div>
+    <a class="bs-customdeck__editbtn" href="{{ edit_deck_url }}">Edit deck</a>
+  </header>
+
+  <section class="bs-customdeck__actions" aria-label="Deck actions">
+    <article class="bs-customdeck__panel">
+      <div class="bs-customdeck__panel-head">
+        <h2 class="bs-customdeck__panel-title">Study this deck</h2>
+        <p class="bs-customdeck__panel-sub">Choose how many cards to review in this session.</p>
+      </div>
+      <form class="bs-customdeck__panel-form" method="get" action="{% url 'vocabulary:flashcard_deck' %}">
+        <input type="hidden" name="deck_id" value="{{ deck.id }}">
+        <label class="bs-customdeck__label" for="deck-session-limit">Session size</label>
+        <select name="limit" id="deck-session-limit" class="bs-fc-session-limit-select" {% if not card_count %}disabled{% endif %}>
+          <option value="" {% if not default_session_limit %}selected{% endif %}>All {{ card_count }} card{{ card_count|pluralize }}</option>
+          {% for lim in session_limit_options %}
+          <option value="{{ lim }}" {% if default_session_limit == lim|stringformat:"d" %}selected{% endif %}>{{ lim }} card{{ lim|pluralize }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="bs-customdeck__cta" {% if not card_count %}disabled{% endif %}>Start studying →</button>
+      </form>
+    </article>
+
+    <article class="bs-customdeck__panel">
+      <div class="bs-customdeck__panel-head">
+        <h2 class="bs-customdeck__panel-title">Quick quiz</h2>
+        <p class="bs-customdeck__panel-sub">Run a focused quiz using only the words in this deck.</p>
+      </div>
+      <div class="bs-customdeck__quizbox">
+        <p class="bs-customdeck__quiznote">
+          {% if card_count >= 3 %}
+            Multiple choice · all cards in this deck
+          {% else %}
+            Add at least 3 cards to start a quiz
+          {% endif %}
+        </p>
+        {% if quick_quiz_url %}
+        <a class="bs-customdeck__cta bs-customdeck__cta--secondary" href="{{ quick_quiz_url }}">Start quiz →</a>
+        {% else %}
+        <button type="button" class="bs-customdeck__cta bs-customdeck__cta--secondary" disabled>Start quiz →</button>
+        {% endif %}
+      </div>
+    </article>
+  </section>
+
+  <section class="bs-customdeck__cards" aria-labelledby="deck-cards-heading">
+    <div class="bs-customdeck__cards-head">
+      <div>
+        <h2 class="bs-customdeck__cards-title" id="deck-cards-heading">Cards in this deck</h2>
+        <p class="bs-customdeck__cards-sub">Review, edit, or add new vocabulary to this deck.</p>
+      </div>
+      <a class="bs-customdeck__addbtn" href="{{ add_card_url }}">Add card</a>
+    </div>
+
+    {% if cards %}
+    <div class="bs-customdeck__list">
+      {% for card in cards %}
+      <div class="bs-customdeck__row">
+        <div class="bs-customdeck__row-main">
+          <div class="bs-customdeck__word">{{ card.word }}</div>
+          <div class="bs-customdeck__def">{{ card.definition }}</div>
+        </div>
+        <div class="bs-customdeck__row-side">
+          <span class="bs-customdeck__chip bs-customdeck__chip--{{ card.status_slug }}">{{ card.status_label }}</span>
+          <a class="bs-customdeck__editicon" href="{{ edit_deck_url }}" aria-label="Edit deck cards">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 20h9"/>
+              <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bs-customdeck__empty">
+      <div class="bs-customdeck__empty-title">No cards yet — add your first card</div>
+      <p class="bs-customdeck__empty-sub">Start building this custom deck with words, definitions, and example sentences.</p>
+      <a class="bs-customdeck__cta" href="{{ add_card_url }}">Add card</a>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

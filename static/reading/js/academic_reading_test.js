@@ -11,8 +11,10 @@
   var DATA = JSON.parse(dataEl.textContent);
   var SUBMIT_URL = app.getAttribute("data-submit-url") || "";
   var TESTS_URL = app.getAttribute("data-tests-url") || "/reading/tests/";
+  var INDEX_URL = app.getAttribute("data-index-url") || TESTS_URL;
+  var isDrill = !!(DATA.singlePart);
 
-  var currentPart = 1;
+  var currentPart = isDrill ? DATA.part || 1 : 1;
   var answers = {};
   var submitted = false;
   var timeLeft = DATA.timeLimitSeconds || 3600;
@@ -23,6 +25,16 @@
     var d = document.createElement("div");
     d.textContent = s == null ? "" : String(s);
     return d.innerHTML;
+  }
+
+  function iconTile(slug, variant, size) {
+    return typeof BSIcons !== "undefined" ? BSIcons.tile(slug, variant, size || "sm") : "";
+  }
+  function iconInline(slug, kind) {
+    return typeof BSIcons !== "undefined" ? BSIcons.inline(slug, kind || "ok") : "";
+  }
+  function iconWarn() {
+    return typeof BSIcons !== "undefined" ? BSIcons.warn() : "";
   }
 
   function getCsrfToken() {
@@ -225,7 +237,9 @@
       inpCls +
       '" data-gap="' +
       q.id +
-      '" value="' +
+      '" name="art-q-' +
+      q.id +
+      '" autocomplete="off" autocapitalize="off" spellcheck="false" value="' +
       escapeHtml(v) +
       '" ' +
       (submitted ? "disabled" : "") +
@@ -267,7 +281,9 @@
       inpCls +
       '" data-summary="' +
       q.id +
-      '" value="' +
+      '" name="art-sum-' +
+      q.id +
+      '" autocomplete="off" autocapitalize="off" spellcheck="false" value="' +
       escapeHtml(v) +
       '" ' +
       (submitted ? "disabled" : "") +
@@ -545,7 +561,7 @@
     if (!goal) {
       return (
         '<div class="art-results-tip">' +
-        '<span class="art-results-tip__ic" aria-hidden="true">💡</span>' +
+        '<span class="art-results-tip__ic" aria-hidden="true">' + iconTile("lightbulb", "amber", "sm") + '</span>' +
         '<div class="art-results-tip__txt"><strong>Strong performance.</strong> You are already at or above the top target on this scale—keep balancing speed and accuracy across all three parts.</div></div>'
       );
     }
@@ -566,7 +582,7 @@
       partAdviceForWeakest(w.n);
     return (
       '<div class="art-results-tip">' +
-      '<span class="art-results-tip__ic" aria-hidden="true">💡</span>' +
+      '<span class="art-results-tip__ic" aria-hidden="true">' + iconTile("lightbulb", "amber", "sm") + '</span>' +
       '<div class="art-results-tip__txt">' +
       escapeHtml(inner) +
       "</div></div>"
@@ -742,7 +758,7 @@
     return (
       '<div class="art-ar-card art-ar-card--wrong">' +
       '<div class="art-ar-card__head">' +
-      '<span class="art-ar-card__x" aria-hidden="true">✗</span>' +
+      '<span class="art-ar-card__x" aria-hidden="true">' + (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + '</span>' +
       '<div class="art-ar-card__qmain"><strong>Q' +
       q.id +
       "</strong> " +
@@ -764,20 +780,20 @@
       '<span class="art-ar-skill">' +
       escapeHtml(skill) +
       "</span></div>" +
-      '<div class="art-ar-row art-ar-row--why"><span aria-hidden="true">⚑</span> ' +
+      '<div class="art-ar-row art-ar-row--why"><span aria-hidden="true">' + iconInline("pin", "ok") + '</span> ' +
       '<span class="art-ar-why-pill">' +
       escapeHtml(why) +
       "</span></div>" +
       (expl
-        ? '<div class="art-ar-row art-ar-row--explain"><span aria-hidden="true">✦</span> ' + escapeHtml(expl) + "</div>"
+        ? '<div class="art-ar-row art-ar-row--explain"><span aria-hidden="true">' + iconInline("lightbulb", "warn") + '</span> ' + escapeHtml(expl) + "</div>"
         : "") +
       (pref
-        ? '<div class="art-ar-row art-ar-row--quote"><span aria-hidden="true">📍</span> <span class="art-ar-muted">Find it in the passage:</span> “' +
+        ? '<div class="art-ar-row art-ar-row--quote"><span aria-hidden="true">' + iconInline("pin", "ok") + '</span> <span class="art-ar-muted">Find it in the passage:</span> “' +
           escapeHtml(pref) +
           '”</div>'
         : "") +
       (cm
-        ? '<div class="art-ar-row art-ar-row--cm"><span aria-hidden="true">⚠</span> <strong>Common mistake —</strong> ' +
+        ? '<div class="art-ar-row art-ar-row--cm"><span aria-hidden="true">' + iconWarn() + '</span> <strong>Common mistake —</strong> ' +
           escapeHtml(cm) +
           "</div>"
         : "") +
@@ -793,14 +809,14 @@
     var more =
       expl || pref
         ? '<details class="art-ar-more">' +
-          '<summary class="art-ar-more__sum">Show explanation ▾</summary>' +
+          '<summary class="art-ar-more__sum">Show explanation</summary>' +
           (expl
-            ? '<div class="art-ar-row art-ar-row--explain art-ar-row--inmore"><span aria-hidden="true">✦</span> ' +
+            ? '<div class="art-ar-row art-ar-row--explain art-ar-row--inmore"><span aria-hidden="true">' + iconInline("lightbulb", "warn") + '</span> ' +
               escapeHtml(expl) +
               "</div>"
             : "") +
           (pref
-            ? '<div class="art-ar-row art-ar-row--quote art-ar-row--inmore"><span aria-hidden="true">📍</span> <span class="art-ar-muted">Find it in the passage:</span> “' +
+            ? '<div class="art-ar-row art-ar-row--quote art-ar-row--inmore"><span aria-hidden="true">' + iconInline("pin", "ok") + '</span> <span class="art-ar-muted">Find it in the passage:</span> “' +
               escapeHtml(pref) +
               '”</div>'
             : "") +
@@ -809,7 +825,7 @@
     return (
       '<div class="art-ar-card art-ar-card--correct">' +
       '<div class="art-ar-card__head">' +
-      '<span class="art-ar-card__ok" aria-hidden="true">✓</span>' +
+      '<span class="art-ar-card__ok" aria-hidden="true">' + (typeof BSIcons !== "undefined" ? BSIcons.check() : "") + '</span>' +
       '<div class="art-ar-card__qmain"><strong>Q' +
       q.id +
       "</strong> " +
@@ -825,7 +841,7 @@
       '<span class="art-ar-muted">Your answer</span> ' +
       '<span class="art-ar-pill art-ar-pill--ok">' +
       escapeHtml(ua) +
-      "</span> ✓ Correct</div>" +
+      "</span> " + (typeof BSIcons !== "undefined" ? BSIcons.check() : "") + " Correct</div>" +
       more +
       "</div>"
     );
@@ -835,10 +851,10 @@
     var tc = tallyReviewCounts(questions);
     var pills =
       '<div class="art-ar-stats">' +
-      '<span class="art-ar-stat art-ar-stat--ok">✓ ' +
+      '<span class="art-ar-stat art-ar-stat--ok">' + (typeof BSIcons !== "undefined" ? BSIcons.check() : "") + " " +
       tc.correct +
       " correct</span>" +
-      '<span class="art-ar-stat art-ar-stat--bad">✗ ' +
+      '<span class="art-ar-stat art-ar-stat--bad">' + (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + " " +
       tc.wrong +
       " wrong</span>" +
       '<span class="art-ar-stat art-ar-stat--skip">— ' +
@@ -941,6 +957,54 @@
     arReviewFilter = "wrong";
     var score = server.score;
     var band = server.band;
+    var totalQ = server.total || 40;
+    if (isDrill) {
+      var elapsed = Math.max(0, (DATA.timeLimitSeconds || 1200) - timeLeft);
+      var em = Math.floor(elapsed / 60);
+      var es = elapsed % 60;
+      var autoNote = server.auto_submit
+        ? '<p class="art-results-hero__meta">Time expired — answers submitted automatically.</p>'
+        : "";
+      var htmlDrill =
+        '<div class="art-results-inner">' +
+        '<div class="art-results-hero">' +
+        '<div class="art-results-hero__label">Timed drill complete</div>' +
+        '<div class="art-results-hero__score">' +
+        score +
+        " / " +
+        totalQ +
+        "</div>" +
+        '<div class="art-results-hero__band">Estimated band: ' +
+        escapeHtml(band) +
+        "</div>" +
+        '<div class="art-results-hero__meta">Time used: ' +
+        em +
+        " min " +
+        (es < 10 ? "0" : "") +
+        es +
+        " sec</div>" +
+        autoNote +
+        "</div>" +
+        '<div class="art-results-actions art-results-actions--row">' +
+        '<button type="button" class="art-results-btn art-results-btn--outline" id="art-retry">Try again</button>' +
+        '<a class="art-results-btn art-results-btn--solid" href="' +
+        escapeHtml(INDEX_URL) +
+        '">Back to drills</a>' +
+        "</div></div>";
+      var shellDrill = document.getElementById("art-results");
+      if (shellDrill) {
+        shellDrill.innerHTML = htmlDrill;
+        shellDrill.classList.remove("art-results--hidden");
+      }
+      app.classList.add("art-app--hidden");
+      var retryDrill = document.getElementById("art-retry");
+      if (retryDrill) {
+        retryDrill.addEventListener("click", function () {
+          window.location.reload();
+        });
+      }
+      return;
+    }
     var p1 = server.part1_score;
     var p2 = server.part2_score;
     var p3 = server.part3_score;
@@ -1075,6 +1139,7 @@
       body: JSON.stringify({
         answers: answers,
         time_taken_seconds: elapsed,
+        auto_submit: !!auto,
       }),
     })
       .then(function (r) {
@@ -1128,6 +1193,19 @@
   });
 
   buildQnav();
-  switchPart(1);
+  if (DATA.testTitleBar) {
+    var titleEl = document.querySelector(".art-topbar__title");
+    if (titleEl) titleEl.textContent = DATA.testTitleBar;
+    if (document.title.indexOf("IELTS Academic Reading") === 0 || document.title.indexOf("ELTS") !== -1) {
+      document.title = DATA.testTitleBar + " — Boosting Score";
+    }
+  }
+  if (isDrill) {
+    var tabsEl = document.querySelector(".art-tabs");
+    if (tabsEl) tabsEl.hidden = true;
+    switchPart(currentPart);
+  } else {
+    switchPart(1);
+  }
   startTimer();
 })();

@@ -1,0 +1,66 @@
+{% load bs_icons %}
+<div class="wl-learn">
+  <div class="wl-golden">
+    <div class="wl-golden__lbl">Band 7 focus</div>
+    <p class="wl-golden__txt">{{ lecture.band_7_focus }}</p>
+  </div>
+
+  <div class="wl-card wl-learn-card">
+    <h2 class="wl-learn-card__title">What this is</h2>
+    <p>{{ lecture.what_this_is }}</p>
+  </div>
+
+  <div class="wl-card wl-learn-card">
+    <h2 class="wl-learn-card__title">The method</h2>
+    <ol class="wl-method">
+      {% for step in lecture.method_steps %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <div class="wl-card wl-learn-card">
+    <h2 class="wl-learn-card__title">Worked example</h2>
+    <p class="wl-learn-card__sub">Prompt</p>
+    <p class="wl-prompt">{{ lecture.worked_example.prompt }}</p>
+    <p class="wl-learn-card__sub">Example</p>
+    <div class="wl-example">{{ lecture.worked_example.example_html|safe }}</div>
+    {% if lecture.worked_example.swaps %}
+    <p class="wl-learn-card__sub">Key paraphrase moves</p>
+    <ul class="wl-swaps">
+      {% for s in lecture.worked_example.swaps %}
+      <li><span class="wl-swap-from">{{ s.before }}</span> → <span class="wl-swap-to">{{ s.after }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="wl-walkthrough">{{ lecture.worked_example.walkthrough }}</p>
+  </div>
+
+  <div class="wl-card wl-learn-card">
+    <h2 class="wl-learn-card__title">Band 6 vs Band 8</h2>
+    <div class="wl-band-row">
+      <div class="wl-band-sample">
+        <span class="wl-band-pill wl-band-pill--6">Band 6</span>
+        <p>{{ lecture.band_compare.weak.text }}</p>
+        <p class="wl-band-note">{{ lecture.band_compare.weak.note }}</p>
+      </div>
+      <div class="wl-band-sample">
+        <span class="wl-band-pill wl-band-pill--8">Band 8</span>
+        <p>{{ lecture.band_compare.strong.text }}</p>
+        <p class="wl-band-note">{{ lecture.band_compare.strong.note }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wl-card wl-learn-card">
+    <h2 class="wl-learn-card__title">Common mistakes</h2>
+    <ul class="wl-mistakes-learn">
+      {% for m in lecture.common_mistakes %}
+      <li>
+        <span class="wl-mistakes-learn__bad">{{ m.mistake }}</span>
+        <span class="wl-mistakes-learn__fix">{{ m.fix }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>

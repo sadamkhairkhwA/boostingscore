@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <a href="{% url 'listening:practice' t.slug %}" class="ll-tip__cta">Practise {{ t.name|lower }} <span class="ll-arrow">→</span></a>
+    <a href="{% url 'listening:type_detail' t.slug %}" class="ll-tip__cta">Practise {{ t.name|lower }} <span class="ll-arrow">→</span></a>
   </article>
   {% endfor %}
 </section>

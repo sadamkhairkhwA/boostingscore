@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Vocabulary guide — IELTS — Boosting Score{% endblock %}
 {% block body_class %}guide-page{% endblock %}
 {% block extra_css %}
@@ -32,42 +32,42 @@
     <h2 class="g-sec-heading">How to use this website</h2>
     <div class="g-fcard-list">
       <article class="g-fcard">
-        <span class="g-fcard-icon" aria-hidden="true">🗂️</span>
+        <span class="g-fcard-icon" aria-hidden="true">{% bs_icon "folder" "green" "md" %}</span>
         <div class="g-fcard-body">
           <h3 class="g-fcard-title">Flashcards</h3>
           <p class="g-fcard-txt">The core tool. See a word, try to recall the meaning yourself, then flip. Rate <strong>Hard</strong> if you struggled, <strong>Easy</strong> if you knew it. Hard cards come back again in the same session. Do this daily for 10–15 minutes.</p>
         </div>
       </article>
       <article class="g-fcard">
-        <span class="g-fcard-icon" aria-hidden="true">⏱️</span>
+        <span class="g-fcard-icon" aria-hidden="true">{% bs_icon "clock" "green" "md" %}</span>
         <div class="g-fcard-body">
           <h3 class="g-fcard-title">Smart review</h3>
           <p class="g-fcard-txt">Words you marked Hard are scheduled to come back. The system tracks when each word is due. Always do your due reviews before starting new words.</p>
         </div>
       </article>
       <article class="g-fcard">
-        <span class="g-fcard-icon" aria-hidden="true">🧠</span>
+        <span class="g-fcard-icon" aria-hidden="true">{% bs_icon "quiz" "purple" "md" %}</span>
         <div class="g-fcard-body">
           <h3 class="g-fcard-title">Quick quiz</h3>
           <p class="g-fcard-txt">Tests your knowledge under pressure. Use <strong>Multiple choice</strong> first when a word is new. Switch to <strong>Spell it</strong> and <strong>Fill in the blank</strong> once you’re more confident — those force active recall which is far more effective.</p>
         </div>
       </article>
       <article class="g-fcard">
-        <span class="g-fcard-icon" aria-hidden="true">✏️</span>
+        <span class="g-fcard-icon" aria-hidden="true">{% bs_icon "pen" "purple" "md" %}</span>
         <div class="g-fcard-body">
           <h3 class="g-fcard-title">Type it</h3>
           <p class="g-fcard-txt">Write a full sentence using the word. This is the most powerful exercise for Writing and Speaking band improvement. Don’t skip it.</p>
         </div>
       </article>
       <article class="g-fcard">
-        <span class="g-fcard-icon" aria-hidden="true">📋</span>
+        <span class="g-fcard-icon" aria-hidden="true">{% bs_icon "clipboard" "navy" "md" %}</span>
         <div class="g-fcard-body">
           <h3 class="g-fcard-title">Word list</h3>
           <p class="g-fcard-txt">Browse all words by topic and level. Star words you want to revisit. Use this to plan which topic to study next before your exam.</p>
         </div>
       </article>
       <article class="g-fcard">
-        <span class="g-fcard-icon" aria-hidden="true">📚</span>
+        <span class="g-fcard-icon" aria-hidden="true">{% bs_icon "book" "green" "md" %}</span>
         <div class="g-fcard-body">
           <h3 class="g-fcard-title">Custom decks</h3>
           <p class="g-fcard-txt">Build your own decks from words you encounter in practice tests or reading. Personalised vocabulary sticks better than generic lists.</p>

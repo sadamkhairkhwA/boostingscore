@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ question_type_card.title }} — Reading{% endblock %}
+{% block body_class %}reading-strategies-page{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'reading/css/strategies.css' %}?v=5" />
+  <link rel="stylesheet" href="{% static 'reading/css/question_type_flow.css' %}?v=1" />
+{% endblock %}
+{% block content %}
+<div class="bs-page rs-page rqt-page">
+  <header class="rqt-head">
+    <a class="rqt-back" href="{{ chooser_url }}">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
+      Back to question types
+    </a>
+    <h1 class="bs-page-title">{{ question_type_card.title }}</h1>
+    <p class="bs-page-sub">{{ question_type_card.description }}</p>
+  </header>
+
+  <div class="rqt-layout">
+    {% include "reading/_question_type_lesson.html" with lesson=learn_lesson %}
+
+    {% if strategy_notes %}
+    <section class="rqt-note-grid" aria-label="Extra guidance">
+      {% for note in strategy_notes %}
+      <article class="rqt-note-card">
+        <h3>{{ note.title }}</h3>
+        {% if note.focus %}<p><strong>What to focus on:</strong> {{ note.focus }}</p>{% endif %}
+        {% if note.mistakes %}
+        <div>
+          <p><strong>Common traps</strong></p>
+          <ul>
+            {% for item in note.mistakes %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% if note.confusing %}<p><strong>Watch this:</strong> {{ note.confusing }}</p>{% endif %}
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="rqt-panel">
+      <div class="rqt-row-actions">
+        <a class="rqt-btn" href="{{ practice_url }}">Practice this type</a>
+        <a class="rqt-btn-ghost" href="{{ chooser_url }}">Back to question types</a>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

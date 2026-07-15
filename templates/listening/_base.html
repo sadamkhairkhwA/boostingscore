@@ -4,27 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Listening{% endblock %} — BoostingScore</title>
-  <link rel="stylesheet" href="{% static 'listening/css/listen_learn.css' %}?v=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=13">
+  <link rel="stylesheet" href="{% static 'css/bs-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'listening/css/listen_learn.css' %}?v=6">
+  <link rel="stylesheet" href="{% static 'css/plan_limits.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/avatar_menu.css' %}?v=1">
   {% block head %}{% endblock %}
 </head>
 <body class="ll-body">
 
-<header class="ll-nav">
-  <div class="ll-nav__inner">
-    <a href="{% url 'home' %}" class="ll-logo">Boosting<span>Score</span></a>
-    <div class="ll-nav__right">
-      <a href="{% url 'listening:home' %}" class="ll-pill">Practice</a>
-      <a href="{% url 'listening:tips' %}" class="ll-pill">Tips</a>
-      <span class="ll-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
-      <a href="{% url 'logout' %}" class="ll-nav__logout">Log out</a>
-    </div>
-  </div>
-</header>
+{% include 'partials/nav.html' %}
 
 <main class="ll-main">
+  {% if messages %}
+  <div class="bs-flash-wrap" role="status">
+    {% for message in messages %}
+    <p class="bs-flash">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% block content %}{% endblock %}
 </main>
 
 {% block scripts %}{% endblock %}
+<script src="{% static 'js/avatar_menu.js' %}?v=1"></script>
 </body>
 </html>

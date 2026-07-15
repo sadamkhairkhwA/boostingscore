@@ -1,5 +1,5 @@
 {% extends "listening/_base.html" %}
-{% load static %}
+{% load static plan_tags %}
 
 {% block title %}Listening{% endblock %}
 
@@ -22,7 +22,8 @@
 
   <div class="ll-grid">
     {% for t in types %}
-    <a href="{% url 'listening:practice' t.slug %}" class="ll-card {% if not t.set_count %}is-soon{% endif %}">
+    {% if user|user_can:t.plan_feature %}
+    <a href="{% url 'listening:type_detail' t.slug %}" class="ll-card {% if not t.set_count %}is-soon{% endif %}">
       <span class="ll-card__ico">
         <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </span>
@@ -30,12 +31,31 @@
       <p class="ll-card__desc">{{ t.blurb }}</p>
       <div class="ll-card__foot">
         {% if t.set_count %}
-          <span class="ll-card__cta">Practise <span class="ll-arrow">→</span></span>
+          <span class="ll-card__cta">{% if t.set_count > 1 %}{{ t.set_count }} tests{% else %}Practise{% endif %} <span class="ll-arrow">→</span></span>
         {% else %}
           <span class="ll-card__cta ll-card__cta--soon">Coming soon</span>
         {% endif %}
       </div>
     </a>
+    {% else %}
+    <div class="ll-card ll-card--plan-locked" aria-disabled="true">
+      <span class="ll-card__pill ll-card__pill--premium">Premium</span>
+      <span class="ll-card__ico">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+      <div class="ll-card__name">{{ t.name }}</div>
+      <p class="ll-card__desc">{{ t.blurb }}</p>
+      <div class="ll-card__foot">
+        <span class="ll-card__cta ll-card__cta--locked">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="10" rx="2"/>
+            <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+          </svg>
+          {{ vocab_premium_lock_message }}
+        </span>
+      </div>
+    </div>
+    {% endif %}
     {% endfor %}
   </div>
 </section>
@@ -64,7 +84,7 @@
       </div>
       <span class="ll-recent__score">{{ a.score }}/{{ a.total }}</span>
       <span class="ll-recent__pct ll-recent__pct--{% if a.percent >= 80 %}good{% elif a.percent >= 50 %}ok{% else %}low{% endif %}">{{ a.percent }}%</span>
-      <a href="{% url 'listening:practice' a.question_type %}" class="ll-recent__again">Retry</a>
+      <a href="{% url 'listening:practice' a.question_type %}?set={{ a.set_id }}" class="ll-recent__again">Retry</a>
     </li>
     {% endfor %}
   </ul>

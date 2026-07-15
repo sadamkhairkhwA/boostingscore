@@ -26,14 +26,22 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
+        parser.add_argument(
+            "--type",
+            dest="qtype",
+            help="Only generate audio for this question-type slug (e.g. multiple-choice).",
+        )
 
     def handle(self, *args, **opts):
         force = opts["force"]
+        qtype_filter = opts.get("qtype")
         out_dir = _out_dir()
         out_dir.mkdir(parents=True, exist_ok=True)
 
         made = skipped = 0
         for slug, sets in PRACTICE_SETS.items():
+            if qtype_filter and slug != qtype_filter:
+                continue
             for pset in sets:
                 audio = pset.get("audio")
                 lines = pset.get("lines")

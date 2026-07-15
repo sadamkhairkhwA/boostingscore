@@ -1,34 +1,96 @@
-BEGINNER = (
-    "school, teacher, student, class, lesson, book, pen, pencil, notebook, exam, test, grade, homework, subject, "
-    "maths, science, history, language, art, sport, library, uniform, timetable, holiday, term, learning, reading, "
-    "writing, number, letter, question, answer, study, pass, fail, graduate, university, college, degree, lecture, "
-    "assignment, essay, group, team, project, knowledge, skill, talent, memory, attention, effort, discipline, "
-    "reward, punishment, playground, classroom, canteen, principal, parent, certificate, diploma, scholarship, "
-    "tuition, campus, dormitory"
+"""Education topic word bank, balanced by part of speech."""
+
+BEGINNER_NOUNS = (
+    "curriculum", "literacy", "tuition", "scholarship", "enrolment", "coursework",
+    "educator", "assessment", "qualification", "discipline", "knowledge", "skill",
+    "syllabus", "lecture", "seminar", "textbook", "learner", "motivation",
+    "attendance", "achievement", "compulsory education", "higher education",
+    "primary school", "secondary school", "distance learning", "online learning",
+    "critical thinking", "learning outcome", "academic performance", "school system",
+    "teaching method", "student loan", "exam pressure", "class size",
+    "learning environment", "study habit", "peer pressure", "career prospect",
+    "lifelong learning", "educational institution",
+)
+BEGINNER_VERBS = (
+    "educate", "learn", "teach", "study", "graduate", "enrol", "assess",
+    "memorise", "revise", "motivate", "instruct", "acquire", "attain", "excel",
+    "specialise", "comprehend", "encourage", "attend", "supervise", "grasp",
+)
+BEGINNER_ADJECTIVES = (
+    "academic", "educational", "compulsory", "vocational", "practical",
+    "theoretical", "knowledgeable", "literate", "disciplined", "motivated",
+    "competent", "capable", "diligent", "attentive", "inclusive", "affordable",
+    "intellectual", "rigorous", "elective", "formal",
+)
+BEGINNER_ADVERBS = (
+    "academically", "intellectually", "increasingly", "effectively", "formally",
+    "critically",
 )
 
-STANDARD = (
-    "curriculum, pedagogy, learning outcome, assessment, critical thinking, higher education, vocational training, "
-    "distance learning, blended learning, e-learning, academic performance, literacy, numeracy, inclusive education, "
-    "special needs, gifted student, classroom management, formative assessment, summative assessment, standardised test, "
-    "academic integrity, plagiarism, peer learning, collaborative learning, flipped classroom, project-based learning, "
-    "experiential learning, lifelong learning, adult education, early childhood education, compulsory education, "
-    "private school, public school, tuition fee, student loan, academic freedom, school dropout, grade repetition, "
-    "educational inequality, brain drain, teacher training, professional development, school leadership, parental involvement, "
-    "extracurricular activity, study abroad, language barrier, multilingual education, STEM education, arts education, "
-    "physical education, sex education, civic education, moral education, religious education, media literacy, "
-    "financial literacy, digital skills, employability, graduate unemployment, education policy, education reform"
+STANDARD_NOUNS = (
+    "pedagogy", "accreditation", "extracurricular activity", "attainment gap",
+    "student engagement", "learning disability", "academic integrity",
+    "standardised testing", "educational reform", "vocational training",
+    "teaching quality", "dropout rate", "class participation", "grade inflation",
+    "educational equity", "school funding", "digital classroom", "blended learning",
+    "continuous assessment", "cognitive development", "learning curve",
+    "academic achievement", "educational attainment", "study skill",
+    "knowledge economy", "educational policy", "teacher training", "school curriculum",
+    "learning outcome", "academic rigour", "student welfare", "tuition fee",
+    "educational opportunity", "skills gap", "academic pressure",
+)
+STANDARD_VERBS = (
+    "cultivate", "foster", "facilitate", "implement", "reinforce", "prioritise",
+    "undermine", "hinder", "allocate", "broaden", "instil", "nurture",
+    "stimulate", "enhance", "streamline", "assess", "evaluate", "integrate",
+    "equip", "empower", "mentor",
+)
+STANDARD_ADJECTIVES = (
+    "rigorous", "holistic", "prestigious", "selective", "comprehensive",
+    "interactive", "student-centred", "meritocratic", "beneficial", "detrimental",
+    "engaging", "demanding", "accessible", "well-rounded", "innovative",
+    "collaborative", "flexible", "prevalent", "substantial", "outdated",
+    "rote-based",
+)
+STANDARD_ADVERBS = (
+    "consequently", "notably", "significantly", "considerably", "arguably",
+    "whereas", "thereby", "subsequently", "predominantly",
 )
 
-ADVANCED = (
-    "constructivism, behaviourism, cognitivism, sociocultural theory, zone of proximal development, scaffolding, "
-    "metacognition, self-regulated learning, growth mindset, fixed mindset, intrinsic motivation, extrinsic motivation, "
-    "academic socialisation, hidden curriculum, null curriculum, school culture, institutional racism, meritocracy, "
-    "credentialism, human capital theory, social reproduction, Bourdieu, cultural capital, habitus, symbolic violence, "
-    "educational attainment gap, intersectionality, neurodiversity, dyslexia, dyscalculia, executive function, working memory, "
-    "cognitive load, spaced repetition, retrieval practice, interleaving, desirable difficulty, transfer of learning, "
-    "Bloom's taxonomy, higher order thinking, critical pedagogy, transformative learning, emancipatory education, "
-    "problem-posing education, indigenous knowledge, decolonising curriculum, academic discourse, disciplinary literacy, "
-    "epistemic agency, threshold concept, troublesome knowledge, communities of practice, situated learning, legitimate peripheral participation, "
-    "activity theory, systemic reform, education governance, quality assurance, accreditation, educational measurement, psychometrics"
+ADVANCED_NOUNS = (
+    "pedagogical approach", "cognitive load", "differentiated instruction",
+    "educational disparity", "intellectual autonomy", "meta-cognition",
+    "socioeconomic background", "academic discourse", "formative assessment",
+    "summative assessment", "epistemology", "curriculum framework",
+    "educational marginalisation", "scholastic achievement", "andragogy",
+    "critical pedagogy", "knowledge acquisition", "intellectual curiosity",
+    "educational infrastructure", "credential inflation", "learning analytics",
+    "academic autonomy", "pedagogical innovation", "cognitive scaffolding",
+    "educational stratification",
 )
+ADVANCED_VERBS = (
+    "engender", "underpin", "consolidate", "augment", "disseminate", "inculcate",
+    "galvanise", "exacerbate", "mitigate", "perpetuate", "curtail", "bolster",
+    "impede", "spearhead", "reconcile", "synthesise", "internalise",
+    "counteract", "expedite", "reinforce", "diversify",
+)
+ADVANCED_ADJECTIVES = (
+    "meritocratic", "autonomous", "scholarly", "multifaceted",
+    "profound", "systemic", "inclusive", "elitist", "prohibitive", "nuanced",
+    "far-reaching", "indispensable", "cumulative", "disproportionate", "salient",
+    "pervasive", "unprecedented", "inextricable", "formative", "transformative",
+    "negligible",
+)
+ADVANCED_ADVERBS = (
+    "ostensibly", "invariably", "markedly", "conversely", "nonetheless",
+    "disproportionately", "fundamentally", "substantially", "inherently",
+)
+
+BEGINNER = BEGINNER_NOUNS + BEGINNER_VERBS + BEGINNER_ADJECTIVES + BEGINNER_ADVERBS
+STANDARD = STANDARD_NOUNS + STANDARD_VERBS + STANDARD_ADJECTIVES + STANDARD_ADVERBS
+ADVANCED = ADVANCED_NOUNS + ADVANCED_VERBS + ADVANCED_ADJECTIVES + ADVANCED_ADVERBS
+
+NOUNS = BEGINNER_NOUNS + STANDARD_NOUNS + ADVANCED_NOUNS
+VERBS = BEGINNER_VERBS + STANDARD_VERBS + ADVANCED_VERBS
+ADJECTIVES = BEGINNER_ADJECTIVES + STANDARD_ADJECTIVES + ADVANCED_ADJECTIVES
+ADVERBS = BEGINNER_ADVERBS + STANDARD_ADVERBS + ADVANCED_ADVERBS

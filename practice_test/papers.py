@@ -1,4 +1,4 @@
-"""Registry of the IELTS Practice Tests (Test 1–5).
+"""Registry of the IELTS Practice Tests (Test 1–15).
 
 Single source of truth for:
   1. which tests appear on the chooser page,
@@ -9,6 +9,7 @@ Test 1 uses the shipped content in ``content.py`` + ``listening_content.py``.
 Tests 2–5 each live in their own module under ``tests_content/`` (test2.py …
 test5.py), exposing READING / LISTENING / WRITING in the exact same shapes.
 Speaking is intentionally not included for Tests 2–5 yet.
+Tests 6–15 are placeholder shells on the chooser (not playable).
 
 To take a test offline again, flip its flag in ACTIVE to ``False``.
 """
@@ -24,6 +25,16 @@ ACTIVE = {
     3: True,
     4: True,
     5: True,
+    6: False,
+    7: False,
+    8: False,
+    9: False,
+    10: False,
+    11: False,
+    12: False,
+    13: False,
+    14: False,
+    15: False,
 }
 
 
@@ -42,6 +53,26 @@ TEST_META = {
         "blurb": "Taste & flavour, Roman roads and AI in medicine."},
     5: {"title": "Practice Test 5",
         "blurb": "Early agriculture, the physics of bridges and memory champions."},
+    6: {"title": "Practice Test 6",
+        "blurb": "Full four-section paper — coming soon."},
+    7: {"title": "Practice Test 7",
+        "blurb": "Full four-section paper — coming soon."},
+    8: {"title": "Practice Test 8",
+        "blurb": "Full four-section paper — coming soon."},
+    9: {"title": "Practice Test 9",
+        "blurb": "Full four-section paper — coming soon."},
+    10: {"title": "Practice Test 10",
+        "blurb": "Full four-section paper — coming soon."},
+    11: {"title": "Practice Test 11",
+        "blurb": "Full four-section paper — coming soon."},
+    12: {"title": "Practice Test 12",
+        "blurb": "Full four-section paper — coming soon."},
+    13: {"title": "Practice Test 13",
+        "blurb": "Full four-section paper — coming soon."},
+    14: {"title": "Practice Test 14",
+        "blurb": "Full four-section paper — coming soon."},
+    15: {"title": "Practice Test 15",
+        "blurb": "Full four-section paper — coming soon."},
 }
 
 
@@ -54,7 +85,7 @@ def is_active(n: int) -> bool:
 
 
 def list_tests() -> list[dict]:
-    """Return chooser-ready metadata for all five tests, in order."""
+    """Return chooser-ready metadata for all tests, in order."""
     return [
         {
             "number": n,

@@ -136,7 +136,7 @@
       var rows = [];
       corrections.red.forEach(function (r) {
         rows.push(
-          '<div class="wt1-corr-row is-red"><div class="icon">✕</div><div><strong>"' +
+          '<div class="wt1-corr-row is-red"><div class="icon">' + (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + '</div><div><strong>"' +
             r.orig +
             '"</strong> → <strong>"' +
             r.corr +
@@ -246,7 +246,7 @@
           "<ol><li>Write a clear overview sentence</li><li>Cover all key categories</li><li>Use at least 4 specific figures</li><li>Make direct comparisons</li><li>Avoid opinions</li></ol>";
       } else {
         vocabHost.innerHTML =
-          '<div class="wt1-vocab-grid"><div><h4>📈 Increases</h4><p>rose · increased · surged · climbed · edged up · doubled</p></div><div><h4>📉 Decreases</h4><p>fell · declined · dropped · dipped · halved</p></div><div><h4>➡ Stability</h4><p>remained stable · levelled off · plateaued · fluctuated</p></div><div><h4>📊 Proportions</h4><p>accounted for · the majority of · a minority of · dominated</p></div></div>';
+          '<div class="wt1-vocab-grid"><div><h4>' + (typeof BSIcons !== "undefined" ? BSIcons.inline("trend-up", "ok") : "") + ' Increases</h4><p>rose · increased · surged · climbed · edged up · doubled</p></div><div><h4>' + (typeof BSIcons !== "undefined" ? BSIcons.inline("trend-down", "bad") : "") + ' Decreases</h4><p>fell · declined · dropped · dipped · halved</p></div><div><h4>' + (typeof BSIcons !== "undefined" ? BSIcons.inline("scale", "ok") : "") + ' Stability</h4><p>remained stable · levelled off · plateaued · fluctuated</p></div><div><h4>' + (typeof BSIcons !== "undefined" ? BSIcons.inline("chart", "ok") : "") + ' Proportions</h4><p>accounted for · the majority of · a minority of · dominated</p></div></div>';
       }
     }
   }

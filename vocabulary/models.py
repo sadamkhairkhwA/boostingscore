@@ -9,12 +9,24 @@ class UserProfile(models.Model):
     level = models.IntegerField(choices=LEVEL_CHOICES, default=1)
     placement_score = models.IntegerField(default=0)
     placement_completed = models.BooleanField(default=False)
+    placement_results = models.JSONField(default=dict, blank=True)
+    placement_taken_at = models.DateTimeField(null=True, blank=True)
+    diagnostic_completed = models.BooleanField(default=False)
+    diagnostic_results = models.JSONField(default=dict, blank=True)
+    section_reviews = models.JSONField(default=dict, blank=True)
     streak = models.IntegerField(default=0)
     best_streak = models.IntegerField(default=0)
     reading_speed_wpm = models.IntegerField(null=True, blank=True)
     review_easy_days = models.IntegerField(default=7)
     review_hard_days = models.IntegerField(default=1)
+    review_hard_hours = models.PositiveSmallIntegerField(default=24)
+    review_good_hours = models.PositiveSmallIntegerField(default=72)
+    review_easy_hours = models.PositiveSmallIntegerField(default=168)
     last_activity_date = models.DateField(null=True, blank=True)
+    plan = models.CharField(max_length=32, default="free")
+    speaking_ai_notice_seen = models.BooleanField(default=False)
+    pending_email = models.EmailField(blank=True, default="")
+    pending_email_sent_at = models.DateTimeField(null=True, blank=True)
 
     @property
     def level_label(self):
@@ -22,7 +34,20 @@ class UserProfile(models.Model):
 
     @property
     def band_range(self):
+        if self.placement_completed and isinstance(self.placement_results, dict):
+            label = (self.placement_results.get("band_range") or "").strip()
+            if label:
+                return label
         return {1: "Band 4–5", 2: "Band 5.5–6.5", 3: "Band 7–9"}.get(self.level, "Band 4–5")
+
+    @property
+    def level_badge_text(self):
+        """Header pill: placement band once taken, otherwise Beginner/Standard/Advanced."""
+        if self.placement_completed and isinstance(self.placement_results, dict):
+            label = (self.placement_results.get("band_range") or "").strip()
+            if label:
+                return label
+        return self.level_label
 
     def __str__(self):
         return f"{self.user.username} — {self.level_label}"
@@ -108,6 +133,14 @@ class VocabularyProgress(models.Model):
     times_correct = models.IntegerField(default=0)
     times_wrong = models.IntegerField(default=0)
     times_marked_hard = models.IntegerField(default=0)
+    is_hard_word = models.BooleanField(
+        default=False,
+        help_text="Keeps this word in the Hard words collection until the user clears it.",
+    )
+    hard_easy_streak = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Consecutive Easy ratings while the word is in the Hard words collection.",
+    )
     mastery_level = models.IntegerField(default=1)
     next_review = models.DateTimeField(null=True, blank=True)
     last_reviewed = models.DateTimeField(null=True, blank=True)
@@ -259,3 +292,32 @@ class CustomDeckWord(models.Model):
 
     def __str__(self):
         return f"{self.deck.name}: {self.word}"
+
+
+class DailyAiUsage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="daily_ai_usage")
+    usage_date = models.DateField()
+    count = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-usage_date"]
+        unique_together = [("user", "usage_date")]
+
+    def __str__(self):
+        return f"{self.user_id} {self.usage_date}: {self.count}"
+
+
+class AiUsageLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ai_usage_logs")
+    feature = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"], name="vocab_ai_user_created_idx"),
+            models.Index(fields=["feature", "-created_at"], name="vocab_ai_feat_created_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} {self.feature} @ {self.created_at}"

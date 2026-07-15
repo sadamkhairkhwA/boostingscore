@@ -1,0 +1,94 @@
+{% extends "listening/_base.html" %}
+{% load bs_icons %}
+
+{% block title %}{{ type_label }} — Practise{% endblock %}
+
+{% block content %}
+<div class="ll-type">
+
+  <div class="ll-type__head">
+    <a href="{% url 'listening:type_detail' qtype %}" class="ll-back">← Back to tips</a>
+    <span class="ll-practice__tag">{{ type_label }}</span>
+  </div>
+  <h1 class="ll-hero__title">{{ type_label }}</h1>
+
+  <nav class="ll-flow" aria-label="Practice steps">
+    <a href="{% url 'listening:type_detail' qtype %}" class="ll-flow__step">
+      <span class="ll-flow__num">1</span>
+      Study the tips
+    </a>
+    <span class="ll-flow__sep" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </span>
+    <span class="ll-flow__step is-current">
+      <span class="ll-flow__num">2</span>
+      Practise
+    </span>
+  </nav>
+
+  <section class="ll-study ll-study--tests" id="choose-test">
+    <header class="ll-study__hd">
+      <span class="ll-study__step">Step 2</span>
+      <h2 class="ll-study__title">{% if test_count > 1 %}Choose a practice test{% else %}Start practice{% endif %}</h2>
+      <p class="ll-study__sub">
+        {% if test_count > 1 %}
+          {{ test_count }} short tests — audio plays once, 5 questions each. Pick any test below.
+        {% else %}
+          One short test — audio plays once, 5 questions. Answers and explanations at the end.
+        {% endif %}
+      </p>
+    </header>
+
+    <div class="ll-testgrid">
+      {% for s in sets %}
+      {% if s.audio_ready %}
+      <a class="ll-testcard" href="{% url 'listening:practice' qtype %}?set={{ s.id }}">
+        <span class="ll-testcard__ico" aria-hidden="true">{% bs_icon s.icon "green" "lg" %}</span>
+        <div class="ll-testcard__body">
+          {% if test_count > 1 %}
+          <span class="ll-testcard__label">Test {{ s.test_number|default:forloop.counter }}</span>
+          {% endif %}
+          <span class="ll-testcard__name">{{ s.title }}</span>
+          <span class="ll-testcard__meta">5 questions · audio plays once</span>
+          {% if s.best_score %}
+          <span class="ll-testcard__best">Best score: {{ s.best_score.score }}/{{ s.best_score.total }}</span>
+          {% endif %}
+        </div>
+        <span class="ll-testcard__cta">Start <span class="ll-arrow">→</span></span>
+      </a>
+      {% else %}
+      <div class="ll-testcard ll-testcard--soon" aria-disabled="true">
+        <span class="ll-testcard__ico" aria-hidden="true">{% bs_icon s.icon "green" "lg" %}</span>
+        <div class="ll-testcard__body">
+          {% if test_count > 1 %}
+          <span class="ll-testcard__label">Test {{ s.test_number|default:forloop.counter }}</span>
+          {% endif %}
+          <span class="ll-testcard__name">{{ s.title }}</span>
+          <span class="ll-testcard__meta">5 questions · <span class="ll-testcard__pending">Audio coming soon</span></span>
+        </div>
+        <span class="ll-testcard__cta ll-testcard__cta--soon">Soon</span>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if recent %}
+  <section class="ll-sec">
+    <h2 class="ll-sec__title">Your recent {{ type_label|lower }} practice</h2>
+    <ul class="ll-recent">
+      {% for a in recent %}
+      <li class="ll-recent__row">
+        <div class="ll-recent__main">
+          <span class="ll-recent__set">{{ a.set_title }}</span>
+        </div>
+        <span class="ll-recent__score">{{ a.score }}/{{ a.total }}</span>
+        <a href="{% url 'listening:practice' qtype %}?set={{ a.set_id }}" class="ll-recent__again">Retry</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

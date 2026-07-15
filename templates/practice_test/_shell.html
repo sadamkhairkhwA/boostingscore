@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block pt_title %}Practice Test{% endblock %} — BoostingScore</title>
   <link rel="stylesheet" href="{% static 'practice_test/css/practice_test.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'css/plan_limits.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/avatar_menu.css' %}?v=1">
   {% block pt_head %}{% endblock %}
 </head>
 <body class="pt-body">
@@ -15,17 +17,24 @@
     <div class="pt-nav__right">
       {% if request.user.is_authenticated %}
         <a href="{% url 'practice_test:hub' %}" class="pt-pill">All tests</a>
-        <span class="pt-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper|default:"U" }}</span>
-        <a href="{% url 'logout' %}" class="pt-nav__logout">Log out</a>
+        {% include "includes/avatar_menu.html" with avatar_class="bs-avatar-menu__btn--pt" %}
       {% endif %}
     </div>
   </div>
 </header>
 
 <main class="pt-main">
+  {% if messages %}
+  <div class="bs-flash-wrap" role="status">
+    {% for message in messages %}
+    <p class="bs-flash">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% block pt_content %}{% endblock %}
 </main>
 
 {% block pt_scripts %}{% endblock %}
+<script src="{% static 'js/avatar_menu.js' %}?v=1"></script>
 </body>
 </html>

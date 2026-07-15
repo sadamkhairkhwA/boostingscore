@@ -1,37 +1,37 @@
 TYPE_META = {
     "bar-chart": {
         "name": "Bar Chart",
-        "emoji": "📊",
+        "emoji": "chart",
         "description": "Compare quantities across categories or time periods",
     },
     "line-graph": {
         "name": "Line Graph",
-        "emoji": "📈",
+        "emoji": "chart",
         "description": "Show trends and changes over time",
     },
     "pie-chart": {
         "name": "Pie Chart",
-        "emoji": "🥧",
+        "emoji": "pie",
         "description": "Show proportions and percentages of a whole",
     },
     "table": {
         "name": "Table",
-        "emoji": "📋",
+        "emoji": "clipboard",
         "description": "Summarise numerical data in rows and columns",
     },
     "process-diagram": {
         "name": "Process Diagram",
-        "emoji": "⚙️",
+        "emoji": "process",
         "description": "Describe stages in a cycle or linear process",
     },
     "map": {
         "name": "Map",
-        "emoji": "🗺️",
+        "emoji": "map",
         "description": "Describe changes to a location over time",
     },
     "mixed-charts": {
         "name": "Mixed Charts",
-        "emoji": "📉",
+        "emoji": "trend-down",
         "description": "Two different chart types shown together",
     },
 }

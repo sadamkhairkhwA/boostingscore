@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account deleted — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=3">
+</head>
+<body class="pf-body">
+<main class="pf-main pf-main--center">
+  <article class="pf-card">
+    <h1 class="pf-h1">Your account has been deleted</h1>
+    <p class="pf-help">All of your BoostingScore data has been removed. Thank you for trying the product.</p>
+    <a href="{% url 'landing' %}" class="pf-btn pf-btn--primary">Back to home</a>
+  </article>
+</main>
+</body>
+</html>

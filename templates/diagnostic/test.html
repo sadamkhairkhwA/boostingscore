@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Quick diagnostic — Boosting Score{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/diagnostic.css' %}?v=1">
+{% endblock %}
+{% block content %}
+<div class="diag-page">
+  <header class="diag-head">
+    <h1 class="diag-title">Quick diagnostic</h1>
+    <p class="diag-sub">A short check across Reading, Listening, Writing, and Speaking — about 5 minutes. We'll suggest where to start.</p>
+  </header>
+
+  <form method="post" class="diag-form">
+    {% csrf_token %}
+    {% for section in sections %}
+    <section class="diag-section">
+      <h2 class="diag-section__title">{{ section.title }}</h2>
+      {% for q in section.questions %}
+      <div class="diag-q">
+        <p class="diag-q__prompt">{{ q.prompt }}</p>
+        <div class="diag-q__opts">
+          {% for opt in q.options %}
+          <label class="diag-opt">
+            <input type="radio" name="q_{{ q.id }}" value="{{ opt.value }}" required>
+            <span>{{ opt.label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endfor %}
+    <button type="submit" class="diag-submit">See my results</button>
+  </form>
+</div>
+{% endblock %}

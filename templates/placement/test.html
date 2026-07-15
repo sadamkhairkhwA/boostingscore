@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Placement test — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/placement.css' %}?v=3">
+</head>
+<body class="pl-body pl-body--test">
+  <header class="pl-testbar">
+    <div class="pl-testbar__row">
+      <div class="pl-testbar__left">
+        <span class="pl-logo pl-logo--sm">Boosting<span>Score</span></span>
+        <span class="pl-sec-label" id="pl-sec-label">Vocabulary</span>
+      </div>
+      <span class="pl-sec-step" id="pl-sec-step">Section 1 of 4</span>
+    </div>
+    <div class="pl-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pl-progress">
+      <div class="pl-progress__fill" id="pl-progress-fill"></div>
+    </div>
+  </header>
+
+  <main class="pl-main pl-main--test">
+    <form method="post" id="pl-form" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="elapsed_seconds" id="pl-elapsed" value="0">
+
+      {% for section in sections %}
+      <section class="pl-section{% if forloop.first %} is-active{% endif %}" data-section="{{ section.id }}" data-title="{{ section.title }}"{% if not forloop.first %} hidden{% endif %}>
+        <header class="pl-section__hd">
+          <h1 class="pl-section__title">{{ section.title }}</h1>
+          <p class="pl-section__hint">{{ section.hint }}</p>
+        </header>
+
+        {% if section.passage %}
+        <article class="pl-passage">
+          <h2 class="pl-passage__title">Passage</h2>
+          <p class="pl-passage__body">{{ section.passage }}</p>
+        </article>
+        {% endif %}
+
+        {% for q in section.questions %}
+        <fieldset class="pl-q" data-qid="{{ q.id }}">
+          <legend class="pl-q__prompt">
+            <span class="pl-q__num">{{ forloop.counter }}.</span>
+            {{ q.prompt }}
+            {% if q.stem %}<span class="pl-q__stem">{{ q.stem }}</span>{% endif %}
+          </legend>
+          <div class="pl-q__opts">
+            {% for opt in q.options %}
+            <label class="pl-opt">
+              <input type="radio" name="q_{{ q.id }}" value="{{ opt.value }}">
+              <span>{{ opt.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
+      </section>
+      {% endfor %}
+
+      <div class="pl-nav">
+        <p class="pl-nav__hint" id="pl-nav-hint" hidden>Answer all questions to continue</p>
+        {# One primary action only — never show Continue and Submit together #}
+        <button type="button" class="pl-btn pl-btn--primary is-blocked" id="pl-action" aria-disabled="true">Continue</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+  (function () {
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.pl-section'));
+    var idx = 0;
+    var totalQ = document.querySelectorAll('.pl-q').length || 20;
+    var actionBtn = document.getElementById('pl-action');
+    var hint = document.getElementById('pl-nav-hint');
+    var form = document.getElementById('pl-form');
+    var elapsedInput = document.getElementById('pl-elapsed');
+    var secLabel = document.getElementById('pl-sec-label');
+    var secStep = document.getElementById('pl-sec-step');
+    var fill = document.getElementById('pl-progress-fill');
+    var progress = document.getElementById('pl-progress');
+    var startedAt = Date.now();
+    var submitted = false;
+
+    function questionsIn(section) {
+      return Array.prototype.slice.call(section.querySelectorAll('.pl-q'));
+    }
+
+    function unansweredIn(section) {
+      return questionsIn(section).filter(function (fs) {
+        return !fs.querySelector('input[type=radio]:checked');
+      });
+    }
+
+    function sectionComplete(section) {
+      return unansweredIn(section).length === 0;
+    }
+
+    function answeredTotal() {
+      var n = 0;
+      document.querySelectorAll('.pl-q').forEach(function (fs) {
+        if (fs.querySelector('input[type=radio]:checked')) n += 1;
+      });
+      return n;
+    }
+
+    function updateProgress() {
+      var pct = Math.round((answeredTotal() / totalQ) * 100);
+      fill.style.width = pct + '%';
+      progress.setAttribute('aria-valuenow', String(pct));
+    }
+
+    function setBlocked(blocked) {
+      actionBtn.classList.toggle('is-blocked', blocked);
+      actionBtn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+    }
+
+    function isLast() {
+      return idx >= sections.length - 1;
+    }
+
+    function syncNav() {
+      var done = sectionComplete(sections[idx]);
+      actionBtn.textContent = isLast() ? 'Submit answers' : 'Continue';
+      setBlocked(!done);
+      hint.hidden = done;
+      hint.textContent = 'Answer all questions to continue';
+    }
+
+    function showSection(i) {
+      sections.forEach(function (s, j) {
+        var on = j === i;
+        s.classList.toggle('is-active', on);
+        if (on) s.removeAttribute('hidden');
+        else s.setAttribute('hidden', 'hidden');
+      });
+      secLabel.textContent = sections[i].getAttribute('data-title') || '';
+      secStep.textContent = 'Section ' + (i + 1) + ' of ' + sections.length;
+      syncNav();
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollToFirstUnanswered() {
+      var first = unansweredIn(sections[idx])[0];
+      if (!first) return;
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      first.classList.add('pl-q--need');
+      setTimeout(function () { first.classList.remove('pl-q--need'); }, 1200);
+    }
+
+    function stampElapsed() {
+      var secs = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+      elapsedInput.value = String(secs);
+    }
+
+    function doSubmit() {
+      if (submitted) return;
+      stampElapsed();
+      submitted = true;
+      setBlocked(true);
+      form.submit();
+    }
+
+    actionBtn.addEventListener('click', function () {
+      if (submitted) return;
+      if (actionBtn.getAttribute('aria-disabled') === 'true' || !sectionComplete(sections[idx])) {
+        hint.hidden = false;
+        scrollToFirstUnanswered();
+        return;
+      }
+      if (isLast()) {
+        doSubmit();
+        return;
+      }
+      idx += 1;
+      showSection(idx);
+    });
+
+    form.addEventListener('change', function () {
+      syncNav();
+      updateProgress();
+    });
+
+    form.addEventListener('submit', function (e) {
+      // Only allow submit from the final complete section (keyboard/Enter safety).
+      if (submitted) {
+        e.preventDefault();
+        return;
+      }
+      if (!isLast() || !sectionComplete(sections[idx])) {
+        e.preventDefault();
+        hint.hidden = false;
+        scrollToFirstUnanswered();
+        return;
+      }
+      stampElapsed();
+      submitted = true;
+    });
+
+    showSection(0);
+  })();
+  </script>
+</body>
+</html>

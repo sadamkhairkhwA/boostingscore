@@ -387,7 +387,7 @@
     var lbl = "Struggling at the base...";
     if (f >= 440) {
       phase = "celebrate";
-      lbl = "Achievement unlocked! ★";
+      lbl = "Achievement unlocked!";
     } else if (f >= 360) {
       phase = "flag";
       lbl = "Raising the flag!";

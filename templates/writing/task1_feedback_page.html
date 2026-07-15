@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Task 1 Feedback{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
@@ -14,7 +14,9 @@
         <h1 class="wt1-title wt1-title--list">AI Feedback</h1>
       </div>
       <div class="wt1-actions wt1-actions--top">
+        {% if writing_task1_can_submit %}
         <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task1_question_page' type_slug question.id %}">Try again</a>
+        {% endif %}
         <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">More questions</a>
       </div>
     </div>
@@ -61,7 +63,7 @@
           <button type="button" class="wt1-ac-head">
             <span class="dot" style="background:{{ c.color }}"></span>
             <strong>{{ c.label }}</strong>
-            {% if c.key == weakest_key %}<span class="wt1-weak-badge">Weakest ↓</span>{% endif %}
+            {% if c.key == weakest_key %}<span class="wt1-weak-badge">Weakest {% bs_icon "trend-down" "red" "sm" %}</span>{% endif %}
             <span class="wt1-ac-score" style="color:{{ c.color }}">{{ c.score|floatformat:1 }}<small>{{ c.status }}</small></span>
             <span class="wt1-ac-arrow">▾</span>
           </button>
@@ -94,17 +96,17 @@
 
     <div class="wt1-grid-2">
       <div class="wt1-fb-card wt1-fb-card--good">
-        <h3>✓ What you did well</h3>
+        <h3><span aria-hidden="true">{% bs_icon "check" "green" "sm" %}</span> What you did well</h3>
         <ul>{% for item in feedback.did_well %}<li>{{ item }}</li>{% endfor %}</ul>
       </div>
       <div class="wt1-fb-card wt1-fb-card--improve">
-        <h3>⚠ What to improve</h3>
+        <h3><span aria-hidden="true">{% bs_icon "warning" "amber" "sm" %}</span> What to improve</h3>
         <ul>{% for item in feedback.improve %}<li>{{ item }}</li>{% endfor %}</ul>
       </div>
     </div>
 
     <div class="wt1-fb-card wt1-fb-card--lang">
-      <h3>💬 Language suggestions</h3>
+      <h3><span aria-hidden="true">{% bs_icon "chat" "green" "sm" %}</span> Language suggestions</h3>
       <ul>{% for item in feedback.language_suggestions %}<li>{{ item }}</li>{% endfor %}</ul>
     </div>
 
@@ -115,7 +117,7 @@
 
     <div class="wt1-card wt1-next-card">
       <div class="wt1-next-head">
-        <div class="icon">📚</div>
+        <div class="icon" aria-hidden="true">{% bs_icon "book" "green" "md" %}</div>
         <div>
           <h3>What to learn next</h3>
           <p>Personalised to your weakest area: <strong class="wt1-amber">{{ weakest_label }} (Band {{ weakest_score|floatformat:1 }})</strong></p>
@@ -123,7 +125,7 @@
       </div>
       <div class="wt1-next-why">
         <p>Your response needs more precision in {{ weakest_label|lower }} for Band 7.</p>
-        <ul>{% for q in feedback.lexical_quickfixes %}<li>↗ {{ q }}</li>{% endfor %}</ul>
+        <ul>{% for q in feedback.lexical_quickfixes %}<li>{% bs_icon "trend-up" "green" "sm" %} {{ q }}</li>{% endfor %}</ul>
       </div>
       <div class="wt1-tabs">
         <button class="wt1-tab is-on" data-tab="vocab">Vocabulary</button>
@@ -144,16 +146,20 @@
           </div>
         </div>
         <div class="wt1-tab-panel" data-panel="resources">
-          <a href="/vocabulary/" class="wt1-resource-row"><span>📘</span><div><strong>Vocabulary flashcards</strong><p>Build precise Task 1 word families</p></div><b>Go →</b></a>
-          <a href="/vocabulary/type-it/" class="wt1-resource-row"><span>🎯</span><div><strong>Type it</strong><p>Practise active recall for academic vocabulary</p></div><b>Go →</b></a>
-          <a href="/reading/" class="wt1-resource-row"><span>📖</span><div><strong>Reading</strong><p>Improve data interpretation and summarising</p></div><b>Go →</b></a>
-          <a href="{% url 'writing:task1_question_page' type_slug question.id %}" class="wt1-resource-row"><span>✍️</span><div><strong>Try this question again</strong><p>Re-attempt with the feedback applied</p></div><b>Go →</b></a>
+          <a href="/vocabulary/" class="wt1-resource-row"><span aria-hidden="true">{% bs_icon "level-medium" "blue" "sm" %}</span><div><strong>Vocabulary flashcards</strong><p>Build precise Task 1 word families</p></div><b>Go →</b></a>
+          <a href="/vocabulary/type-it/" class="wt1-resource-row"><span aria-hidden="true">{% bs_icon "target" "green" "sm" %}</span><div><strong>Type it</strong><p>Practise active recall for academic vocabulary</p></div><b>Go →</b></a>
+          <a href="/reading/" class="wt1-resource-row"><span aria-hidden="true">{% bs_icon "book-open" "green" "sm" %}</span><div><strong>Reading</strong><p>Improve data interpretation and summarising</p></div><b>Go →</b></a>
+          {% if writing_task1_can_submit %}
+          <a href="{% url 'writing:task1_question_page' type_slug question.id %}" class="wt1-resource-row"><span aria-hidden="true">{% bs_icon "pen" "purple" "sm" %}</span><div><strong>Try this question again</strong><p>Re-attempt with the feedback applied</p></div><b>Go →</b></a>
+          {% endif %}
         </div>
       </div>
     </div>
 
     <div class="wt1-actions">
+      {% if writing_task1_can_submit %}
       <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task1_question_page' type_slug question.id %}">Try again</a>
+      {% endif %}
       <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1_question_list' type_slug %}">Next question →</a>
     </div>
   </section>

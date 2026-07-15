@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Flashcard session — Boosting Score{% endblock %}
 {% block body_class %}{% if not empty and not done %}bs-page-flashcard{% endif %}{% endblock %}
 {% block main_class %}{% if not empty and not done %}bs-main-flashcard{% endif %}{% endblock %}
@@ -7,12 +7,18 @@
 {% if empty %}
 <div class="bs-page">
   <div class="bs-empty">
-    <div class="bs-empty-icon">📭</div>
-    <div class="bs-empty-title">No words in this deck</div>
-    <div class="bs-empty-sub">Pick another topic/level, or add words from the word bank.</div>
+    <div class="bs-empty-icon">{% bs_icon "inbox" "navy" "lg" %}</div>
+    <div class="bs-empty-title">{{ empty_title|default:"No words in this deck" }}</div>
+    <div class="bs-empty-sub">{{ empty_sub|default:"Pick another topic/level, or add words from the word bank." }}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-      <a class="bs-btn-primary" href="{% url 'vocabulary:index' %}">Back to topics</a>
-      {% if topic_href %}
+      {% if empty_primary_url %}
+      <a class="bs-btn-primary" href="{{ empty_primary_url }}">{{ empty_primary_label|default:"Back to topics" }}</a>
+      {% else %}
+      <a class="bs-btn-primary" href="{% url 'vocabulary:index' %}">{{ empty_primary_label|default:"Back to topics" }}</a>
+      {% endif %}
+      {% if empty_secondary_url %}
+      <a class="bs-btn-dark" href="{{ empty_secondary_url }}">{{ empty_secondary_label }}</a>
+      {% elif topic_href %}
       <a class="bs-btn-dark" href="{{ topic_href }}">Open this topic</a>
       {% endif %}
     </div>
@@ -49,7 +55,7 @@
           {% endfor %}
         </div>
         <div class="bs-fc-stage" id="fc-stage"> </div>
-        <div class="bs-fc-hint">Space or click to flip · ← Hard · → Easy · Enter next</div>
+        <div class="bs-fc-hint">Space or click to flip · ← Hard · ↓ Good · → Easy · Enter next</div>
       </div>
       <div class="bs-fc-face bs-fc-back">
         <div class="bs-fc-tags">
@@ -67,38 +73,39 @@
   <section class="bs-fc-panel" aria-label="Rating and navigation">
     <div class="bs-fc-toolbar">
       <div style="display:flex;gap:8px;">
-        <button type="button" class="bs-fc-icon-btn" id="fc-expand" title="Expand">⛶</button>
-        <button type="button" class="bs-fc-icon-btn" id="fc-shuffle" title="Shuffle deck order">🔀</button>
+        <button type="button" class="bs-fc-icon-btn" id="fc-expand" title="Expand"><span aria-hidden="true">{% bs_icon "fullscreen" "navy" "sm" %}</span></button>
+        <button type="button" class="bs-fc-icon-btn" id="fc-shuffle" title="Shuffle deck order"><span aria-hidden="true">{% bs_icon "shuffle" "navy" "sm" %}</span></button>
       </div>
-      <button type="button" class="bs-fc-save" id="fc-save">✓ Save progress</button>
-      <a href="{% url 'vocabulary:index' %}" class="bs-fc-icon-btn" title="Deck settings">⚙</a>
+      <button type="button" class="bs-fc-save" id="fc-save">{% bs_icon "check" "green" "sm" %} Save progress</button>
+      <a href="{% url 'vocabulary:index' %}" class="bs-fc-icon-btn" title="Deck settings"><span aria-hidden="true">{% bs_icon "settings" "navy" "sm" %}</span></a>
     </div>
 
     {% csrf_token %}
     <div class="bs-fc-actions">
-      <button type="button" class="bs-fc-btn-hard" id="fc-btn-hard">Hard — review again</button>
+      <button type="button" class="bs-fc-btn-hard" id="fc-btn-hard">Hard · {{ rating_hard_label }}</button>
       <button type="button" class="bs-fc-btn-flip" id="fc-flip-btn">Flip card</button>
-      <button type="button" class="bs-fc-btn-easy" id="fc-btn-easy">Easy — got it</button>
+      <button type="button" class="bs-fc-btn-good" id="fc-btn-good">Good · {{ rating_good_label }}</button>
+      <button type="button" class="bs-fc-btn-easy" id="fc-btn-easy">Easy · {{ rating_easy_label }}</button>
     </div>
 
-    <p class="bs-fc-kb-hint">Shortcuts: <kbd>Space</kbd> flip · <kbd>←</kbd> Hard · <kbd>→</kbd> Easy · <kbd>Enter</kbd> next card</p>
+    <p class="bs-fc-kb-hint">Shortcuts: <kbd>Space</kbd> flip · <kbd>←</kbd> Hard · <kbd>↓</kbd> Good · <kbd>→</kbd> Easy · <kbd>Enter</kbd> next card</p>
 
     <div class="bs-fc-stats">
-      <div class="bs-fc-stat bs-fc-stat-easy">
-        <div class="bs-fc-stat-k" id="stat-easy">0</div>
-        <div class="bs-fc-stat-l">Easy</div>
-      </div>
       <div class="bs-fc-stat bs-fc-stat-hard">
         <div class="bs-fc-stat-k" id="stat-hard">0</div>
         <div class="bs-fc-stat-l">Hard</div>
       </div>
+      <div class="bs-fc-stat bs-fc-stat-good">
+        <div class="bs-fc-stat-k" id="stat-good">0</div>
+        <div class="bs-fc-stat-l">Good</div>
+      </div>
+      <div class="bs-fc-stat bs-fc-stat-easy">
+        <div class="bs-fc-stat-k" id="stat-easy">0</div>
+        <div class="bs-fc-stat-l">Easy</div>
+      </div>
       <div class="bs-fc-stat bs-fc-stat-rev">
         <div class="bs-fc-stat-k" id="stat-reviewed">0</div>
         <div class="bs-fc-stat-l">Reviewed</div>
-      </div>
-      <div class="bs-fc-stat bs-fc-stat-acc">
-        <div class="bs-fc-stat-k" id="stat-acc">—</div>
-        <div class="bs-fc-stat-l">Accuracy</div>
       </div>
     </div>
   </section>
@@ -108,11 +115,11 @@
 <div id="fc-celebration" class="bs-fc-celebration" hidden>
   <canvas id="fc-confetti-canvas" class="bs-fc-confetti-canvas" aria-hidden="true"></canvas>
   <div class="bs-fc-celebration-card">
-    <div class="bs-fc-celebration-trophy" aria-hidden="true">🏆</div>
+    <div class="bs-fc-celebration-trophy" aria-hidden="true">{% bs_icon "trophy" "amber" "xl" %}</div>
     <h2 class="bs-fc-celebration-title">Session complete!</h2>
     <p class="bs-fc-celebration-acc" id="fc-cele-acc"></p>
     <div class="bs-fc-celebration-review">
-      <h3 class="bs-fc-celebration-sub">Words you marked Hard at least once</h3>
+      <h3 class="bs-fc-celebration-sub">Words you added to Hard words</h3>
       <ul class="bs-fc-celebration-list" id="fc-cele-review-list"></ul>
     </div>
     <a class="bs-btn-primary bs-fc-celebration-cta" id="fc-study-again" href="{{ study_again_url }}">Study again</a>
@@ -130,7 +137,7 @@ window.FC_SESSION = {
   initialShuffle: {{ initial_shuffle|yesno:"true,false" }}
 };
 </script>
-<script src="{% static 'js/flashcard_session.js' %}"></script>
+<script src="{% static 'js/flashcard_session.js' %}?v=3"></script>
 {% endif %}
 {% endblock %}
 {% block extra_js %}

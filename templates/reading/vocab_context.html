@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Vocabulary in context — Reading{% endblock %}
+{% block body_class %}reading-strategies-page{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'reading/css/strategies.css' %}?v=5" />
+{% endblock %}
+{% block content %}
+<div class="bs-page rs-page">
+  <header class="rs-head">
+    <div class="rs-head-text">
+      <a href="{% url 'reading:home' %}" class="rs-back-link">← Reading hub</a>
+      <h1 class="bs-page-title">Vocabulary in context</h1>
+      <p class="bs-page-sub">Guess the meaning from the passage — no dictionary. Each answer includes the context clues that point to it.</p>
+    </div>
+  </header>
+
+  <div class="rs-panel-card rs-vocab-context" id="rs-vocab-context">
+    <script type="application/json" id="rs-vocab-data">{{ excerpts_json|safe }}</script>
+    <p class="rs-course-progress-meta" id="rs-vc-progress" aria-live="polite">Question 1 of {{ excerpts|length }}</p>
+    <div id="rs-vc-host"></div>
+    <footer class="rs-core-nav">
+      <button type="button" class="rs-core-nav-btn rs-core-nav-btn--back" id="rs-vc-back" disabled>Back</button>
+      <button type="button" class="rs-core-nav-btn rs-core-nav-btn--next" id="rs-vc-next" disabled>Next</button>
+    </footer>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+  <script src="{% static 'reading/js/reading_practice.js' %}?v=1"></script>
+  <script src="{% static 'reading/js/vocab_context.js' %}?v=1"></script>
+{% endblock %}

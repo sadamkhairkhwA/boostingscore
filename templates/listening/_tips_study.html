@@ -1,0 +1,56 @@
+{# Tips study section — Step 1. Context: tips, qtype #}
+{% load bs_icons %}
+<section class="ll-study ll-study--tips" id="study-tips">
+  <header class="ll-study__hd">
+    <span class="ll-study__step">Step 1</span>
+    <h2 class="ll-study__title">Study the tips</h2>
+    <p class="ll-study__sub">{{ tips.intro }}</p>
+  </header>
+
+  <ol class="ll-tipsflow">
+    {% for tip in tips.tips %}
+    <li class="ll-tiprow">
+      <div class="ll-tiprow__badge" aria-hidden="true">{{ tip.number }}</div>
+      <div class="ll-tiprow__main">
+        <header class="ll-tiprow__head">
+          <span class="ll-tiprow__ico" aria-hidden="true">{% bs_icon tip.icon "green" "md" %}</span>
+          <h3 class="ll-tiprow__title">{{ tip.title }}</h3>
+        </header>
+        <p class="ll-tiprow__body">{{ tip.body }}</p>
+        {% if tip.example %}
+        <div class="ll-tiprow__example">
+          <div class="ll-tiprow__example-hd">
+            <span class="ll-tiprow__example-ico" aria-hidden="true">{% bs_icon "lightbulb" "amber" "sm" %}</span>
+            <span class="ll-tiprow__example-lbl">Example</span>
+          </div>
+          <pre class="ll-tiprow__example-text">{{ tip.example }}</pre>
+        </div>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+
+  <div class="ll-mistakes ll-mistakes--warn">
+    <header class="ll-mistakes__head">
+      <span class="ll-mistakes__ico" aria-hidden="true">{% bs_icon "warning" "amber" "md" %}</span>
+      <h3 class="ll-mistakes__title">Common mistakes to avoid</h3>
+    </header>
+    <ul class="ll-mistakes__list">
+      {% for m in tips.mistakes %}<li>{{ m }}</li>{% endfor %}
+    </ul>
+  </div>
+
+  {% if tips.try_this %}
+  <div class="ll-try ll-try--cta">
+    <div class="ll-try__body">
+      <span class="ll-try__ico" aria-hidden="true">{% bs_icon "target" "green" "md" %}</span>
+      <div class="ll-try__txt">
+        <strong class="ll-try__label">Try this before you practise</strong>
+        <p class="ll-try__desc">{{ tips.try_this }}</p>
+      </div>
+    </div>
+    <a href="{% url 'listening:practice' qtype %}" class="ll-try__btn">Go to practice <span class="ll-arrow">→</span></a>
+  </div>
+  {% endif %}
+</section>

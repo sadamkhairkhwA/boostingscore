@@ -1,29 +1,126 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ lesson.title }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'writing/css/lesson_flow.css' %}?v=4">
 {% endblock %}
 {% block content %}
-<div class="wt1-page">
-  <section class="wt1-wrap">
-    <a class="wt1-back" href="{% url 'writing:lessons_hub' %}">← All lessons</a>
-    <div class="wt1-card">
-      <h1 class="wt1-title wt1-title--list">{{ lesson.icon }} {{ lesson.title }}</h1>
-      <p class="wt1-sub">{{ lesson.subtitle }} · {{ lesson.level }}</p>
-      <div class="wr-steps">
-        <div class="step">1. Understand the task and identify key requirements.</div>
-        <div class="step">2. Plan your response using clear paragraph roles.</div>
-        <div class="step">3. Use precise language and comparisons where needed.</div>
+<div class="wt1-page wl-flow">
+  <section class="wt1-wrap" id="wl-lesson-flow"
+    data-check-url="{% url 'writing:lesson_practice_check' lesson.id %}"
+    data-csrf="{{ csrf_token }}">
+
+    <a class="wt1-back" href="{% url 'writing:lessons_hub' %}?task={% if lesson.task == 'task2' %}2{% else %}1{% endif %}">← All lessons</a>
+
+    <h1 class="wt1-title wt1-title--list">
+      <span aria-hidden="true">{% bs_icon lesson.icon %}</span> {{ lesson.title }}
+    </h1>
+    <p class="wt1-sub">{{ lesson.subtitle }} · {{ lesson.level }}{% if is_complete %} · <span style="color:#3B6D11;font-weight:700">Complete</span>{% endif %}</p>
+
+    <nav class="wl-steps" aria-label="Lesson progress">
+      <div class="wl-step is-active" data-wl-step="learn">
+        <span class="wl-step__icon" aria-hidden="true">{% bs_icon "book" "green" "sm" %}</span>
+        <span><span class="wl-step__label-long">Learn</span></span>
       </div>
-      <div class="wr-examples">
-        <div class="good">✅ Strong example: precise, concise, and accurate.</div>
-        <div class="bad">❌ Weak example: vague claims without evidence.</div>
+      <div class="wl-step" data-wl-step="practice">
+        <span class="wl-step__icon" aria-hidden="true">{% bs_icon "pen" "green" "sm" %}</span>
+        <span><span class="wl-step__label-long">Practice</span></span>
       </div>
-      <div class="wt1-score-card"><p class="wt1-label wt1-label--tight">Band 7 focus</p><p>{{ lesson.content }}</p></div>
-      <form method="post">{% csrf_token %}<input type="hidden" name="mark_done" value="1"><button class="wt1-btn wt1-btn--green" type="submit">Mark as done</button></form>
-      <div class="wt1-actions"><a class="wt1-btn wt1-btn--outline" href="{% url 'writing:lessons_hub' %}">← All lessons</a><a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">Practise in Task →</a></div>
+      <div class="wl-step" data-wl-step="feedback">
+        <span class="wl-step__icon" aria-hidden="true">{% bs_icon "check" "green" "sm" %}</span>
+        <span><span class="wl-step__label-long">Feedback</span></span>
+      </div>
+    </nav>
+
+    {# Step 1 — Learn #}
+    <div class="wl-panel is-visible" id="wl-panel-learn">
+      {% include "writing/_lesson_learn.html" %}
+      <div class="wl-actions">
+        <button type="button" class="wl-btn wl-btn--primary" id="wl-try-btn">Try it yourself</button>
+        <a class="wl-btn wl-btn--outline" href="{% url 'writing:lessons_hub' %}?task={% if lesson.task == 'task2' %}2{% else %}1{% endif %}">← All lessons</a>
+      </div>
     </div>
+
+    {# Step 2 — Practice #}
+    <div class="wl-panel" id="wl-panel-practice">
+      <p class="wl-instruction">{{ practice.instruction }}</p>
+      <div class="wl-card">
+        <p class="wl-card__label">Prompt</p>
+        <pre>{{ practice.prompt_context }}</pre>
+      </div>
+      <p class="wt1-sub" style="margin-top:0">{{ practice.max_words_hint }}</p>
+
+      <div id="wl-prev-attempt" class="wl-prev-attempt wl-hidden">
+        <p class="wl-card__label" style="margin-bottom:6px">Your previous attempt</p>
+        <div id="wl-prev-text"></div>
+      </div>
+
+      <div class="wl-textarea-wrap">
+        <textarea class="wl-textarea" id="wl-response" placeholder="Write your answer here…" aria-label="Your answer"></textarea>
+        <div class="wl-wordcount" id="wl-wordcount">0 words</div>
+      </div>
+      <div id="wl-error" class="wl-error wl-hidden" role="alert"></div>
+      <div class="wl-actions" data-ai-check-wrap>
+        <button type="button" class="wl-btn wl-btn--primary" id="wl-check-btn" data-ai-check-btn>Check my answer</button>
+        <button type="button" class="wl-btn wl-btn--outline" id="wl-back-learn-btn">← Back to learn</button>
+      </div>
+      <div id="wl-ai-loading" class="wt1-ai-loading wl-hidden" hidden></div>
+    </div>
+
+    {# Step 3 — Feedback #}
+    <div class="wl-panel" id="wl-panel-feedback">
+      <div id="wl-success" class="wl-success wl-hidden">
+        <span aria-hidden="true">{% bs_icon "check" "green" "sm" %}</span>
+        Nice — you've got this skill
+      </div>
+
+      <div class="wl-feedback-block wl-card">
+        <h3>What you did well</h3>
+        <ul id="wl-fb-well"></ul>
+      </div>
+
+      <div class="wl-feedback-block wl-card">
+        <h3>Mistakes and fixes</h3>
+        <div id="wl-fb-mistakes"></div>
+      </div>
+
+      <div class="wl-feedback-block wl-card">
+        <h3>How to improve</h3>
+        <ul id="wl-fb-improve"></ul>
+      </div>
+
+      <details class="wl-model">
+        <summary>See a model answer</summary>
+        <div class="wl-model__body" id="wl-model-answer"></div>
+      </details>
+
+      <div class="wl-actions">
+        <button type="button" class="wl-btn wl-btn--primary" id="wl-try-again-btn">Try again</button>
+        <a class="wl-btn wl-btn--outline" href="{% url 'writing:lessons_hub' %}?task={% if lesson.task == 'task2' %}2{% else %}1{% endif %}">← All lessons</a>
+      </div>
+    </div>
+
+    <div class="wl-history{% if not attempts %} wl-hidden{% endif %}" id="wl-history-wrap">
+      <h3>Attempt history</h3>
+      <div id="wl-history-list">
+        {% for a in attempts %}
+        <div class="wl-history-item">
+          <span>Attempt {{ a.attempt_number }} · {{ a.word_count }} words</span>
+          {% if a.ready %}
+          <span class="wl-badge wl-badge--ready">Ready</span>
+          {% else %}
+          <span class="wl-badge wl-badge--retry">Keep practising</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
   </section>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'writing/js/ai_feedback_loading.js' %}?v=1"></script>
+<script src="{% static 'writing/js/lesson_flow.js' %}?v=3"></script>
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bs_icons %}
 
 {% block title %}{{ passage.title }} — Reading{% endblock %}
 
@@ -36,7 +37,7 @@
                 <span class="reading-q-card__num">{{ forloop.counter }}.</span> {{ q.prompt }}
               </p>
               <p class="{% if row.ok %}reading-result-ok{% else %}reading-result-bad{% endif %}">
-                {% if row.ok %}✓ Correct{% else %}✗ Your answer: {{ row.chosen }} — correct: {{ q.correct_letter }}{% endif %}
+                {% if row.ok %}{% bs_icon "check" "green" "sm" %} Correct{% else %}{% bs_icon "x" "red" "sm" %} Your answer: {{ row.chosen }} — correct: {{ q.correct_letter }}{% endif %}
               </p>
               {% if not row.ok %}
                 <p class="text-muted" style="margin: 0.5rem 0 0; font-size: 0.875rem">

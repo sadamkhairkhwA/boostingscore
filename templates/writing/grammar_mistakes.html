@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static bs_icons %}
+{% block title %}Common grammar mistakes — Writing{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'writing/css/grammar_mistakes.css' %}?v=1">
+{% endblock %}
+{% block content %}
+<div class="wt1-page">
+  <section class="wt1-wrap">
+    <a href="{% url 'writing:lessons_hub' %}" class="gm-back">← Writing lessons</a>
+    <h1 class="wt1-title wt1-title--hero">Common grammar mistakes</h1>
+    <p class="wt1-sub">Band-capping errors with wrong/correct pairs — review before you submit any essay.</p>
+
+    <div class="gm-list">
+      {% for m in mistakes %}
+      <article class="gm-card">
+        <h2 class="gm-card__title">{{ m.title }}</h2>
+        <p class="gm-card__summary">{{ m.summary }}</p>
+        <div class="gm-pair">
+          <div class="gm-pair__row gm-pair__row--bad">
+            {% bs_icon "x" "red" "sm" %}
+            <span>{{ m.wrong }}</span>
+          </div>
+          <div class="gm-pair__row gm-pair__row--ok">
+            {% bs_icon "check" "green" "sm" %}
+            <span>{{ m.correct }}</span>
+          </div>
+        </div>
+        <p class="gm-tip">{{ m.tip }}</p>
+      </article>
+      {% endfor %}
+    </div>
+
+    <section class="gm-checklist">
+      <h2 class="gm-checklist__title">Pre-submit self-check</h2>
+      <p class="gm-checklist__sub">Tick each item before you submit Task 1 or Task 2.</p>
+      <ul class="gm-checklist__list" id="gm-checklist">
+        {% for item in checklist %}
+        <li>
+          <label class="gm-check-item">
+            <input type="checkbox" class="gm-check-item__box">
+            <span>{{ item }}</span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </section>
+</div>
+{% endblock %}

@@ -1,76 +1,160 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Flashcards — Boosting Score{% endblock %}
 {% block body_class %}bs-page-studio{% endblock %}
 {% block content %}
 <div class="bs-page bs-studio">
-  <header class="bs-studio-hero">
-    <div class="bs-studio-hero-top">
-      <div class="bs-studio-hero-text">
-        <p class="bs-studio-eyebrow">Flashcard studio</p>
-        <h1 class="bs-studio-title">Choose how you want to study</h1>
-        <p class="bs-studio-lead">IELTS topic decks, due reviews, or your own custom decks — all in one place.</p>
-      </div>
-      <details class="bs-studio-hero-dropdown">
-        <summary class="bs-studio-hero-menu" aria-label="Studio menu">
-          <span class="bs-studio-hero-menu-dot" aria-hidden="true"></span>
-          <span class="bs-studio-hero-menu-dot" aria-hidden="true"></span>
-          <span class="bs-studio-hero-menu-dot" aria-hidden="true"></span>
-        </summary>
-        <div class="bs-studio-hero-dropdown-panel" role="menu" aria-label="Studio actions">
-          <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:deck_create' %}">Create custom deck</a>
-          <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:index' %}#topics-heading">IELTS topic hubs</a>
-          <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:index' %}#due-review">Due for review</a>
-          <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:word_list' %}">Word list</a>
-          <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:guide' %}">Study guide</a>
-          <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:home' %}">Vocabulary home</a>
-        </div>
-      </details>
+  <header class="bs-studio-pagehead">
+    <div class="bs-studio-pagecopy">
+      <h1 class="bs-studio-page-title">Flashcard studio</h1>
+      <p class="bs-studio-page-sub">Topic decks, due reviews, and your own custom decks.</p>
     </div>
-    <a class="bs-studio-cta" href="{% url 'vocabulary:deck_create' %}">
-      <span class="bs-studio-cta-icon" aria-hidden="true">+</span>
-      <span class="bs-studio-cta-body">
-        <span class="bs-studio-cta-title">Create custom deck</span>
-        <span class="bs-studio-cta-sub">Name your deck, add cards, or generate with AI</span>
-      </span>
-    </a>
+    <details class="bs-studio-hero-dropdown">
+      <summary class="bs-studio-page-menu" aria-label="Studio menu">
+        <span aria-hidden="true">{% bs_icon "settings" "green" "sm" %}</span>
+      </summary>
+      <div class="bs-studio-hero-dropdown-panel" role="menu" aria-label="Studio actions">
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:deck_create' %}">Create custom deck</a>
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:index' %}#topics-heading">IELTS topic hubs</a>
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:index' %}#due-review">Due for review</a>
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:index' %}#hard-words">Hard words</a>
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:word_list' %}">Word list</a>
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:guide' %}">Study guide</a>
+        <a class="bs-studio-hero-dropdown-item" role="menuitem" href="{% url 'vocabulary:home' %}">Vocabulary home</a>
+      </div>
+    </details>
   </header>
 
-  <section class="bs-studio-section bs-studio-section--due" id="due-review" aria-labelledby="due-heading">
-    <h2 class="bs-studio-sr-only" id="due-heading">Due for review</h2>
-    <div class="bs-studio-due-card">
-      {% if due_count %}
-      <form class="bs-studio-due-row bs-studio-due-row--form" method="get" action="{% url 'vocabulary:flashcard_deck' %}">
-        <input type="hidden" name="mode" value="due">
-        <div class="bs-studio-due-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+  <a class="bs-studio-create-card" href="{% url 'vocabulary:deck_create' %}">
+    <span class="bs-studio-create-card__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20">
+        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 5v14M5 12h14"/>
+      </svg>
+    </span>
+    <span class="bs-studio-create-card__body">
+      <span class="bs-studio-create-card__title">Create custom deck</span>
+      <span class="bs-studio-create-card__sub">Name your deck, add cards, or generate with AI.</span>
+    </span>
+    <span class="bs-studio-create-card__link">Open →</span>
+  </a>
+
+  <section class="bs-studio-section bs-studio-section--due" aria-labelledby="review-heading">
+    <h2 class="bs-studio-sr-only" id="review-heading">Review queues</h2>
+    <div class="bs-studio-review-grid">
+      <div class="bs-studio-due-card" id="due-review">
+        {% if due_count %}
+        <form class="bs-studio-due-row bs-studio-due-row--form" method="get" action="{% url 'vocabulary:flashcard_deck' %}">
+          <input type="hidden" name="mode" value="due">
+          <div class="bs-studio-due-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <div class="bs-studio-due-body">
+            <div class="bs-studio-due-title">Due for review</div>
+            <div class="bs-studio-due-sub">{{ due_count }} word{{ due_count|pluralize }} ready — choose how many to study now.</div>
+            <div class="bs-studio-due-controls">
+              <label class="bs-studio-due-lbl" for="due-session-limit">Session size</label>
+              <select name="limit" id="due-session-limit" class="bs-fc-session-limit-select">
+                <option value="" {% if not due_default_limit %}selected{% endif %}>All {{ due_count }} cards</option>
+                {% for lim in due_limit_options %}
+                <option value="{{ lim }}" {% if due_default_limit == lim|stringformat:"d" %}selected{% endif %}>{{ lim }} cards</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="bs-studio-due-btn bs-studio-due-btn--submit">Start →</button>
+        </form>
+        {% else %}
+        <div class="bs-studio-due-row bs-studio-due-row--empty">
+          <div class="bs-studio-due-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <div class="bs-studio-due-body">
+            <div class="bs-studio-due-title">Due for review</div>
+            <div class="bs-studio-due-sub">Nothing due right now. Study a topic deck or add words to build your queue.</div>
+          </div>
         </div>
-        <div class="bs-studio-due-body">
-          <div class="bs-studio-due-title">Due for review</div>
-          <div class="bs-studio-due-sub">{{ due_count }} word{{ due_count|pluralize }} ready — choose how many to study now.</div>
-          <div class="bs-studio-due-controls">
-            <label class="bs-studio-due-lbl" for="due-session-limit">Session size</label>
-            <select name="limit" id="due-session-limit" class="bs-fc-session-limit-select">
-              <option value="" {% if not due_default_limit %}selected{% endif %}>All {{ due_count }} cards</option>
-              {% for lim in due_limit_options %}
-              <option value="{{ lim }}" {% if due_default_limit == lim|stringformat:"d" %}selected{% endif %}>{{ lim }} cards</option>
+        {% endif %}
+      </div>
+
+      <div class="bs-studio-due-card" id="hard-words">
+        {% if hard_count %}
+        <form class="bs-studio-hardlaunch" method="get" action="{% url 'vocabulary:flashcard_deck' %}">
+          <input type="hidden" name="mode" value="hard">
+          <div class="bs-studio-due-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4z"/><path d="M9.5 12.5l1.5 1.5 3.5-4"/></svg>
+          </div>
+          <div class="bs-studio-due-body">
+            <div class="bs-studio-due-title">Hard words</div>
+            <div class="bs-studio-due-sub">{{ hard_count }} word{{ hard_count|pluralize }} in your hard-word list — study them across topics and custom decks.</div>
+          </div>
+          <div class="bs-studio-hardlaunch__controls">
+            <label class="bs-studio-due-lbl" for="hard-session-limit">Session size</label>
+            <select name="limit" id="hard-session-limit" class="bs-fc-session-limit-select">
+              <option value="" {% if not hard_default_limit %}selected{% endif %}>All {{ hard_count }} cards</option>
+              {% for lim in hard_limit_options %}
+              <option value="{{ lim }}" {% if hard_default_limit == lim|stringformat:"d" %}selected{% endif %}>{{ lim }} cards</option>
               {% endfor %}
             </select>
           </div>
+          <button type="submit" class="bs-studio-due-btn bs-studio-due-btn--submit">Study hard words →</button>
+        </form>
+        {% else %}
+        <div class="bs-studio-hardlaunch bs-studio-hardlaunch--empty">
+          <div class="bs-studio-due-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4z"/></svg>
+          </div>
+          <div class="bs-studio-due-body">
+            <div class="bs-studio-due-title">Hard words</div>
+            <div class="bs-studio-due-sub">No hard words — nice work. Words you rate as hard will collect here.</div>
+          </div>
         </div>
-        <button type="submit" class="bs-studio-due-btn bs-studio-due-btn--submit">Start →</button>
-      </form>
-      {% else %}
-      <div class="bs-studio-due-row bs-studio-due-row--empty">
-        <div class="bs-studio-due-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="bs-studio-section" id="review-settings" aria-labelledby="review-settings-heading">
+    {% if studio_notice == "settings" %}
+    <p class="bs-studio-note">Review settings saved.</p>
+    {% endif %}
+    <div class="bs-studio-settings-disclosure" data-accordion-root>
+      <div class="bs-studio-section-head bs-studio-section-head--toggle">
+        <div>
+          <h2 class="bs-studio-h2" id="review-settings-heading">Review settings</h2>
+          <p class="bs-studio-muted">Choose how soon hard and easy ratings bring a word back.</p>
         </div>
-        <div class="bs-studio-due-body">
-          <div class="bs-studio-due-title">Due for review</div>
-          <div class="bs-studio-due-sub">Nothing due right now. Study a topic deck or add words to build your queue.</div>
+        <button
+          type="button"
+          class="bs-studio-settings-trigger"
+          data-accordion-toggle
+          aria-expanded="false"
+          aria-controls="review-settings-panel"
+        >
+          Open settings
+        </button>
+      </div>
+      <div class="bs-studio-settings-panel" id="review-settings-panel" data-accordion-panel hidden>
+        <div class="bs-studio-settings-card">
+          <form class="bs-studio-settings-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_review_settings">
+            <div class="bs-studio-settings-grid">
+              {% for row in review_setting_rows %}
+              <label class="bs-studio-settings-item">
+                <span class="bs-studio-settings-label">{{ row.title }}</span>
+                <span class="bs-studio-settings-chip">{{ row.title }} · {{ row.button_label }}</span>
+                <select name="{{ row.field_name }}" class="bs-fc-session-limit-select">
+                  {% for hours, label in review_interval_options %}
+                  <option value="{{ hours }}" {% if row.value == hours %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              {% endfor %}
+            </div>
+            <button type="submit" class="bs-studio-settings-btn">Save settings</button>
+          </form>
         </div>
       </div>
-      {% endif %}
     </div>
   </section>
 
@@ -82,7 +166,7 @@
     <div class="bs-studio-grid bs-studio-grid--topics">
       {% for row in topic_rows %}
       <a class="bs-studio-card bs-studio-card--topic" href="{% url 'vocabulary:flashcard_topic' topic=row.key %}">
-        <div class="bs-studio-card-icon bs-studio-card-icon--topic" aria-hidden="true">{{ row.icon }}</div>
+        <div class="bs-studio-card-icon bs-studio-card-icon--topic" aria-hidden="true">{% bs_icon row.icon "green" "lg" %}</div>
         <div class="bs-studio-card-body">
           <span class="bs-studio-card-name">{{ row.label }}</span>
           <span class="bs-studio-card-meta">3 levels · mastery chips · session size</span>
@@ -102,32 +186,18 @@
 
     <div class="bs-studio-grid bs-studio-grid--custom">
       {% for d in custom_decks %}
-      <div class="bs-studio-card bs-studio-card--custom bs-studio-card--custom-form">
+      <a class="bs-studio-card bs-studio-card--custom" href="{% url 'vocabulary:custom_deck' deck_id=d.id %}">
         <div class="bs-studio-custom-preview" aria-hidden="true">
           <span class="bs-studio-custom-preview-line"></span>
           <span class="bs-studio-custom-preview-line bs-studio-custom-preview-line--short"></span>
         </div>
         <div class="bs-studio-card-body">
           <span class="bs-studio-card-name">{{ d.name }}</span>
-          <span class="bs-studio-card-meta">{% if d.description %}{{ d.description|truncatewords:12 }}{% else %}Your cards{% endif %}</span>
+          <span class="bs-studio-card-meta">{% if d.description %}{{ d.description|truncatewords:12 }}{% else %}{% if d.card_count %}Tap to study or edit{% else %}Tap to add cards{% endif %}{% endif %}</span>
           <span class="bs-studio-card-count">{{ d.card_count }} card{{ d.card_count|pluralize }}</span>
-          {% if d.card_count %}
-          <form class="bs-studio-custom-start-form" method="get" action="{% url 'vocabulary:flashcard_deck' %}">
-            <input type="hidden" name="deck_id" value="{{ d.id }}">
-            <label class="bs-studio-due-lbl" for="deck-lim-{{ d.id }}">Session size</label>
-            <div class="bs-studio-custom-start-row">
-              <select name="limit" id="deck-lim-{{ d.id }}" class="bs-fc-session-limit-select">
-                <option value="" {% if not d.default_session_limit %}selected{% endif %}>All {{ d.card_count }} cards</option>
-                {% for lim in d.session_limit_options %}
-                <option value="{{ lim }}" {% if d.default_session_limit == lim|stringformat:"d" %}selected{% endif %}>{{ lim }} cards</option>
-                {% endfor %}
-              </select>
-              <button type="submit" class="bs-studio-due-btn bs-studio-due-btn--submit">Start →</button>
-            </div>
-          </form>
-          {% endif %}
+          <span class="bs-studio-card-link">Open deck →</span>
         </div>
-      </div>
+      </a>
       {% endfor %}
       <a class="bs-studio-card bs-studio-card--newdeck" href="{% url 'vocabulary:deck_create' %}">
         <span class="bs-studio-card-newdeck-plus" aria-hidden="true">+</span>
@@ -153,6 +223,43 @@
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && menu.hasAttribute("open")) menu.removeAttribute("open");
+  });
+})();
+
+(function () {
+  var COLLAPSE_MS = 220;
+  var shouldOpenSettings = {% if studio_notice == "settings" %}true{% else %}false{% endif %};
+
+  function setExpanded(toggle, panel, expanded) {
+    if (!toggle || !panel) return;
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    if (expanded) {
+      panel.hidden = false;
+      requestAnimationFrame(function () {
+        panel.classList.add("is-open");
+      });
+    } else {
+      panel.classList.remove("is-open");
+      window.setTimeout(function () {
+        if (toggle.getAttribute("aria-expanded") === "false") {
+          panel.hidden = true;
+        }
+      }, COLLAPSE_MS);
+    }
+  }
+
+  var accordionRoots = Array.prototype.slice.call(document.querySelectorAll("[data-accordion-root]"));
+  accordionRoots.forEach(function (root) {
+    var toggle = root.querySelector("[data-accordion-toggle]");
+    var panel = root.querySelector("[data-accordion-panel]");
+    if (!toggle || !panel) return;
+    toggle.addEventListener("click", function () {
+      var open = toggle.getAttribute("aria-expanded") === "true";
+      setExpanded(toggle, panel, !open);
+    });
+    if (shouldOpenSettings) {
+      setExpanded(toggle, panel, true);
+    }
   });
 })();
 </script>

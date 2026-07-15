@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BoostingScore{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/legal.css' %}?v=1">
+</head>
+<body class="ld-body">
+<header class="ld-nav">
+  <div class="ld-nav__inner">
+    <a href="{% url 'landing' %}" class="ld-logo">Boosting<span>Score</span></a>
+    <div class="ld-nav__right">
+      {% if user.is_authenticated %}
+      <a href="{% url 'home' %}" class="ld-btn ld-btn--ghost ld-btn--sm">Dashboard</a>
+      {% else %}
+      <a href="{% url 'login' %}" class="ld-btn ld-btn--ghost ld-btn--sm">Log in</a>
+      <a href="{% url 'signup' %}" class="ld-btn ld-btn--green ld-btn--sm">Sign up free</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<main class="legal-main">
+  <article class="legal-card">
+    {% block legal_content %}{% endblock %}
+  </article>
+</main>
+
+<footer class="ld-footer">
+  <div class="ld-footer__inner">
+    <a href="{% url 'landing' %}" class="ld-logo ld-logo--sm">Boosting<span>Score</span></a>
+    <div class="ld-footer__links">
+      <a href="{% url 'privacy' %}">Privacy</a>
+      <a href="{% url 'terms' %}">Terms</a>
+      <a href="{% url 'contact' %}">Contact</a>
+    </div>
+    <div class="ld-footer__copy">© 2026 BoostingScore</div>
+  </div>
+  <p class="ld-footer__legal">IELTS is a registered trademark of its owners. BoostingScore is not affiliated with IELTS, IDP, the British Council, or Cambridge.</p>
+</footer>
+</body>
+</html>

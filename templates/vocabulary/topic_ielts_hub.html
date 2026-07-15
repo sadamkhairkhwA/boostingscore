@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ topic_label }} — IELTS vocabulary{% endblock %}
 {% block content %}
 <div
@@ -14,7 +14,7 @@
     <div>
       <p class="topic-ielts-hub__eyebrow">IELTS vocabulary</p>
       <h1 class="topic-ielts-hub__title">
-        <span class="topic-ielts-hub__title-emoji" id="topic-hub-emoji" aria-hidden="true">📚</span>
+        <span class="topic-ielts-hub__title-emoji" id="topic-hub-emoji" aria-hidden="true">{% bs_topic_icon topic %}</span>
         {{ topic_label }}
       </h1>
       <p class="topic-ielts-hub__sub" id="topic-hub-meta">195 words · 3 levels · start anywhere</p>
@@ -51,6 +51,7 @@
 
   <div class="topic-ielts-hub__levels" id="topic-hub-levels" hidden></div>
 </div>
-<link rel="stylesheet" href="{% static 'css/vocabulary.css' %}?v=topic-hub-2" />
-<script src="{% static 'js/topic_ielts_hub.js' %}?v=5" defer></script>
+<link rel="stylesheet" href="{% static 'css/vocab_word_checklist.css' %}?v=2" />
+<link rel="stylesheet" href="{% static 'css/vocabulary.css' %}?v=topic-hub-3" />
+<script src="{% static 'js/topic_ielts_hub.js' %}?v=7" defer></script>
 {% endblock %}

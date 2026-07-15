@@ -1,0 +1,248 @@
+/* Profile page */
+
+.pf-body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f7f7f5;
+  color: #111827;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.pf-main {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+
+.pf-main--center {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 72px;
+}
+
+.pf-head { margin-bottom: 18px; }
+.pf-h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+.pf-sub {
+  margin: 0;
+  font-size: 14.5px;
+  color: #6b7280;
+}
+
+.pf-flash { margin-bottom: 14px; }
+.pf-flash__item {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eaf3de;
+  border: 0.5px solid #c5ddb0;
+  font-size: 13.5px;
+  color: #27500a;
+}
+.pf-flash__item--error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.pf-card {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 18px;
+  margin-bottom: 14px;
+}
+
+.pf-card__title {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.pf-card--danger {
+  border-color: #fecaca;
+}
+
+.pf-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.pf-help {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.pf-value {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pf-band {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #27500a;
+}
+
+.pf-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.pf-pending {
+  margin: 8px 0;
+  font-size: 13.5px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 0.5px solid #fde68a;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.pf-form { margin: 0 0 4px; }
+.pf-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.pf-input:focus {
+  outline: none;
+  border-color: #3B6D11;
+  box-shadow: 0 0 0 3px rgba(59, 109, 17, 0.12);
+}
+
+.pf-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pf-row .pf-input { margin-bottom: 0; flex: 1; }
+.pf-row--gap { margin-top: 12px; flex-wrap: wrap; }
+
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+.pf-btn--primary { background: #3B6D11; color: #fff; }
+.pf-btn--primary:hover { background: #27500a; }
+.pf-btn--ghost {
+  background: #fff;
+  color: #374151;
+  border: 0.5px solid #e5e7eb;
+}
+.pf-btn--danger {
+  background: #b91c1c;
+  color: #fff;
+}
+.pf-btn--danger:hover { background: #991b1b; }
+
+.pf-link,
+.pf-link-btn {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #3B6D11;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pf-error {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.pf-rule {
+  border: none;
+  border-top: 0.5px solid #e5e7eb;
+  margin: 16px 0;
+}
+
+.pf-details {
+  margin-top: 8px;
+}
+.pf-details summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #3B6D11;
+  margin-bottom: 10px;
+}
+.pf-details[open] summary { margin-bottom: 12px; }
+
+.pf-bars { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.pf-bar__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+.pf-bar__meta span { font-weight: 600; color: #374151; }
+.pf-bar__meta strong { color: #3B6D11; }
+.pf-bar__track {
+  height: 7px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pf-bar__fill {
+  height: 100%;
+  background: #3B6D11;
+  border-radius: 999px;
+}
+
+.pf-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.pf-stat {
+  border: 0.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fafafa;
+}
+.pf-stat__num {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+}
+.pf-stat__lbl {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.pf-inline-form { margin: 0; }

@@ -1,0 +1,69 @@
+/* Avatar account menu */
+
+.bs-avatar-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.bs-avatar-menu__btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.bs-avatar-menu__circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #3B6D11;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bs-avatar-menu__btn--dash .bs-avatar-menu__circle {
+  width: 34px;
+  height: 34px;
+  background: #111827;
+}
+
+.bs-avatar-menu__btn--pt .bs-avatar-menu__circle {
+  background: #3B6D11;
+}
+
+.bs-avatar-menu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 160px;
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+  z-index: 80;
+}
+
+.bs-avatar-menu__panel[hidden] {
+  display: none !important;
+}
+
+.bs-avatar-menu__item {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111827;
+  text-decoration: none;
+}
+
+.bs-avatar-menu__item:hover {
+  background: #f3f4f6;
+}

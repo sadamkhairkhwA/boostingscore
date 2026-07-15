@@ -43,7 +43,11 @@
   function starsFromScore5(n) {
     var x = Math.max(1, Math.min(5, Math.round(Number(n) || 0)));
     var out = "";
-    for (var i = 1; i <= 5; i++) out += i <= x ? "★" : "☆";
+    for (var i = 1; i <= 5; i++) {
+      out += i <= x
+        ? (typeof BSIcons !== "undefined" ? BSIcons.inline("star", "warn") : "")
+        : (typeof BSIcons !== "undefined" ? BSIcons.inline("star-outline", "warn") : "");
+    }
     return out;
   }
 
@@ -74,7 +78,8 @@
     var b = bestScores[String(w.id)] || 0;
     if (b === 0) return { kind: "new", label: "Not started", cls: "ti-row--new" };
     if (b < 7) return { kind: "retry", label: b + "/10 — retry", cls: "ti-row--retry" };
-    return { kind: "done", label: b + "/10 ✓", cls: "ti-row--done" };
+    var mark = typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "";
+    return { kind: "done", label: b + "/10 " + mark, cls: "ti-row--done" };
   }
 
   function renderList() {
@@ -243,7 +248,7 @@
         " " +
         score +
         '/5</div><div class="ti-fb-h">' +
-        (high ? "✓ Good" : "✗ Needs work") +
+        (high ? (typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "") + " Good" : (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + " Needs work") +
         "</div>" +
         '<div class="ti-fb-box ti-fb-box--good"><strong>What was good</strong><p>' +
         escapeHtml(good || "—") +
@@ -271,7 +276,7 @@
         " " +
         score +
         '/5</div><div class="ti-fb-h">' +
-        (high ? "✓ Good" : "✗ Needs work") +
+        (high ? (typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "") + " Good" : (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + " Needs work") +
         "</div>" +
         '<div class="ti-fb-box ti-fb-box--good"><strong>What was good</strong><p>' +
         escapeHtml(good || "—") +

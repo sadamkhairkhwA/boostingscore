@@ -4,6 +4,7 @@ import re
 import urllib.error
 import urllib.request
 from collections import Counter
+from copy import deepcopy
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -15,6 +16,12 @@ from django.views.decorators.http import require_POST
 from openai import OpenAI
 
 from .academic_test_data import band_from_score, get_client_test_payload, score_answers
+from .question_type_practice_data import (
+    QUESTION_TYPE_CATALOG,
+    QUESTION_TYPE_PRACTICE_SETS,
+    get_question_type_set,
+    question_type_catalog_map,
+)
 from .models import (
     GeneralReadingArticle,
     GeneralReadingBookmark,
@@ -598,14 +605,217 @@ READING_QUESTION_TYPES = [
 ]
 
 
+QUESTION_TYPE_MANUAL_NOTES = {
+    "multiple-choice": [
+        {
+            "title": "Multiple choice",
+            "focus": "Prove the right option from the exact part of the passage and rule out distractors one by one.",
+            "mistakes": [
+                "Choosing the first option that looks familiar instead of checking all four.",
+                "Selecting an answer that matches one keyword but misses the overall meaning.",
+                "Ignoring qualifiers like mainly, best, first, or most likely.",
+            ],
+            "confusing": (
+                "IELTS distractors are often partly true. The correct answer is the one fully supported by "
+                "the passage, not the option that sounds most reasonable from general knowledge."
+            ),
+        }
+    ],
+    "short-answer": [],
+}
+
+
+def _question_type_lesson_map():
+    from .question_types_course import QUESTION_TYPE_LESSONS
+
+    return {lesson["id"]: lesson for lesson in QUESTION_TYPE_LESSONS}
+
+
+def _reading_question_type_map():
+    return {row["title"]: row for row in READING_QUESTION_TYPES}
+
+
+def _question_type_cards():
+    catalog_map = question_type_catalog_map()
+    rows = []
+    for card in QUESTION_TYPE_CATALOG:
+        row = dict(card)
+        row["practice_set_count"] = len(QUESTION_TYPE_PRACTICE_SETS.get(card["slug"], []))
+        row["first_set_number"] = 1
+        rows.append(row)
+    return rows, catalog_map
+
+
+def _question_type_strategy_notes(card):
+    strategy_map = _reading_question_type_map()
+    notes = []
+    for title in card.get("strategy_titles", []):
+        note = strategy_map.get(title)
+        if note:
+            notes.append(note)
+    if notes:
+        return notes
+    return QUESTION_TYPE_MANUAL_NOTES.get(card["slug"], [])
+
+
+def _build_short_answer_lesson(card, strategy_note):
+    return {
+        "title": card["title"],
+        "badges": [("Short answer", "core"), ("Word limit", "gap")],
+        "what": strategy_note["how"],
+        "steps": [
+            "Read the word limit first and keep it visible in your mind before you scan.",
+            "Find the exact part of the passage that answers the question and underline the key noun or number.",
+            "Answer with only the required word or phrase from the text, not a full sentence.",
+            "Check spelling and make sure you did not add an unnecessary article or extra word.",
+        ],
+        "example_layout": "short_answer",
+        "worked_example": {
+            "question": "How much notice must students give before leaving accommodation early?",
+            "passage_html": (
+                "Students who wish to leave before the end of their contract must give "
+                '<span class="rs-hl-green">eight weeks</span>\' written notice.'
+            ),
+            "answer": "eight weeks",
+            "explanation": (
+                "The question asks for a precise factual detail. Copy the exact phrase from the passage "
+                "and stop there."
+            ),
+        },
+    }
+
+
+def _build_question_type_lesson(card):
+    lesson_map = _question_type_lesson_map()
+    strategy_map = _reading_question_type_map()
+    lesson = deepcopy(lesson_map.get(card.get("lesson_id"))) if card.get("lesson_id") else None
+    extra_lesson = (
+        deepcopy(lesson_map.get(card.get("extra_lesson_id")))
+        if card.get("extra_lesson_id")
+        else None
+    )
+    variant = card.get("learn_variant")
+    notes = _question_type_strategy_notes(card)
+    primary_note = notes[0] if notes else None
+
+    if variant == "short-answer":
+        return _build_short_answer_lesson(card, primary_note), notes
+
+    if not lesson:
+        raise Http404("Question type lesson not found")
+
+    lesson["title"] = card["title"]
+    lesson["short_title"] = card["title"]
+
+    if primary_note and primary_note.get("how"):
+        lesson["what"] = primary_note["how"]
+
+    if variant == "tfng":
+        lesson["example_layout"] = "tfng_only"
+        lesson["badges"] = [("TFNG", "tfng"), ("Facts", "core")]
+    elif variant == "ynng":
+        lesson["example_layout"] = "ynng_only"
+        lesson["badges"] = [("Y/N/NG", "tfng"), ("Opinion", "opinion")]
+    elif variant == "matching-information-features":
+        lesson["badges"] = [("Matching", "matching"), ("Information / features", "core")]
+        if len(notes) > 1:
+            lesson["extra_note"] = notes[1]
+    elif variant == "sentence-summary":
+        summary_example = extra_lesson["worked_example"] if extra_lesson else None
+        lesson["badges"] = [("Gap", "gap"), ("Sentence / summary", "core")]
+        lesson["example_layout"] = "gap_summary"
+        lesson["worked_example"] = {
+            "sentence": {
+                "sentence": lesson["worked_example"]["sentence"],
+                "passage_html": lesson["worked_example"]["passage_html"],
+                "footnote": lesson["worked_example"]["footnote"],
+            },
+            "summary": summary_example,
+        }
+
+    return lesson, notes
+
+
+def _question_type_card_or_404(question_type_slug):
+    _, catalog_map = _question_type_cards()
+    card = catalog_map.get(question_type_slug)
+    if not card:
+        raise Http404("Question type not found")
+    row = dict(card)
+    row["practice_set_count"] = len(QUESTION_TYPE_PRACTICE_SETS.get(question_type_slug, []))
+    row["first_set_number"] = 1
+    return row
+
+
+def _normalize_practice_answer(value):
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _question_correct_answers(question):
+    accepted = question.get("accepted")
+    if accepted:
+        return [_normalize_practice_answer(v) for v in accepted]
+    return [_normalize_practice_answer(question.get("answer", ""))]
+
+
+def _question_correct_display(question):
+    accepted = question.get("accepted") or []
+    if question.get("input_type") == "text":
+        return accepted[0] if accepted else question.get("answer", "")
+    return question.get("answer", "")
+
+
 @login_required
 def strategies(request):
+    from .core_strategies_course import (
+        CORE_STRATEGY_LESSONS,
+        GOLDEN_RULE,
+        MIXED_REVIEW,
+    )
+    from .question_types_course import (
+        QUESTION_TYPE_LESSONS,
+        READING_JOURNEY_STAGES,
+    )
+
+    core_course_json = json.dumps(
+        {
+            "lessons": [
+                {
+                    "id": lesson["id"],
+                    "title": lesson["title"],
+                    "practice": lesson["practice"],
+                }
+                for lesson in CORE_STRATEGY_LESSONS
+            ],
+            "mixedReview": MIXED_REVIEW,
+        }
+    )
+
+    qtypes_course_json = json.dumps(
+        {
+            "lessons": [
+                {
+                    "id": lesson["id"],
+                    "title": lesson["title"],
+                    "practice": lesson["practice"],
+                }
+                for lesson in QUESTION_TYPE_LESSONS
+            ],
+        }
+    )
+
     return render(
         request,
         "reading/strategies.html",
         {
             "streak": get_streak(request.user),
-            "question_types": READING_QUESTION_TYPES,
+            "journey_stages": READING_JOURNEY_STAGES,
+            "golden_rule": GOLDEN_RULE,
+            "core_lessons": CORE_STRATEGY_LESSONS,
+            "mixed_review": MIXED_REVIEW,
+            "core_course_json": core_course_json,
+            "question_type_lessons": QUESTION_TYPE_LESSONS,
+            "qtypes_course_json": qtypes_course_json,
             **_streak_ctx(request),
         },
     )
@@ -618,6 +828,123 @@ def skills(request):
         "reading/skills.html",
         {
             "streak": get_streak(request.user),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def question_types_index(request):
+    cards, _ = _question_type_cards()
+    return render(
+        request,
+        "reading/question_types_index.html",
+        {
+            "question_type_cards": cards,
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def question_type_learn(request, question_type_slug: str):
+    card = _question_type_card_or_404(question_type_slug)
+    lesson, notes = _build_question_type_lesson(card)
+    return render(
+        request,
+        "reading/question_type_learn.html",
+        {
+            "question_type_card": card,
+            "learn_lesson": lesson,
+            "strategy_notes": notes,
+            "practice_url": reverse(
+                "reading:question_type_practice",
+                kwargs={"question_type_slug": question_type_slug, "set_number": 1},
+            ),
+            "chooser_url": reverse("reading:question_types_index"),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def question_type_practice(request, question_type_slug: str, set_number: int):
+    card = _question_type_card_or_404(question_type_slug)
+    practice_set = get_question_type_set(question_type_slug, set_number)
+    if not practice_set:
+        return render(
+            request,
+            "reading/question_type_practice.html",
+            {
+                "question_type_card": card,
+                "practice_set": None,
+                "set_number": set_number,
+                "chooser_url": reverse("reading:question_types_index"),
+                "learn_url": reverse(
+                    "reading:question_type_learn",
+                    kwargs={"question_type_slug": question_type_slug},
+                ),
+                **_streak_ctx(request),
+            },
+        )
+
+    results = []
+    score = 0
+    submitted = request.method == "POST"
+    time_taken_seconds = 0
+
+    if submitted:
+        try:
+            time_taken_seconds = max(
+                0, min(int(request.POST.get("time_taken_seconds") or 0), 20 * 60)
+            )
+        except (TypeError, ValueError):
+            time_taken_seconds = 0
+        for question in practice_set["questions"]:
+            field_name = f"q_{question['number']}"
+            user_answer = (request.POST.get(field_name) or "").strip()
+            ok = _normalize_practice_answer(user_answer) in _question_correct_answers(question)
+            if ok:
+                score += 1
+            results.append(
+                {
+                    "question": question,
+                    "user_answer": user_answer,
+                    "ok": ok,
+                    "correct_answer": _question_correct_display(question),
+                }
+            )
+
+    next_set_number = set_number + 1
+    next_set_exists = bool(get_question_type_set(question_type_slug, next_set_number))
+
+    return render(
+        request,
+        "reading/question_type_practice.html",
+        {
+            "question_type_card": card,
+            "practice_set": practice_set,
+            "set_number": set_number,
+            "submitted": submitted,
+            "results": results,
+            "score": score,
+            "total_questions": len(practice_set["questions"]),
+            "time_taken_seconds": time_taken_seconds,
+            "next_set_number": next_set_number,
+            "next_set_exists": next_set_exists,
+            "chooser_url": reverse("reading:question_types_index"),
+            "learn_url": reverse(
+                "reading:question_type_learn",
+                kwargs={"question_type_slug": question_type_slug},
+            ),
+            "retry_url": reverse(
+                "reading:question_type_practice",
+                kwargs={"question_type_slug": question_type_slug, "set_number": set_number},
+            ),
+            "next_set_url": reverse(
+                "reading:question_type_practice",
+                kwargs={"question_type_slug": question_type_slug, "set_number": next_set_number},
+            ),
             **_streak_ctx(request),
         },
     )
@@ -1167,5 +1494,102 @@ def academic_test_submit(request, test_number: int):
             "part1_max": 14,
             "part2_max": 13,
             "part3_max": 13,
+        }
+    )
+
+
+@login_required
+def vocab_context(request):
+    from boostingscore.review_schedule import mark_section_reviewed
+    from .vocab_context_content import VOCAB_CONTEXT_EXCERPTS
+
+    mark_section_reviewed(request.user, "reading_vocab_context")
+    return render(
+        request,
+        "reading/vocab_context.html",
+        {
+            "excerpts": VOCAB_CONTEXT_EXCERPTS,
+            "excerpts_json": json.dumps(VOCAB_CONTEXT_EXCERPTS),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def timed_drill_index(request):
+    from .timed_drill_data import DRILL_OPTIONS, TIMED_DRILL_MINUTES
+
+    return render(
+        request,
+        "reading/timed_drill_index.html",
+        {
+            "drills": DRILL_OPTIONS,
+            "minutes": TIMED_DRILL_MINUTES,
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def timed_drill_session(request, part: int):
+    from boostingscore.review_schedule import mark_section_reviewed
+    from .timed_drill_data import get_timed_drill_payload
+
+    if part not in (1, 2, 3):
+        raise Http404
+    mark_section_reviewed(request.user, "reading_timed_drill")
+    payload = get_timed_drill_payload(part)
+    return render(
+        request,
+        "reading/timed_drill_session.html",
+        {
+            "part": part,
+            "test_payload": payload,
+            "submit_url": reverse("reading:timed_drill_submit", kwargs={"part": part}),
+            "index_url": reverse("reading:timed_drill_index"),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+@require_POST
+def timed_drill_submit(request, part: int):
+    from .timed_drill_data import band_for_part_score, score_part_answers
+
+    if part not in (1, 2, 3):
+        return JsonResponse({"ok": False, "error": "not_found"}, status=404)
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "bad_json"}, status=400)
+    raw_answers = body.get("answers") or {}
+    answers = {str(k): str(v) for k, v in raw_answers.items() if isinstance(raw_answers, dict)}
+    try:
+        time_taken = int(body.get("time_taken_seconds") or 0)
+    except (TypeError, ValueError):
+        time_taken = 0
+    time_taken = max(0, min(time_taken, 3600))
+    auto_submit = bool(body.get("auto_submit"))
+    score, total = score_part_answers(part, answers)
+    band = band_for_part_score(score, total)
+    ReadingAttempt.objects.create(
+        student=request.user,
+        test_type=f"timed_drill_p{part}",
+        score=float(score),
+        total_questions=total,
+        correct_answers=score,
+        time_taken_secs=time_taken,
+        completed=True,
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "score": score,
+            "total": total,
+            "band": band,
+            "time_taken_seconds": time_taken,
+            "auto_submit": auto_submit,
+            "part": part,
         }
     )

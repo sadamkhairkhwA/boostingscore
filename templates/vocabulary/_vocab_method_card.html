@@ -1,0 +1,29 @@
+{% load bs_icons plan_tags %}
+{% if user|user_can:feature %}
+<a class="bs-method {{ extra_class }}" href="{{ href }}">
+{% else %}
+<div class="bs-method bs-method--plan-locked {{ extra_class }}" aria-disabled="true">
+{% endif %}
+  {% if user|user_can:feature %}
+  <span class="bs-method-badge" style="{{ badge_style }}">{{ badge_label }}</span>
+  {% else %}
+  <span class="bs-method-badge bs-method-badge--premium">Premium</span>
+  {% endif %}
+  <div class="bs-method-icon">{% bs_icon icon_name icon_variant "lg" %}</div>
+  <div class="bs-method-name">{{ title }}</div>
+  <div class="bs-method-desc">{{ description }}</div>
+  <div class="bs-method-foot">
+    <span class="bs-method-stat">{{ foot_stat|safe }}</span>
+    {% if user|user_can:feature %}
+    <span class="bs-method-go">{{ action_label }} →</span>
+    {% else %}
+    <span class="bs-method-go bs-method-go--locked">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="10" rx="2"/>
+        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+      </svg>
+      {{ vocab_premium_lock_message }}
+    </span>
+    {% endif %}
+  </div>
+{% if user|user_can:feature %}</a>{% else %}</div>{% endif %}

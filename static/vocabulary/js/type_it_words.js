@@ -26,7 +26,7 @@
     var t = Number(b.total || 0);
     var o = Number(b.out_of || 10);
     if (!t && !b.passed) return { key: "new", label: "Not started", cls: "ti-word-row__badge--new" };
-    if (passes(b)) return { key: "done", label: t + "/" + o + " ✓", cls: "ti-word-row__badge--done" };
+    if (passes(b)) return { key: "done", label: t + "/" + o, cls: "ti-word-row__badge--done" };
     return { key: "retry", label: t + "/" + o + " retry", cls: "ti-word-row__badge--retry" };
   }
 
@@ -49,6 +49,10 @@
     return Object.keys(selected).filter(function (k) {
       return selected[k];
     }).length;
+  }
+
+  function checkMark() {
+    return typeof BSIcons !== "undefined" ? BSIcons.check() : "";
   }
 
   function rowClass(st, isSel) {
@@ -76,7 +80,7 @@
           '<span class="ti-word-row__cb ' +
           (isSel ? "ti-word-row__cb--on" : "") +
           '">' +
-          (isSel ? "✓" : "") +
+          (isSel ? checkMark() : "") +
           "</span>" +
           '<div class="ti-word-row__main"><span class="ti-word-row__line">' +
           '<span class="ti-word-row__word">' +
@@ -88,6 +92,7 @@
           '<span class="ti-word-row__badge ' +
           st.cls +
           '">' +
+          (st.key === "done" ? checkMark() + " " : "") +
           escapeHtml(st.label) +
           "</span>" +
           "</div>"

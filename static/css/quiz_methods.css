@@ -3,91 +3,35 @@
   gap: 12px;
 }
 .qq-method {
-  border-width: 2px;
+  border-width: 1px;
   border-style: solid;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  border-color: #e5e7eb;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s, background 0.15s;
 }
-.qq-method--mc {
-  background: #e8ecf8;
-  border-color: rgba(74, 106, 219, 0.35);
-  color: #1e3a5f;
+.qq-method:hover {
+  border-color: #c5ddb0;
+  box-shadow: 0 8px 20px rgba(59, 109, 17, 0.08);
+  transform: translateY(-1px);
 }
-.qq-method--mc .qq-method-name {
-  color: #1e3a8a;
+.qq-method.is-selected {
+  border-color: #3B6D11;
+  background: #f7fbf3;
+  box-shadow: 0 0 0 1px #3B6D11;
 }
-.qq-method--mc .qq-method-desc {
-  color: #3d5a8a;
+.qq-method .qq-method-name {
+  color: #111827;
 }
-.qq-method--mc.is-selected {
-  border-color: #4a6adb;
-  box-shadow: 0 0 0 1px #4a6adb;
-}
-.qq-method--tf {
-  background: linear-gradient(135deg, #dcfce7 0%, #dcfce7 50%, #ffe4e6 50%, #ffe4e6 100%);
-  border-color: rgba(74, 158, 74, 0.35);
-  color: #374151;
-}
-.qq-method--tf .qq-method-name {
-  color: #1f2937;
-}
-.qq-method--tf.is-selected {
-  border-color: #4a9e4a;
-  box-shadow: 0 0 0 1px #4a9e4a;
-}
-.qq-method--fb {
-  background: #fdf8e8;
-  border-color: rgba(200, 160, 32, 0.45);
-  color: #78350f;
-}
-.qq-method--fb .qq-method-desc {
-  color: #a16207;
-}
-.qq-method--fb.is-selected {
-  border-color: #c8a020;
-  box-shadow: 0 0 0 1px #c8a020;
-}
-.qq-method--match {
-  background: #f0ecfc;
-  border-color: rgba(122, 106, 219, 0.4);
-  color: #4c1d95;
-}
-.qq-method--match .qq-method-desc {
-  color: #6d28d9;
-}
-.qq-method--match.is-selected {
-  border-color: #7a6adb;
-  box-shadow: 0 0 0 1px #7a6adb;
-}
-.qq-method--spell {
-  background: #fff0e8;
-  border-color: rgba(208, 112, 32, 0.4);
-  color: #9a3412;
-}
-.qq-method--spell .qq-method-desc {
-  color: #c2410c;
-}
-.qq-method--spell.is-selected {
-  border-color: #d07020;
-  box-shadow: 0 0 0 1px #d07020;
-}
-.qq-method--listen {
-  background: #e8f4f8;
-  border-color: rgba(32, 144, 168, 0.4);
-  color: #134e4a;
-}
-.qq-method--listen .qq-method-desc {
-  color: #0f766e;
-}
-.qq-method--listen.is-selected {
-  border-color: #2090a8;
-  box-shadow: 0 0 0 1px #2090a8;
+.qq-method .qq-method-desc {
+  color: #6b7280;
 }
 .qq-method-icon {
   font-size: 1.75rem;
   line-height: 1;
 }
 .qq-method-badge--rec {
-  background: #6366f1;
+  background: #3B6D11;
   color: #fff;
 }
 
@@ -166,6 +110,15 @@
   letter-spacing: -0.03em;
   margin: 0 0 0.35rem;
   line-height: 1.15;
+}
+.qq-pos {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #9ca3af;
+  vertical-align: middle;
+  letter-spacing: 0;
 }
 .qqmc-sub {
   font-size: 0.875rem;

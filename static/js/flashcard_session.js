@@ -1,5 +1,5 @@
 /**
- * Client-side flashcard session: queue, 3D flip, SRS (Hard → end + pending save), APIs, gestures, keyboard.
+ * Client-side flashcard session: queue, 3D flip, spaced repetition ratings, APIs, gestures, keyboard.
  */
 (function () {
   "use strict";
@@ -39,9 +39,9 @@
   var studyAgain = document.getElementById("fc-study-again");
 
   var statEasy = document.getElementById("stat-easy");
+  var statGood = document.getElementById("stat-good");
   var statHard = document.getElementById("stat-hard");
   var statRev = document.getElementById("stat-reviewed");
-  var statAcc = document.getElementById("stat-acc");
 
   var RATE_URL = cfg.rateUrl;
   var SAVE_PENDING_URL = cfg.savePendingUrl;
@@ -53,19 +53,28 @@
     4: "Confident",
     5: "Mastered",
   };
-  var LS_KEY = "fc_sess_v4_" + STAT_KEY;
+  var LS_KEY = "fc_sess_v5_" + STAT_KEY;
 
   var deck = cfg.deck.slice();
   var initialTotal = deck.length;
   var queue = [];
   var pendingHard = [];
   var easyCount = 0;
+  var goodCount = 0;
   var hardPressCount = 0;
   var wordsMarkedHard = {};
 
   function getCsrf() {
     var el = document.querySelector("[name=csrfmiddlewaretoken]");
     return el ? el.value : "";
+  }
+
+  function savedLabel(ok) {
+    var ic = typeof BSIcons !== "undefined" ? BSIcons.check() : "";
+    return ok ? ic + " Saved" : "Save failed — retry";
+  }
+  function saveProgressLabel() {
+    return (typeof BSIcons !== "undefined" ? BSIcons.check() : "") + " Save progress";
   }
 
   function cardKey(c) {
@@ -79,12 +88,13 @@
       localStorage.setItem(
         LS_KEY,
         JSON.stringify({
-          v: 4,
+          v: 5,
           statKey: STAT_KEY,
           initialTotal: initialTotal,
           queue: queue,
           pendingHard: pendingHard,
           easyCount: easyCount,
+          goodCount: goodCount,
           hardPressCount: hardPressCount,
           wordsMarkedHard: wordsMarkedHard,
         })
@@ -110,6 +120,7 @@
       queue = s.queue;
       pendingHard = s.pendingHard || [];
       easyCount = s.easyCount || 0;
+      goodCount = s.goodCount || 0;
       hardPressCount = s.hardPressCount || 0;
       wordsMarkedHard = s.wordsMarkedHard || {};
       return true;
@@ -126,6 +137,7 @@
     }
     pendingHard = [];
     easyCount = 0;
+    goodCount = 0;
     hardPressCount = 0;
     wordsMarkedHard = {};
     saveState();
@@ -195,20 +207,20 @@
   }
 
   function updateProgressUI() {
-    var pct = initialTotal ? Math.round((easyCount / initialTotal) * 100) : 0;
+    var doneCount = easyCount + goodCount;
+    var pct = initialTotal ? Math.round((doneCount / initialTotal) * 100) : 0;
     if (barFill) {
       barFill.style.width = pct + "%";
     }
     if (metaN) {
       metaN.textContent =
-        "Progress " + easyCount + " / " + initialTotal + " · " + queue.length + " left";
+        "Progress " + doneCount + " / " + initialTotal + " · " + queue.length + " left";
     }
     if (metaPct) metaPct.textContent = pct + "%";
     if (statEasy) statEasy.textContent = String(easyCount);
+    if (statGood) statGood.textContent = String(goodCount);
     if (statHard) statHard.textContent = String(hardPressCount);
-    var tot = easyCount + hardPressCount;
-    if (statRev) statRev.textContent = String(tot);
-    if (statAcc) statAcc.textContent = tot ? Math.round((easyCount / tot) * 100) + "%" : "—";
+    if (statRev) statRev.textContent = String(doneCount + hardPressCount);
   }
 
   function postRating(rating, c, done) {
@@ -264,21 +276,33 @@
       });
   }
 
+  function queuePendingHard(c) {
+    pendingHard.push({
+      word_id: c.id || null,
+      card_id: c.card_id || null,
+    });
+  }
+
+  function trackHardCard(c) {
+    var k = cardKey(c);
+    wordsMarkedHard[k] = (c.word || k).toString();
+  }
+
   function markHard() {
     var c = currentCard();
     if (!c || !cardEl.classList.contains("is-flipped")) return;
     queue.shift();
     queue.push(c);
-    pendingHard.push({
-      word_id: c.id || null,
-      card_id: c.card_id || null,
-    });
-    var k = cardKey(c);
-    wordsMarkedHard[k] = (c.word || k).toString();
+    trackHardCard(c);
     hardPressCount++;
     saveState();
     updateProgressUI();
     renderCard();
+    postRating("hard", c, function (ok) {
+      if (ok) return;
+      queuePendingHard(c);
+      saveState();
+    });
   }
 
   function markEasy() {
@@ -290,6 +314,27 @@
       if (!ok) {
         queue.unshift(c);
         easyCount--;
+        saveState();
+        updateProgressUI();
+        renderCard();
+        return;
+      }
+      saveState();
+      updateProgressUI();
+      if (queue.length) renderCard();
+      else finishSession();
+    });
+  }
+
+  function markGood() {
+    var c = currentCard();
+    if (!c || !cardEl.classList.contains("is-flipped")) return;
+    queue.shift();
+    goodCount++;
+    postRating("good", c, function (ok) {
+      if (!ok) {
+        queue.unshift(c);
+        goodCount--;
         saveState();
         updateProgressUI();
         renderCard();
@@ -318,13 +363,18 @@
     saveState();
     updateProgressUI();
     if (celeAcc) {
-      var tot = easyCount + hardPressCount;
+      var doneCount = easyCount + goodCount;
+      var tot = doneCount + hardPressCount;
       celeAcc.textContent =
-        "Accuracy " +
-        (tot ? Math.round((easyCount / tot) * 100) : 0) +
-        "% · " +
+        "Completed " +
+        doneCount +
+        " of " +
+        initialTotal +
+        " · " +
         easyCount +
         " easy · " +
+        goodCount +
+        " good · " +
         hardPressCount +
         " hard";
     }
@@ -343,7 +393,7 @@
       if (!words.length) {
         var li0 = document.createElement("li");
         li0.className = "bs-fc-cele-review-none";
-        li0.textContent = "No words flagged for review — perfect run.";
+        li0.textContent = "No words added to Hard words — perfect run.";
         celeList.appendChild(li0);
       }
     }
@@ -414,9 +464,9 @@
     if (ev) ev.preventDefault();
     postPendingHard(function (ok) {
       if (saveBtn) {
-        saveBtn.textContent = ok ? "✓ Saved" : "Save failed — retry";
+        saveBtn.innerHTML = savedLabel(ok);
         window.setTimeout(function () {
-          saveBtn.textContent = "✓ Save progress";
+          saveBtn.innerHTML = saveProgressLabel();
         }, 2000);
       }
     });
@@ -455,6 +505,11 @@
       if (cardEl.classList.contains("is-flipped")) markHard();
       return;
     }
+    if (e.code === "ArrowDown") {
+      e.preventDefault();
+      if (cardEl.classList.contains("is-flipped")) markGood();
+      return;
+    }
     if (e.code === "ArrowRight") {
       e.preventDefault();
       if (cardEl.classList.contains("is-flipped")) markEasy();
@@ -491,6 +546,10 @@
   document.getElementById("fc-btn-hard").addEventListener("click", function (e) {
     e.preventDefault();
     markHard();
+  });
+  document.getElementById("fc-btn-good").addEventListener("click", function (e) {
+    e.preventDefault();
+    markGood();
   });
   document.getElementById("fc-btn-easy").addEventListener("click", function (e) {
     e.preventDefault();

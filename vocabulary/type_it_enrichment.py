@@ -241,12 +241,17 @@ def merge_word_payload(word_obj, manual: dict[str, Any] | None) -> dict[str, Any
     ielts_note = (m.get("ielts_note") or getattr(word_obj, "ielts_note", None) or "").strip()
     if not ielts_note:
         ielts_note = _generic_note(word_obj.topic, word_obj.level, pos)
+    synonyms = m.get("synonyms")
+    if not synonyms:
+        syns = getattr(word_obj, "synonyms", None)
+        synonyms = syns if isinstance(syns, list) else []
     return {
         "id": word_obj.id,
         "word": word_obj.word,
         "definition": definition,
         "example": example,
         "collocations": collocations[:8],
+        "synonyms": synonyms[:3],
         "ielts_note": ielts_note,
         "pos": pos,
         "topic": word_obj.topic,

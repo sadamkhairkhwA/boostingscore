@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ type_meta.name }} Questions{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
@@ -10,14 +10,14 @@
   <section class="wt1-wrap">
     <a class="wt1-back" href="{% url 'writing:task2' %}">← All essay types</a>
     <header class="wt1-list-head">
-      <div class="wt1-list-head__emoji">{{ type_meta.emoji }}</div>
+      <div class="wt1-list-head__emoji" aria-hidden="true">{% bs_icon type_meta.emoji %}</div>
       <div><h1 class="wt1-title wt1-title--list">{{ type_meta.name }} Questions</h1><p class="wt1-sub">{{ type_meta.description }}</p></div>
     </header>
     <p class="wt1-label">{{ rows|length }} questions available</p>
     <div class="wt1-q-list">
       {% for row in rows %}
       <a class="wt1-q-row" href="{% url 'writing:task2_question_page' essay_type row.id %}">
-        <div class="wt1-q-row__icon">{{ type_meta.emoji }}</div>
+        <div class="wt1-q-row__icon" aria-hidden="true">{% bs_icon type_meta.emoji %}</div>
         <div class="wt1-q-row__body">
           <div class="wt1-q-row__title">{{ row.title }}</div>
           {% if row.best_band %}<span class="wt1-badge">Done · Band {{ row.best_band|floatformat:1 }}</span>{% endif %}

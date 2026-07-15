@@ -38,7 +38,7 @@
     levelHead.innerHTML =
       '<div class="tidb-level-head-inner">' +
       '<span class="tidb-level-emoji" aria-hidden="true">' +
-      escapeHtml(t.emoji || "") +
+      (window.BSIcons ? BSIcons.tile(t.emoji || "book") : "") +
       "</span><div><h2 class=\"tidb-level-topic-name\">" +
       escapeHtml(t.name || "") +
       '</h2><p class="tidb-level-sub">Choose a difficulty level</p></div></div>';
@@ -49,7 +49,7 @@
         return (
           '<div class="tidb-level-card">' +
           '<div class="tidb-level-icon" aria-hidden="true">' +
-          escapeHtml(L.icon_emoji || "") +
+          (window.BSIcons ? BSIcons.tile(L.icon || L.icon_emoji || "book") : "") +
           "</div>" +
           '<div class="tidb-level-main">' +
           '<div class="tidb-level-title-row">' +
@@ -128,9 +128,9 @@
     { id: "red", hex: "#b91c1c" },
     { id: "teal", hex: "#0f766e" },
   ];
-  var emojis = ["📖", "🎯", "💡", "✏️", "🔑", "🧠", "⭐", "🔥"];
+  var icons = (window.BSIcons && BSIcons.PICKER) ? BSIcons.PICKER.slice() : ["book", "target", "lightbulb", "pen", "key", "brain", "star", "flame"];
   var colourSel = "navy";
-  var emojiSel = "📖";
+  var iconSel = "book";
 
   function csrfFromCookie() {
     var m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -169,22 +169,22 @@
       });
     }
     if (e) {
-      e.innerHTML = emojis
-        .map(function (x) {
+      e.innerHTML = icons
+        .map(function (slug) {
           return (
-            '<button type="button" class="ti-emoji-btn ' +
-            (x === emojiSel ? "ti-emoji-btn--on" : "") +
-            '" data-emoji="' +
-            x +
+            '<button type="button" class="bs-icon-pick ' +
+            (slug === iconSel ? "is-on" : "") +
+            '" data-icon="' +
+            slug +
             '">' +
-            x +
+            (window.BSIcons ? BSIcons.tile(slug, null, "sm") : "") +
             "</button>"
           );
         })
         .join("");
-      e.querySelectorAll("[data-emoji]").forEach(function (b) {
+      e.querySelectorAll("[data-icon]").forEach(function (b) {
         b.addEventListener("click", function () {
-          emojiSel = b.getAttribute("data-emoji") || "📖";
+          iconSel = b.getAttribute("data-icon") || "book";
           renderPicks();
         });
       });
@@ -214,7 +214,7 @@
         "Content-Type": "application/json",
         "X-CSRFToken": csrfFromCookie(),
       },
-      body: JSON.stringify({ name: name, colour: colourSel, emoji: emojiSel, words: words }),
+      body: JSON.stringify({ name: name, colour: colourSel, icon: iconSel, emoji: iconSel, words: words }),
     })
       .then(function (r) {
         return r.json();

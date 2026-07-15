@@ -1,0 +1,32 @@
+{% extends "listening/_base.html" %}
+{% load bs_icons %}
+
+{% block title %}{{ type_label }} — Listening{% endblock %}
+
+{% block content %}
+<div class="ll-type">
+
+  <div class="ll-type__head">
+    <a href="{% url 'listening:home' %}" class="ll-back">← All question types</a>
+    <span class="ll-practice__tag">{{ type_label }}</span>
+  </div>
+  <h1 class="ll-hero__title">{{ type_label }}</h1>
+
+  <nav class="ll-flow" aria-label="Practice steps">
+    <span class="ll-flow__step is-current">
+      <span class="ll-flow__num">1</span>
+      Study the tips
+    </span>
+    <span class="ll-flow__sep" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </span>
+    <a href="{% url 'listening:practice' qtype %}" class="ll-flow__step">
+      <span class="ll-flow__num">2</span>
+      Practise
+    </a>
+  </nav>
+
+  {% include "listening/_tips_study.html" %}
+
+</div>
+{% endblock %}

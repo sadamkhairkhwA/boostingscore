@@ -140,6 +140,7 @@
     <p style="color:#c0392b">Speaking practice needs JavaScript and microphone access in your browser.</p>
   </noscript>
 
+{% include "includes/speaking_ai_notice.html" %}
 {% endblock %}
 
 {% block pt_scripts %}
@@ -153,7 +154,9 @@
   PARTS.forEach(function(p){ TOTAL += p.questions.length; });
 
   var SESSION_ID = document.getElementById('pt-session-id').value;
-  var CSRF = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+  var CSRF = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
+  var csrfInput = document.querySelector('input[name=csrfmiddlewaretoken]');
+  if (csrfInput) CSRF = csrfInput.value;
 
   var partIdx = 0, qIdx = 0, answeredCount = 0;
   var mediaRecorder = null, chunks = [], recordStart = 0;
@@ -305,6 +308,11 @@
 
   els.recBtn.addEventListener('click', async function(){
     if (mediaRecorder && mediaRecorder.state === 'recording'){ mediaRecorder.stop(); return; }
+    if (window.__bsSpeakingNoticePending) {
+      var notice = document.getElementById('bs-speak-notice');
+      if (notice) notice.hidden = false;
+      return;
+    }
     var s;
     try { s = await getStream(); } catch(e) { return; }
     chunks = [];
@@ -353,7 +361,7 @@
       credentials: 'same-origin',
     }).then(function(r){ return r.json(); }).then(function(data){
       if (!data || !data.ok){
-        els.status.textContent = (data && data.error) || 'Something went wrong. Try again.';
+        els.status.textContent = (data && (data.message || data.error)) || 'Something went wrong. Try again.';
         els.recBtn.disabled = false;
         els.micLabel.textContent = 'Click to retry';
         return;

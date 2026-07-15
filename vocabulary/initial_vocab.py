@@ -46,10 +46,10 @@ INITIAL_WORD_ROWS = [
     ("disruptive", "technology", 3, "radically changing an industry or market", "Disruptive innovation reshaped retail.", ["disruptive technology"], "adjective", "/dɪsˈrʌptɪv/"),
     ("bandwidth", "technology", 3, "data capacity of a network connection", "Rural areas lack sufficient bandwidth.", ["network bandwidth"], "noun", "/ˈbændwɪdθ/"),
     # --- education ---
-    ("school", "education", 1, "a place where children are taught", "The school opened a new library.", ["attend school"], "noun", "/skuːl/"),
-    ("teacher", "education", 1, "a person who teaches", "The teacher gave clear feedback.", ["qualified teacher"], "noun", "/ˈtiːtʃə(r)/"),
-    ("exam", "education", 1, "a formal test of knowledge", "Students prepared for the final exam.", ["pass an exam"], "noun", "/ɪɡˈzæm/"),
-    ("homework", "education", 1, "work done at home for school", "Homework reinforces class lessons.", ["do homework"], "noun", "/ˈhəʊmwɜːk/"),
+    ("compulsory schooling", "education", 1, "education that children are required by law to receive", "Compulsory schooling improves basic literacy nationwide.", ["compulsory schooling age"], "noun phrase", ""),
+    ("educator", "education", 1, "a person who provides instruction or training", "Skilled educators can narrow attainment gaps.", ["qualified educator"], "noun", ""),
+    ("exam", "education", 1, "a formal test of knowledge", "High-stakes exams shape university admissions.", ["pass an exam"], "noun", "/ɪɡˈzæm/"),
+    ("coursework", "education", 1, "written or practical work completed during a course", "Coursework allows teachers to assess progress continuously.", ["submit coursework"], "noun", ""),
     ("scholarship", "education", 2, "money to support a student's studies", "She won a scholarship to university.", ["merit scholarship"], "noun", "/ˈskɒləʃɪp/"),
     ("enrolment", "education", 2, "the act of joining a course or school", "Enrolment numbers rose this year.", ["student enrolment"], "noun", "/ɪnˈrəʊlmənt/"),
     ("literacy", "education", 2, "ability to read and write", "Literacy rates improved in rural areas.", ["digital literacy"], "noun", "/ˈlɪtərəsi/"),
@@ -61,7 +61,7 @@ INITIAL_WORD_ROWS = [
     # --- society ---
     ("family", "society", 1, "a group of related people", "Family support helps young people.", ["nuclear family"], "noun", "/ˈfæməli/"),
     ("community", "society", 1, "people living in one area or sharing interests", "The community organised a clean-up.", ["local community"], "noun", "/kəˈmjuːnəti/"),
-    ("job", "society", 1, "paid work", "She found a part-time job.", ["full-time job"], "noun", "/dʒɒb/"),
+    ("employment", "society", 1, "paid work; the state of having a job", "Youth employment remains a policy priority.", ["gain employment"], "noun", ""),
     ("crime", "society", 1, "illegal activity", "Street crime fell last year.", ["violent crime"], "noun", "/kraɪm/"),
     ("inequality", "society", 2, "unfair differences between groups", "Income inequality widened.", ["social inequality"], "noun", "/ˌɪnɪˈkwɒləti/"),
     ("welfare", "society", 2, "government support for people in need", "Welfare reform was controversial.", ["welfare benefits"], "noun", "/ˈwelfeə(r)/"),
@@ -72,8 +72,8 @@ INITIAL_WORD_ROWS = [
     ("marginalised", "society", 3, "treated as unimportant or excluded", "Policies aimed to help marginalised groups.", ["marginalised communities"], "adjective", "/ˈmɑːdʒɪnəlaɪzd/"),
     ("gentrification", "society", 3, "wealthier people moving in and changing an area", "Gentrification raised rents sharply.", ["urban gentrification"], "noun", "/ˌdʒentrɪfɪˈkeɪʃn/"),
     # --- travel ---
-    ("ticket", "travel", 1, "a pass allowing travel or entry", "We bought train tickets online.", ["book a ticket"], "noun", "/ˈtɪkɪt/"),
-    ("hotel", "travel", 1, "a building where travellers pay to stay", "The hotel was near the station.", ["book a hotel"], "noun", "/həʊˈtel/"),
+    ("accommodation", "travel", 1, "a place where travellers can stay", "Affordable accommodation is scarce in peak season.", ["book accommodation"], "noun", ""),
+    ("border control", "travel", 1, "official checks at national borders", "Stricter border control reduced irregular migration.", ["border control policy"], "noun phrase", ""),
     ("tourist", "travel", 1, "a person travelling for pleasure", "Tourist numbers peaked in summer.", ["foreign tourist"], "noun", "/ˈtʊərɪst/"),
     ("passport", "travel", 1, "an official document for international travel", "Check your passport expiry date.", ["valid passport"], "noun", "/ˈpɑːspɔːt/"),
     ("destination", "travel", 2, "the place someone is going to", "Bali is a popular destination.", ["tourist destination"], "noun", "/ˌdestɪˈneɪʃn/"),
@@ -100,7 +100,7 @@ INITIAL_WORD_ROWS = [
     # --- business ---
     ("company", "business", 1, "a business organisation", "The company hired fifty staff.", ["start a company"], "noun", "/ˈkʌmpəni/"),
     ("customer", "business", 1, "a person who buys goods or services", "Customer feedback improved the product.", ["loyal customer"], "noun", "/ˈkʌstəmə(r)/"),
-    ("price", "business", 1, "the amount money needed to buy something", "The price rose after demand grew.", ["high price"], "noun", "/praɪs/"),
+    ("pricing", "business", 1, "the process of deciding how much to charge", "Dynamic pricing can increase revenue in peak demand.", ["competitive pricing"], "noun", ""),
     ("profit", "business", 1, "money gained after costs are paid", "The shop made a small profit.", ["make a profit"], "noun", "/ˈprɒfɪt/"),
     ("revenue", "business", 2, "income from business activities", "Revenue grew by 8% last year.", ["annual revenue"], "noun", "/ˈrevənjuː/"),
     ("competition", "business", 2, "rivalry between businesses", "Competition lowered consumer prices.", ["market competition"], "noun", "/ˌkɒmpəˈtɪʃn/"),
@@ -113,6 +113,106 @@ INITIAL_WORD_ROWS = [
 ]
 
 
+ANCHOR_SYNONYMS: dict[str, list[str]] = {
+    "pollution": ["contamination", "impurity", "toxic waste"],
+    "recycle": ["reuse", "reprocess", "repurpose"],
+    "climate": ["weather patterns", "atmospheric conditions"],
+    "renewable": ["sustainable", "regenerative"],
+    "wildlife": ["fauna", "wild animals"],
+    "deforestation": ["forest clearance", "logging"],
+    "carbon footprint": ["emissions profile", "greenhouse impact"],
+    "ecosystem": ["habitat system", "biotic community"],
+    "mitigation": ["alleviation", "reduction"],
+    "sustainability": ["long-term viability", "resource stewardship"],
+    "biodiversity": ["species diversity", "ecological variety"],
+    "emission": ["discharge", "release"],
+    "exercise": ["physical activity", "workout"],
+    "diet": ["nutrition", "food intake"],
+    "stress": ["pressure", "strain"],
+    "treatment": ["therapy", "medical care"],
+    "obesity": ["overweight condition", "excess body weight"],
+    "epidemic": ["outbreak", "widespread disease"],
+    "mental health": ["psychological wellbeing", "emotional health"],
+    "vaccination": ["immunisation", "inoculation"],
+    "chronic": ["long-term", "persistent"],
+    "healthcare": ["medical services", "health system"],
+    "longevity": ["life expectancy", "lifespan"],
+    "sedentary": ["inactive", "desk-bound"],
+    "internet": ["world wide web", "online network"],
+    "software": ["application", "program"],
+    "device": ["gadget", "equipment"],
+    "online": ["digital", "web-based"],
+    "digital": ["computerised", "electronic"],
+    "cybersecurity": ["information security", "data protection"],
+    "algorithm": ["procedure", "computational rule"],
+    "artificial intelligence": ["machine intelligence", "AI"],
+    "encryption": ["encoding", "data scrambling"],
+    "scalability": ["expandability", "growth capacity"],
+    "disruptive": ["revolutionary", "game-changing"],
+    "bandwidth": ["data capacity", "throughput"],
+    "compulsory schooling": ["mandatory education", "required schooling"],
+    "educator": ["instructor", "teacher"],
+    "exam": ["assessment", "test"],
+    "coursework": ["assignments", "written work"],
+    "scholarship": ["grant", "bursary"],
+    "enrolment": ["registration", "admission"],
+    "literacy": ["reading ability", "reading proficiency"],
+    "tuition": ["instruction fees", "course fees"],
+    "pedagogy": ["teaching method", "instructional practice"],
+    "curriculum": ["syllabus", "course of study"],
+    "extracurricular": ["non-academic", "after-school"],
+    "accreditation": ["certification", "official approval"],
+    "family": ["household", "kin"],
+    "community": ["society", "local population"],
+    "employment": ["work", "labour market participation"],
+    "crime": ["offence", "criminal activity"],
+    "inequality": ["disparity", "imbalance"],
+    "welfare": ["social support", "benefits"],
+    "migration": ["relocation", "population movement"],
+    "urbanisation": ["city growth", "urban expansion"],
+    "social cohesion": ["social unity", "community solidarity"],
+    "demographic": ["population-related", "statistical"],
+    "marginalised": ["excluded", "disadvantaged"],
+    "gentrification": ["urban renewal", "neighbourhood upgrading"],
+    "accommodation": ["lodging", "housing"],
+    "border control": ["immigration checks", "frontier security"],
+    "tourist": ["visitor", "traveller"],
+    "passport": ["travel document", "identity papers"],
+    "destination": ["location", "travel spot"],
+    "hospitality": ["guest services", "tourism services"],
+    "infrastructure": ["public works", "facilities"],
+    "visa": ["entry permit", "travel authorisation"],
+    "overtourism": ["excessive tourism", "visitor overcrowding"],
+    "sustainable tourism": ["responsible tourism", "eco-tourism"],
+    "connectivity": ["transport links", "accessibility"],
+    "itinerary": ["travel plan", "schedule"],
+    "experiment": ["trial", "test"],
+    "research": ["investigation", "study"],
+    "discovery": ["finding", "breakthrough"],
+    "laboratory": ["research lab", "testing facility"],
+    "hypothesis": ["theory", "proposition"],
+    "evidence": ["proof", "data"],
+    "peer review": ["scholarly assessment", "expert evaluation"],
+    "methodology": ["research method", "approach"],
+    "replicate": ["reproduce", "repeat"],
+    "empirical": ["evidence-based", "observational"],
+    "paradigm": ["model", "framework"],
+    "quantify": ["measure", "calculate"],
+    "company": ["firm", "corporation"],
+    "customer": ["client", "consumer"],
+    "pricing": ["price setting", "cost structure"],
+    "profit": ["earnings", "gain"],
+    "revenue": ["income", "takings"],
+    "competition": ["rivalry", "market contest"],
+    "investment": ["capital allocation", "funding"],
+    "entrepreneur": ["founder", "business starter"],
+    "merger": ["consolidation", "amalgamation"],
+    "liquidity": ["cash availability", "solvency"],
+    "shareholder": ["investor", "stockholder"],
+    "diversification": ["variety", "risk spreading"],
+}
+
+
 def bulk_create_words(WordModel, skip_if_exists: bool = True):
     """
     WordModel: historical Word from migration or concrete Word model.
@@ -121,7 +221,8 @@ def bulk_create_words(WordModel, skip_if_exists: bool = True):
     created = 0
     skipped = 0
     for row in INITIAL_WORD_ROWS:
-        word, topic, level, definition, example, collocs, pos, phon = row
+        word, topic, level, definition, example, collocs, pos, phon = row[:8]
+        syns = ANCHOR_SYNONYMS.get(word.lower(), [])
         if skip_if_exists and WordModel.objects.filter(topic=topic, level=level, word__iexact=word).exists():
             skipped += 1
             continue
@@ -134,6 +235,7 @@ def bulk_create_words(WordModel, skip_if_exists: bool = True):
             collocations=list(collocs),
             part_of_speech=pos[:50],
             phonetic=phon[:100],
+            synonyms=list(syns),
         )
         created += 1
     return created, skipped

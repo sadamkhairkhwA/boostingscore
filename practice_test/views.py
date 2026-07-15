@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,6 +11,12 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
+
+from boostingscore.plan_limits import (
+    ai_limit_json,
+    deny_practice_test_redirect,
+    guard_ai_check,
+)
 
 from . import content as C
 from . import listening_content as LC
@@ -34,7 +41,7 @@ from .scoring import (
 
 @login_required
 def tests(request):
-    """Chooser page: lists Practice Tests 1–5 as cards (active or coming soon)."""
+    """Chooser page: lists Practice Tests 1–15 as cards (active or coming soon)."""
     from . import papers
     return render(
         request,
@@ -49,12 +56,27 @@ def enter_test(request, n: int):
     from . import papers
     if not papers.is_active(n):
         return redirect("practice_test:tests")
+    denied = deny_practice_test_redirect(request, n)
+    if denied:
+        return denied
     request.session["pt_test"] = int(n)
     return redirect("practice_test:hub")
 
 
+def _ensure_practice_test_access(request):
+    """Block free-plan users from tests 2–5 (session or direct URL)."""
+    n = _active_test(request)
+    denied = deny_practice_test_redirect(request, n)
+    if denied:
+        return denied, n
+    return None, n
+
+
 @login_required
 def hub(request):
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     history = (
         TestSession.objects.filter(user=request.user)
         .exclude(status=TestSession.STATUS_IN_PROGRESS, band_overall__isnull=True)
@@ -69,7 +91,6 @@ def hub(request):
         )
         if last is not None:
             latest[kind] = last
-    n = _active_test(request)
     passages = _reading_passages_for(n)
     ldict = _listening_dict_for(n)
     return render(
@@ -581,7 +602,9 @@ def exam_intro(request, section):
 
 @login_required
 def listening(request):
-    n = _active_test(request)
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     ldict = _listening_dict_for(n)
     sections_raw = ldict.get("sections", [])
     total = sum(len(s["questions"]) for s in sections_raw)
@@ -673,7 +696,9 @@ def listening_prepare(request):
 @login_required
 @require_POST
 def listening_submit(request):
-    n = _active_test(request)
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     g = _grade_listening(request.POST, _listening_dict_for(n).get("sections", []))
     session = TestSession.objects.create(
         user=request.user,
@@ -694,7 +719,9 @@ def listening_submit(request):
 
 @login_required
 def reading(request):
-    n = _active_test(request)
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     passages = _reading_passages_for(n)
     return render(
         request,
@@ -711,7 +738,9 @@ def reading(request):
 @login_required
 @require_POST
 def reading_submit(request):
-    n = _active_test(request)
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     g = _grade_reading(request.POST, _reading_passages_for(n))
     session = TestSession.objects.create(
         user=request.user,
@@ -732,7 +761,9 @@ def reading_submit(request):
 
 @login_required
 def writing(request):
-    n = _active_test(request)
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     tasks = _writing_tasks_for(n)
     return render(
         request,
@@ -748,7 +779,9 @@ def writing(request):
 @login_required
 @require_POST
 def writing_submit(request):
-    n = _active_test(request)
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
     g = _grade_writing(request.POST, _writing_tasks_for(n))
     session = TestSession.objects.create(
         user=request.user,
@@ -782,10 +815,13 @@ def speaking(request):
     """
     from django.templatetags.static import static
 
+    denied, n = _ensure_practice_test_access(request)
+    if denied:
+        return denied
+
     # The examiner-video flow, recording, transcription and scoring are shared
     # across all tests — only the folder (and, for some tests, the filename
     # scheme) the videos load from differs per test.
-    n = _active_test(request)
     folder = SPEAKING_VIDEO_FOLDERS.get(n, "speaking_videos")
 
     session = TestSession.objects.create(
@@ -1009,6 +1045,12 @@ def speaking_score_api(request):
     if audio is None:
         return JsonResponse({"ok": False, "error": "missing audio"}, status=400)
 
+    from .scoring import resolve_openai_api_key
+
+    if resolve_openai_api_key():
+        if guard_ai_check(request.user, "speaking_score", will_call_openai=True):
+            return ai_limit_json()
+
     try:
         duration = float(request.POST.get("duration_seconds") or 0)
     except ValueError:
@@ -1102,6 +1144,12 @@ def speaking_rescore_api(request, response_id: int):
             "ok": False,
             "error": "Original recording is no longer available on the server.",
         }, status=400)
+
+    from .scoring import resolve_openai_api_key
+
+    if resolve_openai_api_key():
+        if guard_ai_check(request.user, "speaking_rescore", will_call_openai=True):
+            return ai_limit_json()
 
     transcript, transcribe_error, whisper_meta = transcribe_audio(resp.audio.path)
     metrics = _compute_speaking_metrics(transcript, whisper_meta, resp.duration_seconds or 0)

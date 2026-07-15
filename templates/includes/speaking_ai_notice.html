@@ -1,0 +1,55 @@
+{% load static %}
+{% if speaking_ai_notice_needed %}
+<link rel="stylesheet" href="{% static 'css/legal.css' %}?v=1">
+<div
+  class="bs-speak-notice"
+  id="bs-speak-notice"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="bs-speak-notice-title"
+  data-ack-url="{% url 'speaking_ai_notice_ack' %}"
+>
+  <div class="bs-speak-notice__card">
+    <h2 class="bs-speak-notice__title" id="bs-speak-notice-title">Before you record</h2>
+    <p class="bs-speak-notice__body">
+      Your spoken answer will be transcribed and scored by AI. The audio is not stored — only the transcript and your feedback are kept.
+    </p>
+    <button type="button" class="bs-speak-notice__btn" id="bs-speak-notice-ok">Continue</button>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.getElementById("bs-speak-notice");
+  if (!root) return;
+  var btn = document.getElementById("bs-speak-notice-ok");
+  var ackUrl = root.getAttribute("data-ack-url");
+  var csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || "";
+  var meta = document.querySelector('input[name="csrfmiddlewaretoken"], #pt-csrf');
+  if (meta) csrf = meta.value || csrf;
+
+  window.__bsSpeakingNoticePending = true;
+
+  function dismiss() {
+    root.hidden = true;
+    window.__bsSpeakingNoticePending = false;
+    window.dispatchEvent(new Event("bs-speak-notice-acked"));
+  }
+
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    fetch(ackUrl, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrf,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      credentials: "same-origin",
+    }).then(function () {
+      dismiss();
+    }).catch(function () {
+      dismiss();
+    });
+  });
+})();
+</script>
+{% endif %}

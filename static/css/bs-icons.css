@@ -1,0 +1,182 @@
+/* BoostingScore — unified SVG icon tiles (dashboard style, accent #3B6D11) */
+
+:root {
+  --bs-green: #3B6D11;
+  --bs-green-dk: #27500A;
+  --bs-green-soft: #EAF3DE;
+  --bs-green-border: #C0DD97;
+  --bs-navy: #1e3a5f;
+  --bs-navy-soft: #e2e9f4;
+  --bs-purple: #6f4ed0;
+  --bs-purple-soft: #ece8fb;
+  --bs-orange: #c2570c;
+  --bs-orange-soft: #fdebd9;
+  --bs-blue: #1d4ed8;
+  --bs-blue-soft: #dde7fc;
+  --bs-amber: #b78906;
+  --bs-amber-soft: #fef3c7;
+  --bs-red: #b91c1c;
+  --bs-red-soft: #fee2e2;
+}
+
+.bs-icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  line-height: 0;
+}
+.bs-icon-tile svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Sizes */
+.bs-icon-tile--sm { width: 32px; height: 32px; border-radius: 8px; }
+.bs-icon-tile--sm svg { width: 16px; height: 16px; }
+.bs-icon-tile--md { width: 40px; height: 40px; border-radius: 10px; }
+.bs-icon-tile--lg { width: 48px; height: 48px; border-radius: 12px; }
+.bs-icon-tile--lg svg { width: 22px; height: 22px; }
+.bs-icon-tile--xl { width: 56px; height: 56px; border-radius: 14px; }
+.bs-icon-tile--xl svg { width: 26px; height: 26px; }
+
+/* Colour variants — soft tile + darker icon */
+.bs-icon-tile--green  { background: var(--bs-green-soft);  color: var(--bs-green-dk);  border-color: var(--bs-green-border); }
+.bs-icon-tile--navy   { background: var(--bs-navy-soft);   color: var(--bs-navy); }
+.bs-icon-tile--purple { background: var(--bs-purple-soft); color: var(--bs-purple); }
+.bs-icon-tile--orange { background: var(--bs-orange-soft); color: var(--bs-orange); }
+.bs-icon-tile--blue   { background: var(--bs-blue-soft);   color: var(--bs-blue); }
+.bs-icon-tile--amber  { background: var(--bs-amber-soft);  color: var(--bs-amber); }
+.bs-icon-tile--red    { background: var(--bs-red-soft);    color: var(--bs-red); }
+
+/* Inline status icons (no tile background) */
+.bs-icon-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 0;
+}
+.bs-icon-inline svg { width: 16px; height: 16px; display: block; }
+.bs-icon-inline--ok { color: var(--bs-green); }
+.bs-icon-inline--bad { color: var(--bs-red); }
+.bs-icon-inline--warn { color: var(--bs-amber); }
+
+/* Icon picker buttons */
+.bs-icon-pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color .15s, box-shadow .15s;
+}
+.bs-icon-pick:hover { border-color: var(--bs-green-border); }
+.bs-icon-pick.is-on {
+  border-color: var(--bs-green);
+  box-shadow: 0 0 0 2px rgba(59, 109, 17, .2);
+}
+.bs-icon-pick .bs-icon-tile { border: none; width: 32px; height: 32px; }
+
+/* Replace emoji slots in existing components */
+.vocab-topic-deck-card__emoji,
+.vocab-flash-deck-card__emoji,
+.tidb-topic-emoji,
+.ti-dc-icon,
+.topic-ielts-hub__title-emoji,
+.bs-studio-card-icon,
+.bs-ccard-icon,
+.bs-empty-icon,
+.ti-res-emoji,
+.vocab-struggling-alert__icon,
+.vocab-flash-review-settings-btn__icon,
+.vocab-flash-session-complete__icon-emoji {
+  font-size: 0 !important;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Studio / topic cards: icon tile sits in card header */
+.bs-studio-card-icon .bs-icon-tile,
+.bs-ccard-icon .bs-icon-tile {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+.bs-studio-card-icon .bs-icon-tile svg,
+.bs-ccard-icon .bs-icon-tile svg {
+  width: 22px;
+  height: 22px;
+}
+
+.vocab-topic-deck-card__emoji .bs-icon-tile,
+.vocab-flash-deck-card__emoji .bs-icon-tile {
+  width: 44px;
+  height: 44px;
+}
+
+.ti-dc-icon .bs-icon-tile,
+.tidb-topic-emoji .bs-icon-tile {
+  width: 40px;
+  height: 40px;
+}
+
+.topic-ielts-hub__title-emoji .bs-icon-tile {
+  width: 48px;
+  height: 48px;
+}
+
+.wr-ic .bs-icon-tile,
+.bs-writing-para-icon .bs-icon-tile,
+.bs-mode-icon .bs-icon-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.ld-feat__icon .bs-icon-tile,
+.ld-tab .bs-icon-tile,
+.art-topic-chip .bs-icon-tile,
+.art-hub-stat__ic .bs-icon-tile,
+.gr-tip-ic .bs-icon-tile,
+.gr-article__icon .bs-icon-tile,
+.bs-tile b .bs-icon-tile,
+.ti-sum-icon .bs-icon-tile {
+  font-size: 0;
+  line-height: 0;
+}
+
+.art-topic-chip,
+.art-hub-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gr-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gr-tip-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.wt1-vocab-grid h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

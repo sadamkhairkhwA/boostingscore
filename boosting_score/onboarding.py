@@ -6,17 +6,13 @@ from django.views.decorators.http import require_http_methods
 @login_required
 @require_http_methods(["GET", "POST"])
 def welcome_view(request):
-    """First-time onboarding page for newly-signed-up users.
-
-    GET  → renders the welcome screen (logo, hero, level picker, first steps).
-    POST → saves the chosen starting level and sends the user to the dashboard.
-
-    Existing users who land here still see a useful setup page; submitting the
-    form just confirms their current level.
-    """
+    """Legacy level picker — new users go through the placement test instead."""
     from vocabulary.models import UserProfile
 
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if not profile.placement_completed:
+        return redirect("placement")
 
     if request.method == "POST":
         try:
@@ -26,9 +22,8 @@ def welcome_view(request):
         if level not in (1, 2, 3):
             level = 1
         profile.level = level
-        if hasattr(profile, "placement_completed"):
-            profile.placement_completed = True
-        profile.save()
+        profile.placement_completed = True
+        profile.save(update_fields=["level", "placement_completed"])
         return redirect("home")
 
     return render(

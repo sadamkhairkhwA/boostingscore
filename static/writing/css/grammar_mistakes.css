@@ -1,0 +1,17 @@
+.gm-back { display: inline-block; font-size: 13px; font-weight: 600; color: #6b7280; text-decoration: none; margin-bottom: 12px; }
+.gm-back:hover { color: #3B6D11; }
+.gm-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.gm-card { border: 0.5px solid #e8e8e6; border-radius: 12px; padding: 16px 18px; background: #fff; }
+.gm-card__title { margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827; }
+.gm-card__summary { margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.55; }
+.gm-pair { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.gm-pair__row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; padding: 10px 12px; border-radius: 8px; line-height: 1.5; }
+.gm-pair__row--bad { background: #fef2f2; color: #7f1d1d; }
+.gm-pair__row--ok { background: #eaf3de; color: #27500a; }
+.gm-tip { margin: 0; font-size: 13px; color: #6b7280; }
+.gm-checklist { border: 0.5px solid #e8e8e6; border-radius: 12px; padding: 18px; background: #fafaf9; }
+.gm-checklist__title { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
+.gm-checklist__sub { margin: 0 0 14px; font-size: 14px; color: #6b7280; }
+.gm-checklist__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.gm-check-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; cursor: pointer; line-height: 1.5; }
+.gm-check-item__box { margin-top: 3px; accent-color: #3B6D11; }

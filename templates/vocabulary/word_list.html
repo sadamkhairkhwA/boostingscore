@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Word list — Boosting Score{% endblock %}
 {% block content %}
 <div class="bs-page">
@@ -50,7 +50,7 @@
               <input type="hidden" name="action" value="toggle_favorite">
               <input type="hidden" name="word_id" value="{{ row.word.id }}">
               <button type="submit" class="bs-btn-dark" style="padding:7px 10px;font-size:12px;">
-                {% if row.favored %}★ Saved{% else %}☆ Save{% endif %}
+                {% if row.favored %}{% bs_icon "star" "amber" "sm" %} Saved{% else %}{% bs_icon "star-outline" "amber" "sm" %} Save{% endif %}
               </button>
             </form>
           </td>

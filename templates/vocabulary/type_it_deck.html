@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Type it — Boosting Score{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'vocabulary/css/type_it_full.css' %}?v=5">
@@ -18,7 +18,7 @@
         {% for t in type_it_topics %}
         <button type="button" class="tidb-topic-card" data-topic="{{ t.topic }}" aria-label="Open {{ t.name }} levels">
           <div class="tidb-topic-top">
-            <span class="tidb-topic-emoji" aria-hidden="true">{{ t.emoji }}</span>
+            <span class="tidb-topic-emoji" aria-hidden="true">{% bs_icon t.emoji "green" "md" %}</span>
             <div class="tidb-topic-text">
               <span class="tidb-topic-name">{{ t.name }}</span>
               <span class="tidb-topic-line">{{ t.total_words }} words · 3 levels</span>
@@ -39,7 +39,7 @@
         {% for d in custom_decks %}
         <a class="tidb-custom-card" href="{{ d.url }}">
           <div class="tidb-topic-top">
-            <span class="tidb-topic-emoji" aria-hidden="true">{{ d.emoji }}</span>
+            <span class="tidb-topic-emoji" aria-hidden="true">{% bs_icon d.emoji "green" "md" %}</span>
             <div class="tidb-topic-text">
               <span class="tidb-topic-name">{{ d.name }}</span>
               <span class="tidb-topic-line">Custom · {{ d.count }} words</span>
@@ -76,7 +76,7 @@
     <p class="ti-f-label">Pick a colour</p>
     <div id="ti-colours" class="ti-pick-row"></div>
 
-    <p class="ti-f-label">Pick an emoji</p>
+    <p class="ti-f-label">Pick an icon</p>
     <div id="ti-emojis" class="ti-pick-row"></div>
 
     <label class="ti-f-label" for="ti-create-words">Add words (one per line)</label>

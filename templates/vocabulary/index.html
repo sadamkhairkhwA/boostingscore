@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bs_icons %}
 
 {% block title %}Vocabulary — Boosting Score{% endblock %}
 
@@ -113,7 +114,7 @@
           <p class="vocab-wizard-deck-stat__label">Due today</p>
         </article>
         <article class="vocab-wizard-deck-stat">
-          <p class="vocab-wizard-deck-stat__value">{% if user.is_authenticated %}🔥 {{ nav_streak }}{% else %}—{% endif %}</p>
+          <p class="vocab-wizard-deck-stat__value">{% if user.is_authenticated %}<span class="vocab-wizard-deck-stat__flame" aria-hidden="true">{% bs_icon "flame" "amber" "sm" %}</span> {{ nav_streak }}{% else %}—{% endif %}</p>
           <p class="vocab-wizard-deck-stat__label">Day streak</p>
         </article>
       </div>
@@ -206,7 +207,7 @@
     {% if user.is_authenticated and struggling_count %}
       <div class="vocab-struggling-alert" role="region" aria-label="Struggling words">
         <div class="vocab-struggling-alert__left">
-          <span class="vocab-struggling-alert__icon" aria-hidden="true">⚠</span>
+          <span class="vocab-struggling-alert__icon" aria-hidden="true">{% bs_icon "warning" "amber" "sm" %}</span>
           <div class="vocab-struggling-alert__text">
             <p class="vocab-struggling-alert__title">You are struggling with {{ struggling_count }} word{{ struggling_count|pluralize }}</p>
             <p class="vocab-struggling-alert__sub">These words appeared as Hard in 3 or more sessions. Focused practice will help you master them.</p>
@@ -509,7 +510,7 @@
         {% if not flash_review_mode %}
         <div class="vocab-flash-deck-card vocab-flash-deck-card--{{ flash_theme_slug|escape }}">
           <div class="vocab-flash-deck-card__top">
-            <span class="vocab-flash-deck-card__emoji" aria-hidden="true">{{ flash_deck_emoji }}</span>
+            <span class="vocab-flash-deck-card__emoji" aria-hidden="true">{% bs_icon flash_deck_emoji %}</span>
             <div class="vocab-flash-deck-card__badges">
               {% if flash_review_mode %}
                 <span class="vocab-flash-deck-card__badge vocab-flash-deck-card__badge--review">Review queue</span>
@@ -576,7 +577,7 @@
               aria-controls="vocab-flash-settings-popover"
               title="Review settings"
             >
-              <span class="vocab-flash-review-settings-btn__icon" aria-hidden="true">⚙</span>
+              <span class="vocab-flash-review-settings-btn__icon" aria-hidden="true">{% bs_icon "settings" "navy" "sm" %}</span>
               <span class="vocab-flash-review-settings-btn__label">Settings</span>
             </button>
             {% endif %}
@@ -645,18 +646,18 @@
                 aria-controls="vocab-flash-settings-popover"
                 title="Review settings (Easy / Hard intervals, session size)"
               >
-                <span class="vocab-flash-btn__icon" aria-hidden="true">⚙</span>
+                <span class="vocab-flash-btn__icon" aria-hidden="true">{% bs_icon "settings" "navy" "sm" %}</span>
                 <span class="vocab-flash-btn__label">Settings</span>
               </button>
               {% endif %}
               <button type="button" class="vocab-flash-btn" id="vocab-flash-shuffle" title="Shuffle deck (S)">
-                <span class="vocab-flash-btn__icon" aria-hidden="true">⇄</span> Shuffle
+                <span class="vocab-flash-btn__icon" aria-hidden="true">{% bs_icon "shuffle" "navy" "sm" %}</span> Shuffle
               </button>
               <button type="button" class="vocab-flash-btn" id="vocab-flash-restart" title="Start from first card (R)">
-                <span class="vocab-flash-btn__icon" aria-hidden="true">↺</span> Restart
+                <span class="vocab-flash-btn__icon" aria-hidden="true">{% bs_icon "refresh" "navy" "sm" %}</span> Restart
               </button>
               <button type="button" class="vocab-flash-btn" id="vocab-flash-fullscreen" title="Fullscreen (F)">
-                <span class="vocab-flash-btn__icon" aria-hidden="true">⛶</span> Fullscreen
+                <span class="vocab-flash-btn__icon" aria-hidden="true">{% bs_icon "fullscreen" "navy" "sm" %}</span> Fullscreen
               </button>
             </div>
             <div class="vocab-flash-toolbar__row vocab-flash-toolbar__row--options">
@@ -696,7 +697,7 @@
                 title="Star this card (saved in this browser)"
                 aria-pressed="false"
               >
-                <span class="vocab-flash-star__icon" aria-hidden="true">☆</span>
+                <span class="vocab-flash-star__icon" aria-hidden="true">{% bs_icon "star-outline" "amber" "sm" %}</span>
                 <span class="vocab-flash-btn__label">Star</span>
               </button>
             </div>
@@ -795,10 +796,10 @@
             <div class="fc-toolbar vocab-flash-review-utilities" aria-label="Study tools">
               <div class="fc-toolbar-left vocab-flash-review-utilities__left">
                 <button type="button" class="fc-tool-btn vocab-flash-review-icon-btn" id="vocab-flash-review-util-fullscreen" title="Fullscreen">
-                  <span aria-hidden="true">⛶</span>
+                  <span aria-hidden="true">{% bs_icon "fullscreen" "navy" "sm" %}</span>
                 </button>
                 <button type="button" class="fc-tool-btn vocab-flash-review-icon-btn" id="vocab-flash-review-util-shuffle" title="Shuffle">
-                  <span aria-hidden="true">⇄</span>
+                  <span aria-hidden="true">{% bs_icon "shuffle" "navy" "sm" %}</span>
                 </button>
               </div>
               <div class="fc-toolbar-center" id="vocab-flash-fc-save-wrap" role="presentation" title="Ratings save to your account while logged in">
@@ -812,7 +813,7 @@
               <div class="fc-toolbar-right">
                 {% if study_mode %}
                 <button type="button" class="fc-tool-btn vocab-flash-review-icon-btn" id="vocab-flash-review-util-settings" title="Settings" aria-label="Settings">
-                  <span aria-hidden="true">⚙</span>
+                  <span aria-hidden="true">{% bs_icon "settings" "navy" "sm" %}</span>
                 </button>
                 {% endif %}
               </div>
@@ -1041,7 +1042,7 @@
     >
       <h2 class="vocab-panel__heading">Type it</h2>
       <p class="vocab-panel__intro">
-        You see a <strong>word</strong> (🔊 to hear it). Choose to write an <strong>example sentence</strong> that uses
+        You see a <strong>word</strong> ({% bs_icon "volume" "blue" "sm" %} to hear it). Choose to write an <strong>example sentence</strong> that uses
         the word, or write the <strong>definition</strong> in your own words. AI says if it’s right or wrong and shows
         the correct <strong>meaning</strong>. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> / <kbd>⌘</kbd>+<kbd>Enter</kbd> to submit.
         {% if not user.is_authenticated %}
@@ -1062,7 +1063,7 @@
     >
       <h2 class="vocab-panel__heading">Favored</h2>
       <p class="vocab-panel__intro">
-        Vocabulary you starred from <strong>Word list</strong> (all topics). Tap ★ to remove from this list.
+        Vocabulary you starred from <strong>Word list</strong> (all topics). Tap the star to remove from this list.
       </p>
       <div id="vocab-favorites-root"></div>
     </div>
@@ -2167,14 +2168,11 @@
           const iconSlot = document.getElementById("vocab-flash-complete-icon-slot");
           if (iconSlot) {
             if (tier === "perfect") {
-              iconSlot.innerHTML =
-                '<span class="vocab-flash-session-complete__icon-emoji" aria-hidden="true">⭐</span>';
+              iconSlot.innerHTML = BSIcons.tile("star", "amber", "xl");
             } else if (tier === "great") {
-              iconSlot.innerHTML =
-                '<span class="vocab-flash-session-complete__icon-check" aria-hidden="true">✓</span>';
+              iconSlot.innerHTML = BSIcons.inline("check", "ok");
             } else {
-              iconSlot.innerHTML =
-                '<span class="vocab-flash-session-complete__icon-emoji" aria-hidden="true">👍</span>';
+              iconSlot.innerHTML = BSIcons.tile("thumbs-up", "green", "md");
             }
           }
 
@@ -2560,7 +2558,7 @@
             const k = cardKey(w);
             const on = starred.has(k);
             btnStar.setAttribute("aria-pressed", on ? "true" : "false");
-            starIcon.textContent = on ? "★" : "☆";
+            starIcon.innerHTML = on ? BSIcons.tile("star", "amber", "sm") : BSIcons.tile("star-outline", "amber", "sm");
           }
 
           if (btnBackSpeakExample) {
@@ -3375,7 +3373,9 @@
             favHtml =
               '<a class="vocab-wl-star-guest" href="' +
               escAttr(cfg.loginUrl || "/accounts/login/") +
-              '" title="Log in to save favorites">☆</a>';
+              '" title="Log in to save favorites">' +
+              BSIcons.tile("star-outline", "amber", "sm") +
+              "</a>";
           } else {
             const fk = w.is_custom ? "custom" : "word";
             const fid = w.is_custom ? w.custom_id : w.word_id;
@@ -3392,7 +3392,9 @@
               (w.favorited ? "true" : "false") +
               '" title="' +
               (w.favorited ? "Remove from favored" : "Add to favored") +
-              '">★</button>';
+              '">' +
+              (w.favorited ? BSIcons.tile("star", "amber", "sm") : BSIcons.tile("star-outline", "amber", "sm")) +
+              "</button>";
           }
           let wbHtml = "";
           if (cfg.isAuth && cfg.wordBankAddUrl) {
@@ -3586,7 +3588,7 @@
         }
         if (favorites.length === 0) {
           root.innerHTML =
-            '<p class="vocab-panel__empty">No favorited words yet. Open <strong>Word list</strong> and tap ★ on any row.</p>';
+            '<p class="vocab-panel__empty">No favorited words yet. Open <strong>Word list</strong> and tap the star on any row.</p>';
           return;
         }
         let html =
@@ -3619,7 +3621,9 @@
             fid +
             '" data-fav-row="' +
             wi +
-            '" aria-pressed="true" title="Remove from favored">★</button></td><td><button type="button" class="vocab-list-speak btn btn--ghost btn--sm" data-fav-speak-idx="' +
+            '" aria-pressed="true" title="Remove from favored">' +
+            BSIcons.tile("star", "amber", "sm") +
+            "</button></td><td><button type="button" class="vocab-list-speak btn btn--ghost btn--sm" data-fav-speak-idx="' +
             wi +
             '" aria-label="Pronounce word">Speak</button></td></tr>';
         });
@@ -4382,7 +4386,7 @@
                 (ok ? "vocab-type-result__header--ok" : "vocab-type-result__header--warn");
             }
             if (verdictIcon) {
-              verdictIcon.textContent = ok ? "✓" : "!";
+              verdictIcon.innerHTML = ok ? BSIcons.inline("check", "ok") : BSIcons.inline("warning", "warn");
             }
             if (verdictTitle) {
               verdictTitle.textContent = ok ? "Correct" : "Needs improvement";

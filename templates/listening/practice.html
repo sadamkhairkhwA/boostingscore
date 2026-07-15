@@ -1,5 +1,5 @@
 {% extends "listening/_base.html" %}
-{% load static %}
+{% load static bs_icons %}
 
 {% block title %}{{ type_label }} — Listening{% endblock %}
 
@@ -7,13 +7,19 @@
 <div class="ll-practice">
 
   <div class="ll-practice__head">
-    <a href="{% url 'listening:home' %}" class="ll-back">← All question types</a>
+    <a href="{{ hub_url }}" class="ll-back">← {% if show_test_hub %}Back to tips{% else %}All question types{% endif %}</a>
     <span class="ll-practice__tag">{{ type_label }}</span>
   </div>
   <h1 class="ll-practice__title">{{ pset.title }}</h1>
 
   {% if mode == "results" %}
   {# ============================ RESULTS ============================ #}
+  {% if cycle_complete and cycle_total >= 5 %}
+  <div class="ll-cycle-done" role="status">
+    <span class="ll-cycle-done__ico" aria-hidden="true">{% bs_icon "check" "green" "md" %}</span>
+    <p>You've completed all 5 tests — great work! Starting a fresh round.</p>
+  </div>
+  {% endif %}
   <div class="ll-score">
     <div class="ll-score__ring ll-score__ring--{% if percent >= 80 %}good{% elif percent >= 50 %}ok{% else %}low{% endif %}">
       <span class="ll-score__num">{{ score }}/{{ total }}</span>
@@ -29,7 +35,7 @@
     {% for r in results %}
     <li class="ll-result {% if r.correct %}is-correct{% else %}is-wrong{% endif %}">
       <div class="ll-result__top">
-        <span class="ll-result__badge">{% if r.correct %}✓{% else %}✗{% endif %}</span>
+        <span class="ll-result__badge">{% if r.correct %}{% bs_icon "check" "green" "sm" %}{% else %}{% bs_icon "x" "red" "sm" %}{% endif %}</span>
         <span class="ll-result__q"><b>{{ r.number }}.</b> {{ r.text }}</span>
       </div>
       <div class="ll-result__ans">
@@ -42,9 +48,9 @@
   </ol>
 
   <div class="ll-practice__actions">
-    <a href="{% url 'listening:practice' qtype %}" class="ll-btn ll-btn--primary">Try again</a>
-    <a href="{% url 'listening:home' %}" class="ll-btn">Another question type</a>
-    <a href="{% url 'listening:tips' %}" class="ll-btn ll-btn--ghost">Tips for {{ type_label|lower }}</a>
+    <a href="{% url 'listening:practice' qtype %}" class="ll-btn ll-btn--primary">Next practice</a>
+    <a href="{% url 'listening:practice' qtype %}?set={{ pset.id }}" class="ll-btn">Try again</a>
+    <a href="{{ hub_url }}" class="ll-btn ll-btn--ghost">{% if show_test_hub %}Back to tips{% else %}Another question type{% endif %}</a>
   </div>
 
   {% else %}
@@ -112,7 +118,7 @@
 
     <div class="ll-practice__actions">
       <button type="submit" class="ll-btn ll-btn--primary" id="ll-submit">Submit answers</button>
-      <a href="{% url 'listening:home' %}" class="ll-btn ll-btn--ghost">Cancel</a>
+      <a href="{{ hub_url }}" class="ll-btn ll-btn--ghost">Cancel</a>
     </div>
   </form>
   {% endif %}

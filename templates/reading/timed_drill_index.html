@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static bs_icons %}
+{% block title %}Timed reading drill{% endblock %}
+{% block body_class %}reading-strategies-page{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'reading/css/strategies.css' %}?v=5" />
+{% endblock %}
+{% block content %}
+<div class="bs-page rs-page">
+  <header class="rs-head">
+    <div class="rs-head-text">
+      <a href="{% url 'reading:home' %}" class="rs-back-link">← Reading hub</a>
+      <h1 class="bs-page-title">Timed drill</h1>
+      <p class="bs-page-sub">One passage, strict {{ minutes }}-minute countdown. Answer all questions before time runs out — auto-submit when the clock hits zero.</p>
+    </div>
+  </header>
+
+  <div class="rs-panel-card">
+    <p class="rs-sec-lbl" style="margin-top:0;">Choose a passage</p>
+    <div class="rs-drill-grid">
+      {% for d in drills %}
+      <a href="{% url 'reading:timed_drill_session' d.part %}" class="rs-drill-card">
+        <h3 class="rs-drill-card__title">{{ d.title }}</h3>
+        <p class="rs-drill-card__sub">{{ d.subtitle }}</p>
+        <span class="rs-drill-card__cta">Start drill {% bs_icon "compass" "green" "sm" %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

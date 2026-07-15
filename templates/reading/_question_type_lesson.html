@@ -1,0 +1,170 @@
+{% load bs_icons %}
+<div class="rs-strat-card rs-strat-card--full">
+  <h2 class="rs-strat-title">{{ lesson.title }}</h2>
+  <p class="rs-qtype-badges" style="margin:0 0 10px;">
+    {% for badge in lesson.badges %}
+    <span class="rs-badge rs-badge--{{ badge.1 }}">{{ badge.0 }}</span>
+    {% endfor %}
+  </p>
+
+  <div class="rs-qtype-sec">
+    <div class="rs-qtype-lbl">What it is</div>
+    <p class="rs-strat-desc">{{ lesson.what }}</p>
+  </div>
+
+  <div class="rs-qtype-sec">
+    <div class="rs-qtype-lbl">How to solve it — step by step</div>
+    <ol class="rs-qtype-steps">
+      {% for step in lesson.steps %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <div class="rs-qtype-sec">
+    <div class="rs-qtype-lbl">Worked example</div>
+
+    {% if lesson.example_layout == "mc" %}
+    <div class="rs-exbox" style="margin-bottom:10px;">
+      <div class="rs-exbox-lbl">Passage</div>
+      <p class="rs-passage">{{ lesson.worked_example.passage }}</p>
+    </div>
+    <p class="rs-lab-hint"><strong>Question:</strong> {{ lesson.worked_example.question }}</p>
+    <ul class="rs-mc-example-opts">
+      {% for opt in lesson.worked_example.options %}
+      <li class="rs-mc-example-opt{% if opt.label == lesson.worked_example.correct %} rs-mc-example-opt--ok{% endif %}">
+        {% if opt.label == lesson.worked_example.correct %}{% bs_icon "check" "green" "sm" %}{% endif %}
+        <strong>{{ opt.label }}</strong> {{ opt.text }}
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="rs-ex-foot">{{ lesson.worked_example.explanation }}</p>
+
+    {% elif lesson.example_layout == "tfng_ynng" %}
+    <p class="rs-guide-sub" style="margin-bottom:8px;">True / False / Not Given</p>
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Passage</div>
+      <p class="rs-passage">{{ lesson.worked_example.tfng.passage }}</p>
+    </div>
+    <div class="rs-guide-rows">
+      {% for row in lesson.worked_example.tfng.rows %}
+      <div class="rs-guide-row">
+        <span class="rs-pill-t rs-pill-t--{{ row.answer_class }}">{{ row.answer }}</span>
+        {{ row.text }}
+      </div>
+      {% endfor %}
+    </div>
+    <p class="rs-guide-sub" style="margin:16px 0 8px;">Yes / No / Not Given</p>
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Passage</div>
+      <p class="rs-passage">{{ lesson.worked_example.ynng.passage_html|safe }}</p>
+    </div>
+    <p class="rs-guide-sub" style="margin-bottom:8px;"><strong>Statement:</strong> {{ lesson.worked_example.ynng.statement }}</p>
+    <div class="rs-guide-rows">
+      <div class="rs-guide-row">
+        <span class="rs-pill-t rs-pill-t--{{ lesson.worked_example.ynng.answer_class }}">{{ lesson.worked_example.ynng.answer }}</span>
+        {{ lesson.worked_example.ynng.explanation }}
+      </div>
+    </div>
+
+    {% elif lesson.example_layout == "tfng_only" %}
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Passage</div>
+      <p class="rs-passage">{{ lesson.worked_example.tfng.passage }}</p>
+    </div>
+    <div class="rs-guide-rows">
+      {% for row in lesson.worked_example.tfng.rows %}
+      <div class="rs-guide-row">
+        <span class="rs-pill-t rs-pill-t--{{ row.answer_class }}">{{ row.answer }}</span>
+        {{ row.text }}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif lesson.example_layout == "ynng_only" %}
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Passage</div>
+      <p class="rs-passage">{{ lesson.worked_example.ynng.passage_html|safe }}</p>
+    </div>
+    <p class="rs-guide-sub" style="margin-bottom:8px;"><strong>Statement:</strong> {{ lesson.worked_example.ynng.statement }}</p>
+    <div class="rs-guide-rows">
+      <div class="rs-guide-row">
+        <span class="rs-pill-t rs-pill-t--{{ lesson.worked_example.ynng.answer_class }}">{{ lesson.worked_example.ynng.answer }}</span>
+        {{ lesson.worked_example.ynng.explanation }}
+      </div>
+    </div>
+
+    {% elif lesson.example_layout == "headings" %}
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Paragraph</div>
+      <p class="rs-passage"><span class="rs-para-badge">Para 1</span> {{ lesson.worked_example.paragraph }}</p>
+    </div>
+    <ul class="rs-hdr-list">
+      {% for opt in lesson.worked_example.heading_options %}
+      <li class="{% if opt.correct %}rs-hdr-right{% else %}rs-hdr-wrong{% endif %}">
+        {% if opt.correct %}
+        {% bs_icon "check" "green" "sm" %} {{ opt.text }}<span class="rs-hdr-reason">{{ opt.reason }}</span>
+        {% else %}
+        <s>{{ opt.text }}</s><span class="rs-hdr-reason">{{ opt.reason }}</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+
+    {% elif lesson.example_layout == "gap" %}
+    <p class="rs-gap-sentence" style="margin-bottom:10px;">{{ lesson.worked_example.sentence }}</p>
+    <div class="rs-exbox">
+      <div class="rs-exbox-lbl">Passage excerpt</div>
+      <p class="rs-passage">{{ lesson.worked_example.passage_html|safe }}</p>
+      <p class="rs-ex-foot" style="margin-top:10px;margin-bottom:0;"><strong>Copy exactly — do not paraphrase.</strong> {{ lesson.worked_example.footnote }}</p>
+    </div>
+
+    {% elif lesson.example_layout == "summary" %}
+    <div class="rs-exbox" style="margin-bottom:10px;">
+      <div class="rs-exbox-lbl">Summary gap</div>
+      <p class="rs-passage">{{ lesson.worked_example.summary }}</p>
+      <p class="rs-ex-foot" style="margin-top:8px;">Word box: {{ lesson.worked_example.word_box|join:", " }}</p>
+    </div>
+    <p class="rs-ex-foot"><strong>Answer:</strong> <span class="rs-hl-green">{{ lesson.worked_example.correct_word }}</span> — {{ lesson.worked_example.explanation }}</p>
+
+    {% elif lesson.example_layout == "match_info" %}
+    <div class="rs-exbox" style="margin-bottom:10px;">
+      <div class="rs-exbox-lbl">Paragraphs</div>
+      {% for para in lesson.worked_example.paragraphs %}
+      <p class="rs-passage" style="margin-bottom:6px;"><span class="rs-para-badge">Para {{ para.label }}</span> {{ para.text }}</p>
+      {% endfor %}
+    </div>
+    <div class="rs-guide-rows">
+      {% for stmt in lesson.worked_example.statements %}
+      <div class="rs-guide-row">
+        <span class="rs-pill-t rs-pill-t--true">Para {{ stmt.answer }}</span>
+        {{ stmt.text }} — {{ stmt.explanation }}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif lesson.example_layout == "gap_summary" %}
+    <p class="rs-gap-sentence" style="margin-bottom:10px;">{{ lesson.worked_example.sentence.sentence }}</p>
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Sentence-completion excerpt</div>
+      <p class="rs-passage">{{ lesson.worked_example.sentence.passage_html|safe }}</p>
+      <p class="rs-ex-foot" style="margin-top:10px;margin-bottom:0;"><strong>Sentence completion:</strong> {{ lesson.worked_example.sentence.footnote }}</p>
+    </div>
+    <div class="rs-exbox" style="margin-bottom:10px;">
+      <div class="rs-exbox-lbl">Summary gap</div>
+      <p class="rs-passage">{{ lesson.worked_example.summary.summary }}</p>
+      <p class="rs-ex-foot" style="margin-top:8px;">Word box: {{ lesson.worked_example.summary.word_box|join:", " }}</p>
+    </div>
+    <p class="rs-ex-foot"><strong>Summary answer:</strong> <span class="rs-hl-green">{{ lesson.worked_example.summary.correct_word }}</span> — {{ lesson.worked_example.summary.explanation }}</p>
+
+    {% elif lesson.example_layout == "short_answer" %}
+    <div class="rs-exbox" style="margin-bottom:12px;">
+      <div class="rs-exbox-lbl">Question</div>
+      <p class="rs-passage"><strong>{{ lesson.worked_example.question }}</strong></p>
+      <div class="rs-exbox-lbl">Passage excerpt</div>
+      <p class="rs-passage">{{ lesson.worked_example.passage_html|safe }}</p>
+    </div>
+    <p class="rs-ex-foot"><strong>Answer:</strong> <span class="rs-hl-green">{{ lesson.worked_example.answer }}</span> — {{ lesson.worked_example.explanation }}</p>
+    {% endif %}
+  </div>
+</div>

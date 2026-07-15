@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons plan_tags %}
 {% block title %}Writing{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'css/plan_limits.css' %}?v=1">
 {% endblock %}
 {% block content %}
 <div class="wt1-page">
@@ -10,62 +11,221 @@
     <h1 class="wt1-title wt1-title--hero">Writing</h1>
     <p class="wt1-sub">Task 1 and Task 2 practice with AI feedback. Build accuracy first — band scores follow.</p>
 
-    <div class="wr-grid-2">
-      <article class="wr-practice-card wr-practice-card--t1">
-        <span class="wr-badge">TASK 1</span>
-        <h3>Academic Task 1</h3>
-        <p>Summarise visual information clearly: overview + key features + comparisons.</p>
-        <div class="wr-meta">20 minutes · at least 150 words · 6 question types</div>
-        <div class="wr-bottom">
-          <div><small>Your best</small><strong>{% if task1_best %}Band {{ task1_best|floatformat:1 }}{% else %}Not started{% endif %}</strong></div>
-          <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task1' %}">Start Task 1 →</a>
+    <div class="bs-hub-grid-2">
+      <article class="bs-task-card{% if is_free_plan and not writing_task1_can_submit %} bs-task-card--plan-locked{% endif %}">
+        <div class="bs-task-card__head">
+          <span class="bs-task-card__ico" aria-hidden="true">{% bs_icon "chart" "green" "md" %}</span>
+          {% if is_free_plan and not writing_task1_can_submit %}
+          <span class="bs-task-pill bs-task-pill--premium">Premium</span>
+          {% else %}
+          <span class="bs-task-pill bs-task-pill--t1">Task 1</span>
+          {% endif %}
+        </div>
+        <h2 class="bs-task-card__title">Academic Task 1</h2>
+        <p class="bs-task-card__desc">Summarise visual information clearly: overview + key features + comparisons.</p>
+        <div class="bs-task-chips">
+          <span class="bs-task-chip">20 min</span>
+          <span class="bs-task-chip">150+ words</span>
+          <span class="bs-task-chip">6 types</span>
+        </div>
+        <div class="bs-task-card__foot">
+          <div class="bs-task-best">
+            <span class="bs-task-best__lbl">Your best</span>
+            <span class="bs-task-best__val">{% if task1_best %}Band {{ task1_best|floatformat:1 }}{% else %}Not started{% endif %}</span>
+            {% if is_free_plan and writing_task1_can_submit %}
+            <span class="bs-task-best__note">{{ writing_free_attempt_note }}</span>
+            {% endif %}
+          </div>
+          {% if writing_task1_can_submit %}
+          <a class="bs-task-btn" href="{% url 'writing:task1' %}">Start →</a>
+          {% else %}
+          <span class="bs-task-btn bs-task-btn--locked" aria-disabled="true">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+            {{ writing_task_used_message }}
+          </span>
+          {% endif %}
         </div>
       </article>
-      <article class="wr-practice-card wr-practice-card--t2">
-        <span class="wr-badge wr-badge--t2">TASK 2</span>
-        <h3>Academic Task 2</h3>
-        <p>Write a focused essay with a clear position, developed paragraphs, and precise language.</p>
-        <div class="wr-meta">40 minutes · at least 250 words · 5 essay types</div>
-        <div class="wr-bottom">
-          <div><small>Your best</small><strong>{% if task2_best %}Band {{ task2_best|floatformat:1 }}{% else %}Not started{% endif %}</strong></div>
-          <a class="wt1-btn wt1-btn--dark" href="{% url 'writing:task2' %}">Start Task 2 →</a>
+
+      <article class="bs-task-card{% if is_free_plan and not writing_task2_can_submit %} bs-task-card--plan-locked{% endif %}">
+        <div class="bs-task-card__head">
+          <span class="bs-task-card__ico" aria-hidden="true">{% bs_icon "pen" "blue" "md" %}</span>
+          {% if is_free_plan and not writing_task2_can_submit %}
+          <span class="bs-task-pill bs-task-pill--premium">Premium</span>
+          {% else %}
+          <span class="bs-task-pill bs-task-pill--t2">Task 2</span>
+          {% endif %}
+        </div>
+        <h2 class="bs-task-card__title">Academic Task 2</h2>
+        <p class="bs-task-card__desc">Write a focused essay with a clear position, developed paragraphs, and precise language.</p>
+        <div class="bs-task-chips">
+          <span class="bs-task-chip">40 min</span>
+          <span class="bs-task-chip">250+ words</span>
+          <span class="bs-task-chip">5 types</span>
+        </div>
+        <div class="bs-task-card__foot">
+          <div class="bs-task-best">
+            <span class="bs-task-best__lbl">Your best</span>
+            <span class="bs-task-best__val">{% if task2_best %}Band {{ task2_best|floatformat:1 }}{% else %}Not started{% endif %}</span>
+            {% if is_free_plan and writing_task2_can_submit %}
+            <span class="bs-task-best__note">{{ writing_free_attempt_note }}</span>
+            {% endif %}
+          </div>
+          {% if writing_task2_can_submit %}
+          <a class="bs-task-btn" href="{% url 'writing:task2' %}">Start →</a>
+          {% else %}
+          <span class="bs-task-btn bs-task-btn--locked" aria-disabled="true">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+            {{ writing_task_used_message }}
+          </span>
+          {% endif %}
         </div>
       </article>
     </div>
 
-    <p class="wt1-label">Learn & improve</p>
-    <div class="wr-grid-2">
-      <a class="wr-learn-card" href="{% url 'writing:lessons_hub' %}">
-        <div class="wr-ic wr-ic--purple">📖</div>
-        <div class="wr-body"><h4>Writing Lessons</h4><p>How to write each question type</p></div>
-        <div class="wr-progress">{{ lesson_done }} / {{ lesson_total }} lessons done<div class="bar"><span style="width:{% widthratio lesson_done lesson_total 100 %}%"></span></div></div>
-      </a>
-      <a class="wr-learn-card" href="{% url 'writing:skills_hub' %}">
-        <div class="wr-ic wr-ic--green">✏️</div>
-        <div class="wr-body"><h4>Writing Skills</h4><p>Vocabulary · Grammar · Phrases · Practice</p></div>
-        <div class="wr-progress">{{ skill_done }} / {{ skill_total }} skills done<div class="bar"><span style="width:{% widthratio skill_done skill_total 100 %}%"></span></div></div>
-      </a>
-    </div>
-
-    <a class="wr-para-row" href="{% url 'writing:paraphrase' %}">
-      <span class="wr-ic wr-ic--dark">✍️</span>
-      <div><h4>Paraphrase practice</h4><p>Train lexical flexibility — the hidden engine behind high Writing and Reading scores.</p></div>
-      <span class="wt1-btn wt1-btn--green">Practice</span>
-    </a>
-
-    <p class="wt1-label">Recent history</p>
-    <div class="wr-history">
-      {% for r in recent_attempts %}
-      <div class="wr-h-row">
-        <div class="wr-band">{{ r.score|floatformat:1 }}</div>
-        <div class="wr-h-main">
-          <strong>{{ r.task }} · {{ r.title }} · {{ r.word_count }} words</strong>
-          <p>{{ r.when|date:"M j, Y · H:i" }}</p>
+    <p class="bs-hub-sec-lbl">Learn and improve</p>
+    <div class="bs-hub-stack">
+      {% if user|user_can:"writing_lessons" %}
+      <a class="bs-hub-card" href="{% url 'writing:lessons_hub' %}">
+        <div class="bs-hub-card__row">
+          <span class="bs-hub-card__ico" aria-hidden="true">{% bs_icon "book-open" "green" "md" %}</span>
+          <div class="bs-hub-card__body">
+            <h3 class="bs-hub-card__title">Writing lessons</h3>
+            <p class="bs-hub-card__sub">How to write each question type</p>
+          </div>
+          <span class="bs-hub-card__arrow" aria-hidden="true">→</span>
         </div>
-        <a href="{{ r.feedback_url }}">View feedback</a>
+        <div class="bs-hub-card__progress">
+          <div class="bs-hub-card__bar"><span style="width:{% if lesson_total %}{% widthratio lesson_done lesson_total 100 %}{% else %}0{% endif %}%"></span></div>
+          <span class="bs-hub-card__count">{{ lesson_done }} / {{ lesson_total }}</span>
+        </div>
+      </a>
+      {% else %}
+      <div class="bs-hub-card bs-hub-card--plan-locked" aria-disabled="true">
+        <div class="bs-hub-card__row">
+          <span class="bs-hub-card__ico" aria-hidden="true">{% bs_icon "book-open" "green" "md" %}</span>
+          <div class="bs-hub-card__body">
+            <div class="bs-hub-card__head">
+              <h3 class="bs-hub-card__title">Writing lessons</h3>
+              <span class="bs-hub-card__pill bs-hub-card__pill--premium">Premium</span>
+            </div>
+            <p class="bs-hub-card__sub">How to write each question type</p>
+          </div>
+          <span class="bs-hub-card__locked-cta">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+            {{ vocab_premium_lock_message }}
+          </span>
+        </div>
+        <div class="bs-hub-card__progress bs-hub-card__progress--muted">
+          <div class="bs-hub-card__bar"><span style="width:{% if lesson_total %}{% widthratio lesson_done lesson_total 100 %}{% else %}0{% endif %}%"></span></div>
+          <span class="bs-hub-card__count">{{ lesson_done }} / {{ lesson_total }}</span>
+        </div>
       </div>
+      {% endif %}
+
+      {% if user|user_can:"writing_grammar" %}
+      <a class="bs-hub-card" href="{% url 'writing:grammar_hub' %}">
+        <div class="bs-hub-card__row">
+          <span class="bs-hub-card__ico" aria-hidden="true">{% bs_icon "check" "green" "md" %}</span>
+          <div class="bs-hub-card__body">
+            <h3 class="bs-hub-card__title">Writing grammar</h3>
+            <p class="bs-hub-card__sub">The grammar rules that raise your band</p>
+          </div>
+          <span class="bs-btn-primary bs-hub-card__cta">Learn →</span>
+        </div>
+        <div class="bs-hub-card__progress">
+          <div class="bs-hub-card__bar"><span style="width:{% if grammar_total %}{% widthratio grammar_done grammar_total 100 %}{% else %}0{% endif %}%"></span></div>
+          <span class="bs-hub-card__count">{{ grammar_done }} / {{ grammar_total }}</span>
+        </div>
+      </a>
+      {% else %}
+      <div class="bs-hub-card bs-hub-card--plan-locked" aria-disabled="true">
+        <div class="bs-hub-card__row">
+          <span class="bs-hub-card__ico" aria-hidden="true">{% bs_icon "check" "green" "md" %}</span>
+          <div class="bs-hub-card__body">
+            <div class="bs-hub-card__head">
+              <h3 class="bs-hub-card__title">Writing grammar</h3>
+              <span class="bs-hub-card__pill bs-hub-card__pill--premium">Premium</span>
+            </div>
+            <p class="bs-hub-card__sub">The grammar rules that raise your band</p>
+          </div>
+          <span class="bs-hub-card__locked-cta">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+            {{ vocab_premium_lock_message }}
+          </span>
+        </div>
+        <div class="bs-hub-card__progress bs-hub-card__progress--muted">
+          <div class="bs-hub-card__bar"><span style="width:{% if grammar_total %}{% widthratio grammar_done grammar_total 100 %}{% else %}0{% endif %}%"></span></div>
+          <span class="bs-hub-card__count">{{ grammar_done }} / {{ grammar_total }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if user|user_can:"writing_paraphrase" %}
+      <a class="bs-hub-card" href="{% url 'writing:paraphrase' %}">
+        <div class="bs-hub-card__row">
+          <span class="bs-hub-card__ico" aria-hidden="true">{% bs_icon "refresh" "green" "md" %}</span>
+          <div class="bs-hub-card__body">
+            <h3 class="bs-hub-card__title">Paraphrase practice</h3>
+            <p class="bs-hub-card__sub">Train lexical flexibility — the engine behind high writing and reading scores.</p>
+          </div>
+          <span class="bs-btn-primary bs-hub-card__cta">Practice →</span>
+        </div>
+      </a>
+      {% else %}
+      <div class="bs-hub-card bs-hub-card--plan-locked" aria-disabled="true">
+        <div class="bs-hub-card__row">
+          <span class="bs-hub-card__ico" aria-hidden="true">{% bs_icon "refresh" "green" "md" %}</span>
+          <div class="bs-hub-card__body">
+            <div class="bs-hub-card__head">
+              <h3 class="bs-hub-card__title">Paraphrase practice</h3>
+              <span class="bs-hub-card__pill bs-hub-card__pill--premium">Premium</span>
+            </div>
+            <p class="bs-hub-card__sub">Train lexical flexibility — the engine behind high writing and reading scores.</p>
+          </div>
+          <span class="bs-hub-card__locked-cta">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+            {{ vocab_premium_lock_message }}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <p class="bs-hub-sec-lbl">Recent history</p>
+    <div class="bs-hub-history">
+      {% for r in recent_attempts %}
+      <a class="bs-hub-history__row" href="{{ r.feedback_url }}">
+        <div class="bs-hub-history__band">{{ r.score|floatformat:1 }}</div>
+        <div>
+          <span class="bs-hub-history__title">{{ r.task }} · {{ r.title }} · {{ r.word_count }} words</span>
+          <p class="bs-hub-history__meta">{{ r.when|date:"M j, Y · H:i" }}</p>
+        </div>
+        <span class="bs-hub-history__link">View feedback</span>
+      </a>
       {% empty %}
-      <div class="wr-h-row"><div class="wr-band">—</div><div class="wr-h-main"><strong>No attempts yet</strong><p>Complete a task to see your history.</p></div></div>
+      <div class="bs-hub-history__row">
+        <div class="bs-hub-history__band">—</div>
+        <div>
+          <span class="bs-hub-history__title">No attempts yet</span>
+          <p class="bs-hub-history__meta">Complete a task to see your history.</p>
+        </div>
+      </div>
       {% endfor %}
     </div>
   </section>

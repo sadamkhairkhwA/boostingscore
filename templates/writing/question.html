@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load writing_tags %}
+{% load writing_tags bs_icons %}
 
 {% block title %}Writing — {{ task_label }} · Level {{ level }}{% endblock %}
 
@@ -58,7 +58,7 @@
         In your saved drafts below:
         <mark class="hl-issue-major">red underline</mark> = fix first ·
         <mark class="hl-issue-minor">yellow</mark> = small tweak ·
-        <mark class="hl-good">green ★</mark> = keep doing this
+        <mark class="hl-good">green {% bs_icon "star" "amber" "sm" %}</mark> = keep doing this
       </p>
       <div class="writing-coach-panel">
         <p class="writing-coach-panel__eyebrow">Draft 1 · preserved</p>

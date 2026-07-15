@@ -1,0 +1,10 @@
+{% load static %}
+<div class="bs-avatar-menu" data-avatar-menu>
+  <button type="button" class="bs-avatar-menu__btn {{ avatar_class|default:'bs-avatar-menu__btn--nav' }}" aria-expanded="false" aria-haspopup="true" aria-label="Account menu" data-avatar-toggle>
+    <span class="bs-avatar-menu__circle" aria-hidden="true">{{ avatar_initial }}</span>
+  </button>
+  <div class="bs-avatar-menu__panel" hidden data-avatar-panel>
+    <a href="{% url 'profile_settings' %}" class="bs-avatar-menu__item">Profile</a>
+    <a href="{% url 'logout' %}" class="bs-avatar-menu__item">Log out</a>
+  </div>
+</div>

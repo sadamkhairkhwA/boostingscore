@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ question.title }} — Task 1{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
 {% endblock %}
 {% block content %}
 <div class="wt1-page">
@@ -18,7 +18,7 @@
     </div>
     {% if prev_attempt %}
     <details class="wt1-card">
-      <summary>📝 Your previous attempt</summary>
+      <summary><span aria-hidden="true">{% bs_icon "write" "purple" "sm" %}</span> Your previous attempt</summary>
       <p>Band {{ prev_attempt.band_score|default:"—" }} · {{ prev_attempt.word_count|default:0 }} words</p>
     </details>
     {% endif %}
@@ -45,13 +45,18 @@
         <div class="wt1-progress__bar"><span id="wt1-progress-fill"></span></div>
         <div class="wt1-progress__txt"><span id="wt1-progress-count">0</span> / 150</div>
       </div>
-      <p class="wt1-tip">💡 Write an overview first, then describe key features with specific data and comparisons.</p>
-      <button class="wt1-btn wt1-btn--green wt1-btn--full" type="submit">Get AI feedback →</button>
+      <p class="wt1-tip"><span aria-hidden="true">{% bs_icon "lightbulb" "amber" "sm" %}</span> Write an overview first, then describe key features with specific data and comparisons.</p>
+      <div data-ai-check-wrap>
+      <button class="wt1-btn wt1-btn--green wt1-btn--full" type="submit" data-ai-check-btn>Get AI feedback →</button>
+      </div>
+      <div id="wt1-ai-error" class="wt1-ai-error" hidden role="alert"></div>
+      <div id="wt1-ai-loading" class="wt1-ai-loading" hidden></div>
       <a class="wt1-back wt1-back--small" href="{% url 'writing:task1_question_list' type_slug %}">← Choose a different question</a>
     </form>
   </section>
 </div>
 {% endblock %}
 {% block extra_js %}
-<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+<script src="{% static 'writing/js/ai_feedback_loading.js' %}?v=1" defer></script>
+<script src="{% static 'writing/js/task1_practice.js' %}?v=5" defer></script>
 {% endblock %}

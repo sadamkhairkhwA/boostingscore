@@ -1,9 +1,10 @@
-{% load static %}<!DOCTYPE html>
+{% load static bs_icons %}<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log in — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/bs-icons.css' %}">
   <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=1">
   <link rel="stylesheet" href="{% static 'css/auth_showcase.css' %}?v=2">
 </head>
@@ -122,7 +123,7 @@
             <div class="bs-passage">
               <div class="bs-passage__head">
                 <span>Reading · Academic Passage 2</span>
-                <span class="bs-timer">⏱ <span class="bs-timer__t">12:48</span></span>
+                <span class="bs-timer">{% bs_icon "clock" "green" "sm" %} <span class="bs-timer__t">12:48</span></span>
               </div>
               <div class="bs-passage__body">
                 <span class="bs-line"></span>
@@ -157,10 +158,10 @@
         <div class="bs-slide bs-slide--lessons" data-slide="lessons">
           <div class="bs-slide__visual">
             <div class="bs-tilegrid">
-              <div class="bs-tile bs-tile--purple"><b>🏗️ Task 1 structure</b><span>4-paragraph formula</span><i class="bs-tile__bar"><i style="--w:80%"></i></i></div>
-              <div class="bs-tile bs-tile--green"><b>📈 Trend vocabulary</b><span>rose · surged · plateaued</span><i class="bs-tile__bar"><i style="--w:60%"></i></i></div>
-              <div class="bs-tile bs-tile--amber"><b>🎯 Topic sentences</b><span>Open every paragraph well</span><i class="bs-tile__bar"><i style="--w:45%"></i></i></div>
-              <div class="bs-tile bs-tile--blue"><b>🔗 Linkers &amp; cohesion</b><span>Furthermore · In contrast</span><i class="bs-tile__bar"><i style="--w:30%"></i></i></div>
+              <div class="bs-tile bs-tile--purple"><b>{% bs_icon "structure" "green" "sm" %} Task 1 structure</b><span>4-paragraph formula</span><i class="bs-tile__bar"><i style="--w:80%"></i></i></div>
+              <div class="bs-tile bs-tile--green"><b>{% bs_icon "trend-up" "green" "sm" %} Trend vocabulary</b><span>rose · surged · plateaued</span><i class="bs-tile__bar"><i style="--w:60%"></i></i></div>
+              <div class="bs-tile bs-tile--amber"><b>{% bs_icon "target" "green" "sm" %} Topic sentences</b><span>Open every paragraph well</span><i class="bs-tile__bar"><i style="--w:45%"></i></i></div>
+              <div class="bs-tile bs-tile--blue"><b>{% bs_icon "link" "blue" "sm" %} Linkers &amp; cohesion</b><span>Furthermore · In contrast</span><i class="bs-tile__bar"><i style="--w:30%"></i></i></div>
             </div>
           </div>
           <div class="bs-explain">
@@ -177,7 +178,7 @@
         <div class="bs-slide bs-slide--streak" data-slide="streak">
           <div class="bs-slide__visual">
             <div class="bs-streak">
-              <div class="bs-streak__flame">🔥</div>
+              <div class="bs-streak__flame" aria-hidden="true">{% bs_icon "flame" "amber" "xl" %}</div>
               <div class="bs-streak__num"><span class="bs-count" data-to="12">0</span><small>day streak</small></div>
               <div class="bs-streak__week">
                 <span></span><span></span><span></span><span></span><span class="on"></span><span class="on"></span><span class="on today"></span>
@@ -237,7 +238,7 @@
       <div class="auth-card__footer">
         No account? <a href="{% url 'signup' %}">Sign up free</a>
       </div>
-      <p class="auth-tiny">By continuing you agree to our Terms and Privacy.</p>
+      <p class="auth-tiny">By continuing you agree to our <a href="{% url 'terms' %}">Terms</a> and <a href="{% url 'privacy' %}">Privacy</a>.</p>
     </div>
   </section>
 </main>
@@ -245,11 +246,12 @@
 <div class="auth-footerline">
   © 2026 BoostingScore
   · <a href="/">Home</a>
-  · <a href="/#about">Privacy</a>
-  · <a href="/#about">Terms</a>
-  · <a href="/#about">Contact</a>
+  · <a href="{% url 'privacy' %}">Privacy</a>
+  · <a href="{% url 'terms' %}">Terms</a>
+  · <a href="{% url 'contact' %}">Contact</a>
 </div>
 
+<script src="{% static 'js/bs-icons.js' %}"></script>
 <script>
 (() => {
   const slides = Array.from(document.querySelectorAll('.bs-slide'));

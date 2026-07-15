@@ -1,0 +1,533 @@
+{% extends "speaking/_base.html" %}
+{% load static %}
+
+{% block title %}Speaking{% endblock %}
+
+{% block content %}
+<section class="ll-hero ll-hero--compact">
+  <a href="{% url 'home' %}" class="ll-back">← Dashboard</a>
+  <div class="ll-hero__ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="26" height="26"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+  </div>
+  <h1 class="ll-hero__title">Speaking</h1>
+  <p class="ll-hero__sub">IELTS-style questions, pronunciation notes, useful phrases, examiner strategies, and self-recording practice.</p>
+</section>
+
+<nav class="sp-tabs" aria-label="Speaking study sections">
+  {% for tab in section_tabs %}
+  <a href="?section={{ tab.id }}{% if tab.id == 'questions' and section == 'questions' %}&part={{ question_part }}{% endif %}"
+     class="sp-tabs__btn {% if section == tab.id %}is-active{% endif %}"
+     {% if section == tab.id %}aria-current="page"{% endif %}>
+    {{ tab.label }}
+  </a>
+  {% endfor %}
+</nav>
+
+{# ---------------- Common questions ---------------- #}
+{% if section == "questions" %}
+<nav class="sp-parts" aria-label="IELTS Speaking parts">
+  {% for p in question_parts %}
+  <a href="?section=questions&part={{ p.id }}"
+     class="sp-parts__btn {% if question_part == p.id %}is-active{% endif %}"
+     {% if question_part == p.id %}aria-current="true"{% endif %}>
+    <span class="sp-parts__title">{{ p.title }}</span>
+    <span class="sp-parts__sep" aria-hidden="true">—</span>
+    <span class="sp-parts__label">{{ p.label }}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+{% if question_part == 1 %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Part 1 — familiar topics</h2>
+    <p class="sp-panel__sub">Short personal questions. Try answering aloud first, then tap Show example answer to compare with a Band 7+ model.</p>
+  </header>
+  <div class="sp-topic-grid">
+    {% for topic in part1_topics %}
+    <article class="sp-topic-card">
+      <h3 class="sp-topic-card__name">{{ topic.topic }}</h3>
+      <ol class="sp-qlist">
+        {% for q in topic.questions %}
+        <li class="sp-qitem">
+          <p class="sp-qitem__text">{{ q.text }}</p>
+          <details class="sp-example">
+            <summary class="sp-example__toggle">
+              <svg class="sp-example__chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              Show example answer
+            </summary>
+            <div class="sp-example__box">
+              <span class="sp-example__label">Example answer</span>
+              <p class="sp-example__text">{{ q.example }}</p>
+            </div>
+          </details>
+        </li>
+        {% endfor %}
+      </ol>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if question_part == 2 %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Part 2 — cue cards (long turn)</h2>
+    <p class="sp-panel__sub">One minute to prepare, then speak for one to two minutes. Reveal the model monologue when you are ready to check.</p>
+  </header>
+  <div class="sp-cue-grid">
+    {% for card in part2_cue_cards %}
+    <article class="sp-cue-card">
+      <span class="sp-cue-card__tag">{{ card.topic }}</span>
+      <h3 class="sp-cue-card__title">{{ card.title }}</h3>
+      <p class="sp-cue-card__label">You should say:</p>
+      <ul class="sp-cue-card__bullets">
+        {% for b in card.bullets %}
+        <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
+      <details class="sp-example sp-example--cue">
+        <summary class="sp-example__toggle">
+          <svg class="sp-example__chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+          Show example answer
+        </summary>
+        <div class="sp-example__box">
+          <span class="sp-example__label">Example answer</span>
+          <p class="sp-example__text">{{ card.example }}</p>
+        </div>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if question_part == 3 %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Part 3 — discussion</h2>
+    <p class="sp-panel__sub">Developed discussion answers — try your own first, then reveal each Band 7+ model.</p>
+  </header>
+  <div class="sp-topic-grid">
+    {% for theme in part3_themes %}
+    <article class="sp-topic-card">
+      <h3 class="sp-topic-card__name">{{ theme.theme }}</h3>
+      <ol class="sp-qlist">
+        {% for q in theme.questions %}
+        <li class="sp-qitem">
+          <p class="sp-qitem__text">{{ q.text }}</p>
+          <details class="sp-example">
+            <summary class="sp-example__toggle">
+              <svg class="sp-example__chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+              Show example answer
+            </summary>
+            <div class="sp-example__box">
+              <span class="sp-example__label">Example answer</span>
+              <p class="sp-example__text">{{ q.example }}</p>
+            </div>
+          </details>
+        </li>
+        {% endfor %}
+      </ol>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endif %}
+
+{# ---------------- Pronunciation ---------------- #}
+{% if section == "pronunciation" %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Commonly mispronounced words</h2>
+    <p class="sp-panel__sub">IELTS examiners assess clarity, not accent. Tap the speaker icon to hear the correct pronunciation, then compare with the phonetic guide.</p>
+  </header>
+  <div class="sp-pron-table-wrap">
+    <table class="sp-pron-table">
+      <thead>
+        <tr>
+          <th scope="col">Word</th>
+          <th scope="col">Correct pronunciation</th>
+          <th scope="col">Common mistake</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in mispronounced_words %}
+        <tr>
+          <td class="sp-pron-table__word">
+            <span class="sp-pron-table__word-row">
+              <span>{{ item.word }}</span>
+              <button type="button" class="sp-pron-play" data-audio="{% static item.audio %}" aria-label="Play pronunciation of {{ item.word }}">
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              </button>
+            </span>
+          </td>
+          <td class="sp-pron-table__phonetic">{{ item.phonetic }}</td>
+          <td>{{ item.mistake }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Silent letters</h2>
+    <p class="sp-panel__sub">English spelling often hides sounds. The silent letter is shown in each example.</p>
+  </header>
+  <div class="sp-pron-grid">
+    {% for item in silent_letters %}
+    <article class="sp-pron-card">
+      <div class="sp-pron-card__head">
+        <h3 class="sp-pron-card__word">{{ item.word }}</h3>
+        <span class="sp-pron-card__badge">silent <strong>{{ item.silent }}</strong></span>
+      </div>
+      <p class="sp-pron-card__phonetic">{{ item.phonetic }}</p>
+      <p class="sp-pron-card__note">{{ item.note }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Tricky word endings</h2>
+    <p class="sp-panel__sub">The spelling -ed and -s does not tell you the sound — listen to the stem's final consonant.</p>
+  </header>
+  <div class="sp-ending-grid">
+    {% for block in tricky_word_endings %}
+    <article class="sp-ending-card">
+      <h3 class="sp-ending-card__title">{{ block.title }}</h3>
+      <p class="sp-ending-card__intro">{{ block.intro }}</p>
+      {% for rule in block.rules %}
+      <div class="sp-ending-rule">
+        <div class="sp-ending-rule__sound">{{ rule.sound }}</div>
+        <p class="sp-ending-rule__when">{{ rule.when }}</p>
+        <p class="sp-ending-rule__examples">
+          {% for ex in rule.examples %}<span>{{ ex }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
+        </p>
+      </div>
+      {% endfor %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Minimal pairs</h2>
+    <p class="sp-panel__sub">Sounds that differ by only one feature — practising these sharpens clarity under exam pressure.</p>
+  </header>
+  <div class="sp-pairs-grid">
+    {% for group in minimal_pairs %}
+    <article class="sp-pairs-card">
+      <h3 class="sp-pairs-card__title">{{ group.title }}</h3>
+      <ul class="sp-pairs-list">
+        {% for pair in group.pairs %}
+        <li>
+          <span class="sp-pairs-list__words"><strong>{{ pair.a }}</strong> / <strong>{{ pair.b }}</strong></span>
+          <span class="sp-pairs-list__note">{{ pair.note }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---------------- Useful phrases ---------------- #}
+{% if section == "phrases" %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Useful speaking phrases</h2>
+    <p class="sp-panel__sub">Functional language grouped by purpose. Adapt the phrases to your own ideas — do not memorise long blocks word for word.</p>
+  </header>
+  <div class="sp-phrase-grid">
+    {% for group in phrase_groups %}
+    <article class="sp-phrase-card">
+      <h3 class="sp-phrase-card__name">{{ group.group }}</h3>
+      <ul class="sp-phrase-list">
+        {% for phrase, note in group.phrases %}
+        <li>
+          <span class="sp-phrase-list__phrase">{{ phrase }}</span>
+          <span class="sp-phrase-list__note">{{ note }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---------------- Tips ---------------- #}
+{% if section == "tips" %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">How to do it</h2>
+    <p class="sp-panel__sub">Strategy for each part of the test, plus fluency and pronunciation advice.</p>
+  </header>
+  <ul class="sp-overview">
+    {% for line in speaking_tips.overview %}
+    <li>{{ line }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Strategy by part</h2>
+  </header>
+  <div class="sp-tips-grid">
+    {% for part in speaking_tips.parts %}
+    <article class="sp-tip-card">
+      {% if part.video %}
+      <div class="sp-tip-video">
+        <h4 class="sp-tip-video__heading">{{ part.video_heading }}</h4>
+        <div class="sp-tip-video__wrap">
+          <video class="sp-tip-video__el" controls playsinline preload="metadata" src="{% static part.video %}"></video>
+        </div>
+      </div>
+      {% endif %}
+      <div class="sp-tip-card__head">
+        <h3 class="sp-tip-card__part">{{ part.part }}</h3>
+        <span class="sp-tip-card__dur">{{ part.duration }}</span>
+      </div>
+      <p class="sp-tip-card__format">{{ part.format }}</p>
+      <div class="sp-tip-block">
+        <h4 class="sp-tip-block__label">Strategy</h4>
+        <ul>
+          {% for tip in part.strategy %}
+          <li>{{ tip }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="sp-tip-block">
+        <h4 class="sp-tip-block__label">Answer structure</h4>
+        <p class="sp-tip-block__text">{{ part.structure }}</p>
+      </div>
+      <div class="sp-tip-block sp-tip-block--warn">
+        <h4 class="sp-tip-block__label">Common mistakes</h4>
+        <ul>
+          {% for m in part.mistakes %}
+          <li>{{ m }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-panel sp-panel--split">
+  <article class="sp-advice-card">
+    <h3 class="sp-advice-card__title">Fluency</h3>
+    <ul>
+      {% for tip in speaking_tips.fluency %}
+      <li>{{ tip }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+  <article class="sp-advice-card">
+    <h3 class="sp-advice-card__title">Pronunciation</h3>
+    <ul>
+      {% for tip in speaking_tips.pronunciation %}
+      <li>{{ tip }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Sounding natural — fillers &amp; hesitation</h2>
+    <p class="sp-panel__sub">Phrases that buy thinking time. Use them occasionally — not in every sentence.</p>
+  </header>
+  <p class="sp-filler-warn">{{ filler_overuse_warning }}</p>
+  <div class="sp-phrase-grid">
+    {% for group in filler_phrase_groups %}
+    <article class="sp-phrase-card">
+      <h3 class="sp-phrase-card__group">{{ group.group }}</h3>
+      <p class="sp-phrase-card__note">{{ group.note }}</p>
+      <ul class="sp-phrase-card__list">
+        {% for phrase, note in group.phrases %}
+        <li><strong>{{ phrase }}</strong> — {{ note }}</li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---------------- Practice recording ---------------- #}
+{% if section == "record" %}
+<section class="sp-panel">
+  <header class="sp-panel__hd">
+    <h2 class="sp-panel__title">Practice recording</h2>
+    <p class="sp-panel__sub">Pick a question, record your answer, and play it back — no AI scoring, just self-review.</p>
+  </header>
+  <div class="sp-record-layout">
+    <div class="sp-record-picker">
+      <label class="sp-record-lbl" for="sp-record-select">Question</label>
+      <select id="sp-record-select" class="sp-record-select">
+        {% for q in recording_questions %}
+        <option value="{{ forloop.counter0 }}" data-part="{{ q.part }}">Part {{ q.part }} — {{ q.label|truncatechars:50 }}</option>
+        {% endfor %}
+      </select>
+      <div id="sp-record-prompt" class="sp-record-prompt"></div>
+      <ul id="sp-record-bullets" class="sp-record-bullets" hidden></ul>
+    </div>
+    <div class="sp-record-controls">
+      <button type="button" class="sp-record-btn sp-record-btn--rec" id="sp-record-start">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor"/></svg>
+        Record
+      </button>
+      <button type="button" class="sp-record-btn" id="sp-record-stop" disabled>Stop</button>
+      <button type="button" class="sp-record-btn" id="sp-record-play" disabled>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7L8 5z"/></svg>
+        Play back
+      </button>
+      <p class="sp-record-status" id="sp-record-status">Microphone access required to record.</p>
+      <audio id="sp-record-playback" controls hidden></audio>
+    </div>
+  </div>
+</section>
+{{ recording_questions_json|json_script:"sp-record-data" }}
+<script>
+(function () {
+  var dataEl = document.getElementById("sp-record-data");
+  if (!dataEl) return;
+  var questions = JSON.parse(dataEl.textContent);
+  var sel = document.getElementById("sp-record-select");
+  var promptEl = document.getElementById("sp-record-prompt");
+  var bulletsEl = document.getElementById("sp-record-bullets");
+  var statusEl = document.getElementById("sp-record-status");
+  var playback = document.getElementById("sp-record-playback");
+  var mediaRecorder = null;
+  var chunks = [];
+  var blobUrl = null;
+
+  function showQuestion() {
+    var q = questions[parseInt(sel.value, 10)];
+    if (!q) return;
+    promptEl.textContent = q.prompt;
+    bulletsEl.innerHTML = "";
+    if (q.bullets && q.bullets.length) {
+      bulletsEl.hidden = false;
+      q.bullets.forEach(function (b) {
+        var li = document.createElement("li");
+        li.textContent = b;
+        bulletsEl.appendChild(li);
+      });
+    } else {
+      bulletsEl.hidden = true;
+    }
+  }
+  sel.addEventListener("change", showQuestion);
+  showQuestion();
+
+  document.getElementById("sp-record-start").addEventListener("click", function () {
+    if (window.__bsSpeakingNoticePending) {
+      var notice = document.getElementById("bs-speak-notice");
+      if (notice) notice.hidden = false;
+      return;
+    }
+    if (!navigator.mediaDevices) {
+      statusEl.textContent = "Recording not supported in this browser.";
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+      mediaRecorder.onstop = function () {
+        var blob = new Blob(chunks, { type: "audio/webm" });
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        blobUrl = URL.createObjectURL(blob);
+        playback.src = blobUrl;
+        playback.hidden = false;
+        document.getElementById("sp-record-play").disabled = false;
+        statusEl.textContent = "Recording saved — play it back or record again.";
+        stream.getTracks().forEach(function (t) { t.stop(); });
+      };
+      mediaRecorder.start();
+      statusEl.textContent = "Recording…";
+      document.getElementById("sp-record-stop").disabled = false;
+      document.getElementById("sp-record-play").disabled = true;
+    }).catch(function () {
+      statusEl.textContent = "Could not access microphone.";
+    });
+  });
+  document.getElementById("sp-record-stop").addEventListener("click", function () {
+    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+    this.disabled = true;
+  });
+  document.getElementById("sp-record-play").addEventListener("click", function () {
+    if (playback.src) playback.play();
+  });
+})();
+</script>
+{% include "includes/speaking_ai_notice.html" %}
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if section == "tips" %}
+<script>
+(function () {
+  document.querySelectorAll(".sp-tip-video__el").forEach(function (video) {
+    var frameReady = false;
+
+    function setPosterFromFrame() {
+      if (frameReady || video.readyState < 2 || !video.videoWidth) return;
+      frameReady = true;
+      try {
+        var canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+        video.setAttribute("poster", canvas.toDataURL("image/jpeg", 0.85));
+      } catch (e) { /* ignore if frame cannot be captured */ }
+      video.pause();
+    }
+
+    video.addEventListener("loadedmetadata", function () {
+      if (!frameReady) video.currentTime = 0.001;
+    });
+
+    video.addEventListener("seeked", function () {
+      if (!frameReady && video.currentTime > 0) setPosterFromFrame();
+    });
+
+    video.addEventListener("loadeddata", function () {
+      if (!frameReady && video.currentTime < 0.01) video.currentTime = 0.001;
+    });
+  });
+})();
+</script>
+{% elif section == "pronunciation" %}
+<script>
+(function () {
+  var current = null;
+  document.querySelectorAll(".sp-pron-play").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var url = btn.getAttribute("data-audio");
+      if (!url) return;
+      if (current) {
+        current.pause();
+        current.currentTime = 0;
+      }
+      current = new Audio(url);
+      current.play().catch(function () {});
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

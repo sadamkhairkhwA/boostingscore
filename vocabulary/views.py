@@ -5,7 +5,7 @@ import logging
 import os
 import random
 import re
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -19,6 +19,8 @@ from django.views.decorators.http import require_POST
 from openai import AuthenticationError, OpenAI
 
 from boostingscore.openai_key import resolve_openai_api_key
+
+from vocabulary.icon_registry import LEVEL_ICONS, TOPIC_ICONS, resolve_icon
 
 from .ielts_topic_ai import sync_tier_words_to_db
 from .topic_words import TOPIC_WORDS
@@ -41,6 +43,23 @@ from .type_it_enrichment import (
 from .streak_utils import bump_streak_for_user
 
 logger = logging.getLogger(__name__)
+
+REVIEW_INTERVAL_CHOICES = [
+    (12, "12 hours"),
+    (24, "1 day"),
+    (48, "2 days"),
+    (72, "3 days"),
+    (120, "5 days"),
+    (168, "7 days"),
+    (336, "14 days"),
+]
+REVIEW_INTERVAL_SET = {hours for hours, _label in REVIEW_INTERVAL_CHOICES}
+HARD_WORD_PRESET_CHOICES = [
+    ("tomorrow", "Tomorrow"),
+    ("3d", "3 days"),
+    ("7d", "Next week"),
+    ("custom", "Custom date"),
+]
 
 
 def _streak_ctx(request):
@@ -139,11 +158,86 @@ def _default_session_limit_str(word_count: int) -> str:
     return ""
 
 
-def _next_review_delta(profile, hard: bool):
-    from datetime import timedelta
+def _coerce_review_hours(raw, fallback: int) -> int:
+    try:
+        hours = int(raw)
+    except (TypeError, ValueError):
+        return int(fallback)
+    return hours if hours in REVIEW_INTERVAL_SET else int(fallback)
 
-    days = profile.review_hard_days if hard else profile.review_easy_days
-    return timezone.now() + timedelta(days=days)
+
+def _review_interval_hours(profile, rating: str) -> int:
+    if rating == "hard":
+        return _coerce_review_hours(getattr(profile, "review_hard_hours", 24), 24)
+    if rating == "good":
+        return _coerce_review_hours(getattr(profile, "review_good_hours", 72), 72)
+    if rating == "easy":
+        return _coerce_review_hours(getattr(profile, "review_easy_hours", 168), 168)
+    raise ValueError("bad rating")
+
+
+def _review_interval_label(hours: int, *, button=False) -> str:
+    hours = int(hours or 0)
+    if button and hours == 24:
+        return "tomorrow"
+    for option_hours, label in REVIEW_INTERVAL_CHOICES:
+        if option_hours == hours:
+            return label
+    if hours <= 0:
+        return "today"
+    if hours < 24:
+        return f"{hours} hours"
+    days = hours // 24
+    return f"{days} day" if days == 1 else f"{days} days"
+
+
+def _profile_review_settings(profile):
+    return {
+        "hard": _review_interval_hours(profile, "hard"),
+        "good": _review_interval_hours(profile, "good"),
+        "easy": _review_interval_hours(profile, "easy"),
+    }
+
+
+def _next_review_delta(profile, rating: str):
+    hours = _review_interval_hours(profile, rating)
+    return timezone.now() + timedelta(hours=hours)
+
+
+def _friendly_next_review(dt) -> str:
+    if not dt:
+        return "Not scheduled"
+    local_dt = timezone.localtime(dt)
+    today = timezone.localdate()
+    delta_days = (local_dt.date() - today).days
+    if delta_days <= 0:
+        return f"Today · {local_dt.strftime('%-I:%M %p')}"
+    if delta_days == 1:
+        return f"Tomorrow · {local_dt.strftime('%-I:%M %p')}"
+    if delta_days == 7:
+        return f"Next week · {local_dt.strftime('%-I:%M %p')}"
+    if delta_days < 7:
+        return f"In {delta_days} days · {local_dt.strftime('%-I:%M %p')}"
+    return local_dt.strftime("%d %b · %-I:%M %p")
+
+
+def _reschedule_datetime_from_form(preset: str, custom_date_raw: str):
+    now = timezone.localtime()
+    if preset == "tomorrow":
+        return timezone.now() + timedelta(days=1)
+    if preset == "3d":
+        return timezone.now() + timedelta(days=3)
+    if preset == "7d":
+        return timezone.now() + timedelta(days=7)
+    if preset == "custom" and custom_date_raw:
+        try:
+            picked = datetime.strptime(custom_date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+        naive_dt = datetime.combine(picked, time(hour=max(now.hour, 8), minute=0))
+        aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+        return aware_dt
+    return None
 
 
 def _ensure_progress(user, word):
@@ -151,6 +245,15 @@ def _ensure_progress(user, word):
         student=user,
         word=word,
         defaults={"next_review": timezone.now()},
+    )
+    return prog
+
+
+def _ensure_custom_progress(user, custom_card):
+    prog, _ = VocabularyProgress.objects.get_or_create(
+        student=user,
+        custom_card=custom_card,
+        defaults={"next_review": timezone.now(), "status": "learning"},
     )
     return prog
 
@@ -173,7 +276,7 @@ def _mastery_for_word_id(user, word_id):
         return 1
 
 
-def _word_card_from_model(user, w: Word) -> dict:
+def _word_card_from_model(user, w: Word, *, mastery_level=None) -> dict:
     return {
         "id": w.id,
         "word": w.word,
@@ -188,7 +291,26 @@ def _word_card_from_model(user, w: Word) -> dict:
         "level": w.level,
         "level_label": w.get_level_display(),
         "topic_label": w.get_topic_display(),
-        "mastery_level": _mastery_for_word_id(user, w.id),
+        "mastery_level": mastery_level if mastery_level is not None else _mastery_for_word_id(user, w.id),
+    }
+
+
+def _custom_card_from_model(custom_card: CustomCard, *, mastery_level=None) -> dict:
+    return {
+        "id": None,
+        "word": custom_card.word,
+        "definition": custom_card.definition,
+        "example_sentence": custom_card.example_sentence,
+        "topic": "custom",
+        "topic_key": "custom",
+        "is_custom": True,
+        "card_id": custom_card.id,
+        "part_of_speech": (custom_card.part_of_speech or "phrase").strip() or "phrase",
+        "phonetic": "",
+        "level": custom_card.level,
+        "level_label": "Custom",
+        "topic_label": custom_card.deck.name if getattr(custom_card, "deck_id", None) else "Custom deck",
+        "mastery_level": mastery_level if mastery_level is not None else (5 if custom_card.is_mastered else 1),
     }
 
 
@@ -214,10 +336,11 @@ def _flashcard_query_url(hidden: dict, offset: int) -> str:
 
 
 def _apply_flashcard_rating(user, profile, word_id, card_id, rating: str) -> None:
-    """Apply one Easy/Hard rating (Word progress or custom card streak)."""
-    if rating not in ("easy", "hard"):
+    """Apply one Hard/Good/Easy rating to a topic word or custom card."""
+    if rating not in ("easy", "good", "hard"):
         raise ValueError("bad rating")
     hard = rating == "hard"
+    good = rating == "good"
     wid = (str(word_id).strip() if word_id is not None else "") or ""
     cid = (str(card_id).strip() if card_id is not None else "") or ""
     if wid:
@@ -225,17 +348,68 @@ def _apply_flashcard_rating(user, profile, word_id, card_id, rating: str) -> Non
         prog = _ensure_progress(user, word)
         if hard:
             prog.times_wrong += 1
+            prog.times_marked_hard += 1
             prog.mastery_level = max(1, prog.mastery_level - 1)
+            prog.is_hard_word = True
+            prog.hard_easy_streak = 0
         else:
             prog.times_correct += 1
-            prog.mastery_level = min(5, prog.mastery_level + 1)
-            prog.easy_chip_master_count = min(3, (prog.easy_chip_master_count or 0) + 1)
+            if good:
+                prog.mastery_level = min(5, prog.mastery_level + 1)
+                if prog.is_hard_word:
+                    prog.hard_easy_streak = 0
+                else:
+                    prog.hard_easy_streak = 0
+            else:
+                prog.mastery_level = min(5, prog.mastery_level + 1)
+                prog.easy_chip_master_count = min(3, (prog.easy_chip_master_count or 0) + 1)
+                if prog.is_hard_word:
+                    prog.hard_easy_streak = min(2, (prog.hard_easy_streak or 0) + 1)
+                    if prog.hard_easy_streak >= 2:
+                        prog.is_hard_word = False
+                        prog.hard_easy_streak = 0
+                else:
+                    prog.hard_easy_streak = 0
         prog.last_reviewed = timezone.now()
-        prog.next_review = _next_review_delta(profile, hard=hard)
+        prog.next_review = _next_review_delta(profile, rating)
         prog.status = "reviewing" if prog.mastery_level < 5 else "mastered"
         prog.save()
         bump_streak_for_user(user)
     elif cid:
+        custom_card = get_object_or_404(CustomCard, pk=cid, student=user)
+        prog = _ensure_custom_progress(user, custom_card)
+        if hard:
+            prog.times_wrong += 1
+            prog.times_marked_hard += 1
+            prog.mastery_level = max(1, prog.mastery_level - 1)
+            prog.is_hard_word = True
+            prog.hard_easy_streak = 0
+        else:
+            prog.times_correct += 1
+            if good:
+                prog.mastery_level = min(5, prog.mastery_level + 1)
+                if prog.is_hard_word:
+                    prog.hard_easy_streak = 0
+                else:
+                    prog.hard_easy_streak = 0
+            else:
+                prog.mastery_level = min(5, prog.mastery_level + 1)
+                prog.easy_chip_master_count = min(3, (prog.easy_chip_master_count or 0) + 1)
+                if prog.is_hard_word:
+                    prog.hard_easy_streak = min(2, (prog.hard_easy_streak or 0) + 1)
+                    if prog.hard_easy_streak >= 2:
+                        prog.is_hard_word = False
+                        prog.hard_easy_streak = 0
+                else:
+                    prog.hard_easy_streak = 0
+        prog.last_reviewed = timezone.now()
+        prog.next_review = _next_review_delta(profile, rating)
+        prog.status = "reviewing" if prog.mastery_level < 5 else "mastered"
+        prog.save()
+
+        custom_card.is_mastered = prog.mastery_level >= 5
+        custom_card.next_review_at = prog.next_review
+        custom_card.save(update_fields=["is_mastered", "next_review_at"])
         bump_streak_for_user(user)
     else:
         raise ValueError("no target")
@@ -319,6 +493,122 @@ def deck_create(request):
             "user_vocab_level": int(profile.level),
             "initial_topic": "environment",
             "max_cards": 30,
+            "editing_deck_id": None,
+            "initial_deck_name": "",
+            "initial_deck_description": "",
+            "initial_cards_json": "[]",
+            "page_heading": "Create a deck",
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def deck_edit(request, deck_id):
+    """Edit an existing custom deck — add or change cards."""
+    user = request.user
+    deck = get_object_or_404(CustomDeck, pk=deck_id, student=user)
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    profile = user.profile
+    topic_choices = list(Word.TOPIC_CHOICES) + [("other", "Personal vocabulary")]
+    cards = list(CustomCard.objects.filter(deck=deck).order_by("id"))
+    initial_cards = [
+        {
+            "word": c.word,
+            "definition": c.definition,
+            "example_sentence": c.example_sentence or "",
+        }
+        for c in cards
+    ]
+    return render(
+        request,
+        "vocabulary/deck_create.html",
+        {
+            "streak": streak,
+            "topic_choices": topic_choices,
+            "user_vocab_level": int(profile.level),
+            "initial_topic": "other",
+            "max_cards": 30,
+            "editing_deck_id": deck.pk,
+            "initial_deck_name": deck.name,
+            "initial_deck_description": deck.description or "",
+            "initial_cards_json": json.dumps(initial_cards),
+            "page_heading": f"Edit deck — {deck.name}",
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+@require_POST
+def deck_delete(request, deck_id):
+    deck = get_object_or_404(CustomDeck, pk=deck_id, student=request.user)
+    deck.delete()
+    return redirect("vocabulary:index")
+
+
+@login_required
+def custom_deck_hub(request, deck_id):
+    """Study hub for a custom flashcard deck."""
+    user = request.user
+    deck = get_object_or_404(CustomDeck, pk=deck_id, student=user)
+    cards = list(CustomCard.objects.filter(deck=deck).order_by("id"))
+    card_count = len(cards)
+    progress_map = {
+        p.custom_card_id: p
+        for p in VocabularyProgress.objects.filter(student=user, custom_card__deck=deck)
+    }
+    card_rows = []
+    mastered_count = 0
+    for card in cards:
+        prog = progress_map.get(card.id)
+        mastery_level = prog.mastery_level if prog else (5 if card.is_mastered else 1)
+        if mastery_level >= 5 or card.is_mastered:
+            status_slug = "mastered"
+            status_label = "Mastered"
+            mastered_count += 1
+        elif prog and (
+            prog.last_reviewed
+            or prog.times_correct
+            or prog.times_wrong
+            or prog.sessions_seen
+        ):
+            status_slug = "learning"
+            status_label = "Learning"
+        else:
+            status_slug = "new"
+            status_label = "Not started"
+        card_rows.append(
+            {
+                "id": card.id,
+                "word": card.word,
+                "definition": card.definition,
+                "status_slug": status_slug,
+                "status_label": status_label,
+                "mastery_level": mastery_level,
+            }
+        )
+    streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    quick_quiz_url = ""
+    if card_count >= 3:
+        quick_quiz_url = "{}?{}".format(
+            reverse("vocabulary:quiz_session"),
+            urlencode({"deck_id": deck.pk, "quiz_types": "mc", "quiz_limit": "all"}),
+        )
+    return render(
+        request,
+        "vocabulary/custom_deck_hub.html",
+        {
+            "streak": streak,
+            "deck": deck,
+            "card_count": card_count,
+            "mastered_count": mastered_count,
+            "cards": card_rows,
+            "session_limit_options": _session_limit_option_values(card_count),
+            "default_session_limit": _default_session_limit_str(card_count),
+            "edit_deck_url": reverse("vocabulary:deck_edit", kwargs={"deck_id": deck.pk}),
+            "add_card_url": reverse("vocabulary:deck_edit", kwargs={"deck_id": deck.pk}),
+            "quick_quiz_url": quick_quiz_url,
             **_streak_ctx(request),
         },
     )
@@ -340,11 +630,19 @@ def deck_create_save(request):
     if not isinstance(cards_in, list) or len(cards_in) == 0:
         return JsonResponse({"ok": False, "error": "Add at least one card."}, status=400)
 
-    deck = CustomDeck.objects.create(
-        student=request.user,
-        name=name[:100],
-        description=description[:4000] if description else "",
-    )
+    deck_id = data.get("deck_id")
+    if deck_id:
+        deck = get_object_or_404(CustomDeck, pk=int(deck_id), student=request.user)
+        deck.name = name[:100]
+        deck.description = description[:4000] if description else ""
+        deck.save(update_fields=["name", "description"])
+        CustomCard.objects.filter(deck=deck).delete()
+    else:
+        deck = CustomDeck.objects.create(
+            student=request.user,
+            name=name[:100],
+            description=description[:4000] if description else "",
+        )
     n = 0
     for c in cards_in:
         if not isinstance(c, dict):
@@ -363,11 +661,16 @@ def deck_create_save(request):
         )
         n += 1
     if n == 0:
-        deck.delete()
+        if not deck_id:
+            deck.delete()
         return JsonResponse({"ok": False, "error": "No valid cards to save."}, status=400)
 
-    q = urlencode({"deck_id": deck.pk})
-    redirect_url = f"{reverse('vocabulary:flashcard_deck')}?{q}"
+    practice = bool(data.get("practice"))
+    if practice:
+        q = urlencode({"deck_id": deck.pk})
+        redirect_url = f"{reverse('vocabulary:flashcard_deck')}?{q}"
+    else:
+        redirect_url = reverse("vocabulary:custom_deck", kwargs={"deck_id": deck.pk})
     return JsonResponse({"ok": True, "deck_id": deck.pk, "redirect_url": redirect_url})
 
 
@@ -522,24 +825,140 @@ def vocabulary_home(request):
     )
 
 
-_FLASHCARD_TOPIC_ICONS = {
-    "environment": "🌿",
-    "health": "🩺",
-    "technology": "💻",
-    "education": "🎓",
-    "society": "🏛️",
-    "travel": "✈️",
-    "science": "🔬",
-    "business": "💼",
-}
+_FLASHCARD_TOPIC_ICONS = {k: TOPIC_ICONS.get(k, "book") for k, _ in Word.TOPIC_CHOICES}
+_FLASHCARD_TOPIC_ICONS["other"] = "star"
+
+
+def _studio_redirect(*, saved: str = "", anchor: str = ""):
+    url = reverse("vocabulary:index")
+    if saved:
+        url = f"{url}?{urlencode({'saved': saved})}"
+    if anchor:
+        url = f"{url}#{anchor}"
+    return redirect(url)
+
+
+def _studio_review_setting_rows(profile):
+    settings = _profile_review_settings(profile)
+    return [
+        {
+            "slug": "hard",
+            "title": "Hard",
+            "field_name": "review_hard_hours",
+            "value": settings["hard"],
+            "button_label": _review_interval_label(settings["hard"], button=True),
+        },
+        {
+            "slug": "good",
+            "title": "Good",
+            "field_name": "review_good_hours",
+            "value": settings["good"],
+            "button_label": _review_interval_label(settings["good"], button=True),
+        },
+        {
+            "slug": "easy",
+            "title": "Easy",
+            "field_name": "review_easy_hours",
+            "value": settings["easy"],
+            "button_label": _review_interval_label(settings["easy"], button=True),
+        },
+    ]
+
+
+def _hard_word_rows(progress_qs):
+    rows = []
+    for prog in progress_qs:
+        if prog.word_id and prog.word:
+            target_kind = "word"
+            target_id = prog.word_id
+            word_text = prog.word.word
+            source_label = prog.word.get_topic_display()
+        elif prog.custom_card_id and prog.custom_card:
+            target_kind = "custom"
+            target_id = prog.custom_card_id
+            word_text = prog.custom_card.word
+            source_label = prog.custom_card.deck.name
+        else:
+            continue
+        rows.append(
+            {
+                "target_kind": target_kind,
+                "target_id": target_id,
+                "word": word_text,
+                "source_label": source_label,
+                "next_review_text": _friendly_next_review(prog.next_review),
+                "next_review_date": timezone.localtime(prog.next_review).date().isoformat()
+                if prog.next_review
+                else "",
+            }
+        )
+    return rows
 
 
 @login_required
 def flashcard_deck(request):
     user = request.user
     streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
+    profile = user.profile
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        if action == "save_review_settings":
+            profile.review_hard_hours = _coerce_review_hours(
+                request.POST.get("review_hard_hours"),
+                _review_interval_hours(profile, "hard"),
+            )
+            profile.review_good_hours = _coerce_review_hours(
+                request.POST.get("review_good_hours"),
+                _review_interval_hours(profile, "good"),
+            )
+            profile.review_easy_hours = _coerce_review_hours(
+                request.POST.get("review_easy_hours"),
+                _review_interval_hours(profile, "easy"),
+            )
+            profile.save(
+                update_fields=[
+                    "review_hard_hours",
+                    "review_good_hours",
+                    "review_easy_hours",
+                ]
+            )
+            return _studio_redirect(saved="settings", anchor="review-settings")
+        if action == "reschedule_hard_word":
+            target_kind = (request.POST.get("target_kind") or "").strip()
+            target_id = (request.POST.get("target_id") or "").strip()
+            preset = (request.POST.get("preset") or "").strip()
+            custom_date = (request.POST.get("custom_date") or "").strip()
+            next_review = _reschedule_datetime_from_form(preset, custom_date)
+            if next_review and target_id:
+                prog = None
+                if target_kind == "word":
+                    prog = VocabularyProgress.objects.filter(
+                        student=user,
+                        word_id=target_id,
+                        is_hard_word=True,
+                    ).first()
+                elif target_kind == "custom":
+                    prog = VocabularyProgress.objects.filter(
+                        student=user,
+                        custom_card_id=target_id,
+                        is_hard_word=True,
+                    ).select_related("custom_card").first()
+                if prog:
+                    prog.next_review = next_review
+                    prog.save(update_fields=["next_review"])
+                    if prog.custom_card_id:
+                        prog.custom_card.next_review_at = next_review
+                        prog.custom_card.save(update_fields=["next_review_at"])
+            return _studio_redirect(saved="rescheduled", anchor="hard-words-list")
     now = timezone.now()
-    due_count = VocabularyProgress.objects.filter(student=user, next_review__lte=now).count()
+    progress_rows = VocabularyProgress.objects.filter(student=user)
+    due_count = progress_rows.filter(next_review__lte=now).count()
+    hard_count = progress_rows.filter(is_hard_word=True).count()
+    hard_progress_rows = list(
+        progress_rows.filter(is_hard_word=True)
+        .select_related("word", "custom_card", "custom_card__deck")
+        .order_by("next_review", "-last_reviewed", "id")
+    )
     topic_counts = {
         row["topic"]: row["n"]
         for row in Word.objects.values("topic").annotate(n=Count("id"))
@@ -549,7 +968,7 @@ def flashcard_deck(request):
             "key": k,
             "label": label,
             "count": topic_counts.get(k, 0),
-            "icon": _FLASHCARD_TOPIC_ICONS.get(k, "📇"),
+            "icon": _FLASHCARD_TOPIC_ICONS.get(k, "book"),
         }
         for k, label in Word.TOPIC_CHOICES
     ]
@@ -570,6 +989,14 @@ def flashcard_deck(request):
             "due_count": due_count,
             "due_limit_options": _session_limit_option_values(due_count),
             "due_default_limit": _default_session_limit_str(due_count),
+            "hard_count": hard_count,
+            "hard_limit_options": _session_limit_option_values(hard_count),
+            "hard_default_limit": _default_session_limit_str(hard_count),
+            "review_interval_options": REVIEW_INTERVAL_CHOICES,
+            "review_setting_rows": _studio_review_setting_rows(profile),
+            "hard_word_rows": _hard_word_rows(hard_progress_rows),
+            "hard_reschedule_presets": HARD_WORD_PRESET_CHOICES,
+            "studio_notice": (request.GET.get("saved") or "").strip(),
             "topic_rows": topic_rows,
             "custom_decks": custom_decks,
             **_streak_ctx(request),
@@ -621,6 +1048,9 @@ def _topic_word_goals(topic: str) -> dict[int, int]:
     }
 
 
+_BAND_LABELS = {1: "Band 5", 2: "Band 6", 3: "Band 7+"}
+
+
 def _topic_hub_levels_payload(user, topic: str):
     goals = _topic_word_goals(topic)
     titles = {1: "Beginner", 2: "Standard", 3: "Advanced"}
@@ -651,6 +1081,7 @@ def _topic_hub_levels_payload(user, topic: str):
         out[str(lvl)] = {
             "level": lvl,
             "title": titles[lvl],
+            "band_label": _BAND_LABELS.get(lvl, "Band 5"),
             "description": _TOPIC_LEVEL_BLURBS[lvl],
             "word_goal": goals[lvl],
             "word_count": len(words_payload),
@@ -744,6 +1175,14 @@ def flashcard_topic(request, topic: str):
             **_streak_ctx(request),
         },
     )
+
+
+def _progress_row_to_flashcard(prog):
+    if prog.word_id and prog.word:
+        return _word_card_from_model(None, prog.word, mastery_level=prog.mastery_level)
+    if prog.custom_card_id and prog.custom_card:
+        return _custom_card_from_model(prog.custom_card, mastery_level=prog.mastery_level)
+    return None
 
 
 @login_required
@@ -873,7 +1312,7 @@ def flashcard_session(request):
         limit_post = (request.POST.get("limit") or "").strip()
         words_post = (request.POST.get("words") or "").strip()
 
-        if rating in ("easy", "hard"):
+        if rating in ("easy", "good", "hard"):
             try:
                 _apply_flashcard_rating(user, profile, word_id, card_id, rating)
             except ValueError:
@@ -918,37 +1357,40 @@ def flashcard_session(request):
     words = []
     if deck_id:
         deck = get_object_or_404(CustomDeck, pk=deck_id, student=user)
-        cards = list(CustomCard.objects.filter(deck=deck).order_by("id"))
+        cards = list(CustomCard.objects.filter(deck=deck).select_related("deck").order_by("id"))
+        progress_map = {
+            p.custom_card_id: p
+            for p in VocabularyProgress.objects.filter(student=user, custom_card__deck=deck)
+        }
         for c in cards:
+            prog = progress_map.get(c.id)
             words.append(
-                {
-                    "id": None,
-                    "word": c.word,
-                    "definition": c.definition,
-                    "example_sentence": c.example_sentence,
-                    "topic": "custom",
-                    "is_custom": True,
-                    "card_id": c.id,
-                    "part_of_speech": "phrase",
-                    "phonetic": "",
-                    "level": 1,
-                    "level_label": "Custom",
-                    "topic_label": "Custom deck",
-                    "topic_key": "custom",
-                    "mastery_level": 1,
-                }
+                _custom_card_from_model(
+                    c,
+                    mastery_level=prog.mastery_level if prog else (5 if c.is_mastered else 1),
+                )
             )
     elif mode == "due":
         now = timezone.now()
         due = (
             VocabularyProgress.objects.filter(student=user, next_review__lte=now)
-            .select_related("word")
+            .select_related("word", "custom_card", "custom_card__deck")
             .order_by("next_review")
         )
         for p in due:
-            card = _word_card_from_model(user, p.word)
-            card["mastery_level"] = p.mastery_level
-            words.append(card)
+            card = _progress_row_to_flashcard(p)
+            if card:
+                words.append(card)
+    elif mode == "hard":
+        hard_rows = (
+            VocabularyProgress.objects.filter(student=user, is_hard_word=True)
+            .select_related("word", "custom_card", "custom_card__deck")
+            .order_by("next_review", "-last_reviewed", "id")
+        )
+        for p in hard_rows:
+            card = _progress_row_to_flashcard(p)
+            if card:
+                words.append(card)
     else:
         qs = Word.objects.all()
         if topic:
@@ -1000,6 +1442,15 @@ def flashcard_session(request):
                 topic_href = reverse("vocabulary:flashcard_topic", kwargs={"topic": topic})
             except Exception:
                 topic_href = ""
+        empty_title = "No words in this deck"
+        empty_sub = "Pick another topic/level, or add words from the word bank."
+        empty_primary_url = reverse("vocabulary:index")
+        empty_primary_label = "Back to topics"
+        if mode == "hard":
+            empty_title = "No hard words — nice work"
+            empty_sub = "Words you rate as hard will collect here. Study any deck to build your review pile."
+            empty_primary_url = reverse("vocabulary:index")
+            empty_primary_label = "Back to studio"
         return render(
             request,
             "vocabulary/flashcard_session.html",
@@ -1016,6 +1467,10 @@ def flashcard_session(request):
                 "querystring": "",
                 "topic_for_empty": topic or "",
                 "topic_href": topic_href,
+                "empty_title": empty_title,
+                "empty_sub": empty_sub,
+                "empty_primary_url": empty_primary_url,
+                "empty_primary_label": empty_primary_label,
                 **_streak_ctx(request),
             },
         )
@@ -1044,6 +1499,9 @@ def flashcard_session(request):
             "stat_storage_key": stat_storage_key,
             "initial_shuffle": initial_shuffle,
             "mastery_labels": MASTERY_STAGE_LABEL,
+            "rating_hard_label": _review_interval_label(_review_interval_hours(profile, "hard"), button=True),
+            "rating_good_label": _review_interval_label(_review_interval_hours(profile, "good"), button=True),
+            "rating_easy_label": _review_interval_label(_review_interval_hours(profile, "easy"), button=True),
             "study_again_url": study_again_url,
             **_flashcard_session_api_urls(),
             **_streak_ctx(request),
@@ -1119,43 +1577,99 @@ def quiz_topic_words_api(request, topic: str):
 
 
 @login_required
+def quiz_custom_deck_words_api(request, deck_id: int):
+    deck = get_object_or_404(CustomDeck, pk=deck_id, student=request.user)
+    words = list(
+        CustomCard.objects.filter(deck=deck)
+        .order_by("word", "id")
+        .values("id", "word")
+    )
+    return JsonResponse({"words": words, "deck": {"id": deck.id, "name": deck.name}})
+
+
+@login_required
 def quiz_session(request):
     """Run interactive quiz (MC, T/F, etc.) from query params produced by quiz setup."""
     user = request.user
     raw_ids = request.GET.get("words") or ""
+    deck_id = (request.GET.get("deck_id") or "").strip()
     topic_key = (request.GET.get("topic") or "").strip()
+    from_setup = request.GET.get("from_setup") == "1"
     method_raw = (request.GET.get("quiz_types") or "mc").strip().lower().split(",")[0].strip()
     limit_raw = (request.GET.get("quiz_limit") or "all").strip().lower()
 
-    id_parts = [x.strip() for x in raw_ids.split(",") if x.strip().isdigit()]
-    ids = [int(x) for x in id_parts][:800]
-    if len(ids) < 3:
-        return redirect(f"{reverse('vocabulary:quiz_setup')}?error=minwords")
+    quiz_back_url = reverse("vocabulary:quiz_setup")
+    if deck_id:
+        try:
+            custom_deck = get_object_or_404(CustomDeck, pk=int(deck_id), student=user)
+        except (TypeError, ValueError):
+            return redirect(quiz_back_url)
+        selected_custom_ids = []
+        for raw in raw_ids.split(","):
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                cid = int(raw)
+            except ValueError:
+                continue
+            selected_custom_ids.append(cid)
+        custom_qs = CustomCard.objects.filter(deck=custom_deck).order_by("id")
+        if selected_custom_ids:
+            custom_qs = custom_qs.filter(id__in=selected_custom_ids)
+        custom_cards = list(custom_qs)
+        if len(custom_cards) < 3:
+            return redirect(quiz_back_url)
+        deck = [
+            {
+                "item_id": f"c-{card.id}",
+                "word": card.word,
+                "definition": card.definition,
+                "example": (card.example_sentence or "").strip(),
+                "synonyms": [],
+                "times_marked_hard": 0,
+                "word_id": None,
+                "card_id": card.id,
+            }
+            for card in custom_cards
+        ]
+        topic_label = custom_deck.name
+        if not from_setup:
+            quiz_back_url = reverse(
+                "vocabulary:custom_deck", kwargs={"deck_id": custom_deck.pk}
+            )
+    else:
+        id_parts = [x.strip() for x in raw_ids.split(",") if x.strip().isdigit()]
+        ids = [int(x) for x in id_parts][:800]
+        if len(ids) < 3:
+            return redirect(f"{quiz_back_url}?error=minwords")
 
-    qs = Word.objects.filter(pk__in=ids)
-    if topic_key:
-        valid_topics = {k for k, _ in Word.TOPIC_CHOICES}
-        if topic_key in valid_topics:
-            qs = qs.filter(topic=topic_key)
-    by_id = {w.id: w for w in qs}
-    ordered_models = [by_id[i] for i in ids if i in by_id]
-    if len(ordered_models) < 3:
-        return redirect(f"{reverse('vocabulary:quiz_setup')}?error=minwords")
+        qs = Word.objects.filter(pk__in=ids)
+        if topic_key:
+            valid_topics = {k for k, _ in Word.TOPIC_CHOICES}
+            if topic_key in valid_topics:
+                qs = qs.filter(topic=topic_key)
+        by_id = {w.id: w for w in qs}
+        ordered_models = [by_id[i] for i in ids if i in by_id]
+        if len(ordered_models) < 3:
+            return redirect(f"{quiz_back_url}?error=minwords")
 
-    deck = [_word_quiz_deck_item(user, w) for w in ordered_models]
+        deck = [_word_quiz_deck_item(user, w) for w in ordered_models]
+        topic_label = _topic_label(topic_key) if topic_key else "Mixed"
+
     random.shuffle(deck)
     if limit_raw in ("5", "10", "20"):
         n = int(limit_raw)
         deck = deck[: min(n, len(deck))]
 
     quiz_method = method_raw if method_raw in _QUIZ_METHOD_KEYS else "mc"
-    topic_label = _topic_label(topic_key) if topic_key else "Mixed"
 
     quiz_config = {
         "deck": deck,
         "quizMethod": quiz_method,
         "topicLabel": topic_label,
-        "setupUrl": reverse("vocabulary:quiz_setup"),
+        "setupUrl": quiz_back_url,
+        "rateUrl": reverse("vocabulary:flashcard_rate"),
     }
     streak = getattr(getattr(user, "profile", None), "streak", 0) or 0
     return render(
@@ -1164,6 +1678,7 @@ def quiz_session(request):
         {
             "streak": streak,
             "quiz_config": quiz_config,
+            "quiz_back_url": quiz_back_url,
             **_streak_ctx(request),
         },
     )
@@ -1175,6 +1690,22 @@ def quiz_setup(request):
     quiz_topic_words_url = reverse(
         "vocabulary:quiz_topic_words", kwargs={"topic": "__topic__"}
     )
+    custom_quiz_decks = []
+    under_min_custom_decks = []
+    for deck in (
+        CustomDeck.objects.filter(student=request.user)
+        .annotate(card_count=Count("customcard"))
+        .order_by("-created_at")
+    ):
+        row = {
+            "id": deck.id,
+            "name": deck.name,
+            "count": deck.card_count or 0,
+        }
+        if row["count"] >= 3:
+            custom_quiz_decks.append(row)
+        else:
+            under_min_custom_decks.append(row)
     return render(
         request,
         "vocabulary/quiz_setup.html",
@@ -1182,27 +1713,23 @@ def quiz_setup(request):
             "streak": streak,
             "topics": Word.TOPIC_CHOICES,
             "quiz_topic_words_url": quiz_topic_words_url,
+            "quiz_custom_deck_words_url": reverse(
+                "vocabulary:quiz_custom_deck_words", kwargs={"deck_id": 999999}
+            ).replace("999999", "__deck__"),
+            "custom_quiz_decks": custom_quiz_decks,
+            "under_min_custom_decks": under_min_custom_decks,
             "quiz_session_url": reverse("vocabulary:quiz_session"),
             **_streak_ctx(request),
         },
     )
 
 
-TYPE_IT_TOPIC_EMOJI = {
-    "environment": "🌿",
-    "health": "🩺",
-    "technology": "💻",
-    "education": "📚",
-    "society": "🏙️",
-    "travel": "✈️",
-    "science": "🔬",
-    "business": "💼",
-}
+TYPE_IT_TOPIC_ICON = {k: TOPIC_ICONS.get(k, "book") for k, _ in Word.TOPIC_CHOICES}
 TYPE_IT_LEVEL_SLUG = {1: "beginner", 2: "standard", 3: "advanced"}
 TYPE_IT_LEVEL_CARD = {
     1: {
         "tier_title": "Easy",
-        "icon_emoji": "📗",
+        "icon": LEVEL_ICONS[1],
         "ielts": "Beginner",
         "desc": (
             "Core everyday vocabulary — simple definitions and common phrases."
@@ -1211,7 +1738,7 @@ TYPE_IT_LEVEL_CARD = {
     },
     2: {
         "tier_title": "Medium",
-        "icon_emoji": "📘",
+        "icon": LEVEL_ICONS[2],
         "ielts": "Standard",
         "desc": (
             "IELTS-ready vocabulary — collocations, academic phrases, "
@@ -1221,7 +1748,7 @@ TYPE_IT_LEVEL_CARD = {
     },
     3: {
         "tier_title": "Hard",
-        "icon_emoji": "📙",
+        "icon": LEVEL_ICONS[3],
         "ielts": "Advanced",
         "desc": (
             "Band 7+ vocabulary — complex academic language and sophisticated collocations."
@@ -1273,7 +1800,7 @@ def type_it_deck(request):
                 {
                     "slug": slug,
                     "tier_title": meta["tier_title"],
-                    "icon_emoji": meta["icon_emoji"],
+                    "icon": meta["icon"],
                     "ielts": meta["ielts"],
                     "desc": meta["desc"],
                     "badge": meta["badge"],
@@ -1288,7 +1815,7 @@ def type_it_deck(request):
             {
                 "topic": topic_key,
                 "name": topic_label,
-                "emoji": TYPE_IT_TOPIC_EMOJI.get(topic_key, "📖"),
+                "emoji": TYPE_IT_TOPIC_ICON.get(topic_key, "book"),
                 "total_words": topic_total,
                 "done": topic_done,
                 "pct": topic_pct,
@@ -1311,7 +1838,7 @@ def type_it_deck(request):
         custom.append(
             {
                 "id": f"custom-{d.id}",
-                "emoji": d.emoji or "📖",
+                "emoji": resolve_icon(d.emoji, "folder"),
                 "name": d.name,
                 "colour": d.colour or "navy",
                 "count": total,
@@ -1906,7 +2433,7 @@ def type_it_custom_deck_create_api(request):
         return JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
     name = (payload.get("name") or "").strip()
     colour = (payload.get("colour") or "navy").strip().lower()
-    emoji = (payload.get("emoji") or "📖").strip()
+    icon = resolve_icon((payload.get("emoji") or payload.get("icon") or "book").strip())
     words_text = (payload.get("words") or "").strip()
     if not name:
         return JsonResponse({"ok": False, "error": "name_required"}, status=400)
@@ -1917,7 +2444,7 @@ def type_it_custom_deck_create_api(request):
         student=request.user,
         name=name[:100],
         colour=colour[:20] or "navy",
-        emoji=emoji[:10] or "📖",
+        emoji=icon[:20] or "book",
     )
     objs = []
     for w in lines[:200]:

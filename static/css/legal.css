@@ -1,0 +1,165 @@
+/* Legal / privacy / terms / contact pages */
+
+.legal-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 36px 20px 64px;
+}
+
+.legal-card {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 28px 28px 32px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.legal-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.legal-h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #111827;
+}
+
+.legal-lead {
+  margin: 0 0 28px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #6b7280;
+}
+
+.legal-sec {
+  margin-bottom: 22px;
+}
+
+.legal-sec h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.legal-sec p,
+.legal-sec li {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.legal-sec p {
+  margin: 0 0 10px;
+}
+
+.legal-sec ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.legal-sec a {
+  color: #3b6d11;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.legal-sec a:hover {
+  text-decoration: underline;
+}
+
+.legal-email {
+  display: inline-block;
+  margin: 4px 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.legal-note {
+  margin-top: 14px !important;
+  font-size: 13px !important;
+  color: #9ca3af !important;
+}
+
+.legal-note code {
+  font-size: 12.5px;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.ld-footer__legal {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 22px 18px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* Speaking AI notice modal */
+.bs-speak-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.bs-speak-notice[hidden] {
+  display: none !important;
+}
+
+.bs-speak-notice__card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+.bs-speak-notice__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.bs-speak-notice__body {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
+.bs-speak-notice__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #3b6d11;
+  color: #fff;
+  cursor: pointer;
+}
+
+.bs-speak-notice__btn:hover {
+  background: #27500a;
+}

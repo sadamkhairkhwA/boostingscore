@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ question.title }} — Task 2{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
 {% endblock %}
 {% block content %}
 <div class="wt1-page">
@@ -17,7 +17,7 @@
       <a class="wt1-btn wt1-btn--outline" href="{% url 'writing:task2_question_list' essay_type %}">← Questions</a>
     </div>
     {% if prev_attempt %}
-    <details class="wt1-card"><summary>📝 Your previous attempt</summary><p>Band {{ prev_attempt.band_score|default:"—" }} · {{ prev_attempt.word_count|default:0 }} words</p></details>
+    <details class="wt1-card"><summary><span aria-hidden="true">{% bs_icon "write" "purple" "sm" %}</span> Your previous attempt</summary><p>Band {{ prev_attempt.band_score|default:"—" }} · {{ prev_attempt.word_count|default:0 }} words</p></details>
     {% endif %}
     <form id="wt1-response-form" data-min-words="250" data-duration-minutes="40" action="{% url 'writing:task2_feedback_page' essay_type question.id %}" method="post" class="wt1-card">
       {% csrf_token %}
@@ -27,12 +27,17 @@
       <div class="wt1-response-head"><h2>Your response</h2><div><span id="wt1-live-count">0</span> / 250 words minimum</div></div>
       <textarea name="response_text" id="wt1-response" class="wt1-textarea" placeholder="Write your essay here..."></textarea>
       <div class="wt1-progress"><div class="wt1-progress__bar"><span id="wt1-progress-fill"></span></div><div class="wt1-progress__txt"><span id="wt1-progress-count">0</span> / 250</div></div>
-      <p class="wt1-tip">💡 Present a clear position, develop both body paragraphs, and support points with examples.</p>
-      <button class="wt1-btn wt1-btn--green wt1-btn--full" type="submit">Get AI feedback →</button>
+      <p class="wt1-tip"><span aria-hidden="true">{% bs_icon "lightbulb" "amber" "sm" %}</span> Present a clear position, develop both body paragraphs, and support points with examples.</p>
+      <div data-ai-check-wrap>
+      <button class="wt1-btn wt1-btn--green wt1-btn--full" type="submit" data-ai-check-btn>Get AI feedback →</button>
+      </div>
+      <div id="wt1-ai-error" class="wt1-ai-error" hidden role="alert"></div>
+      <div id="wt1-ai-loading" class="wt1-ai-loading" hidden></div>
     </form>
   </section>
 </div>
 {% endblock %}
 {% block extra_js %}
-<script src="{% static 'writing/js/task1_practice.js' %}?v=4" defer></script>
+<script src="{% static 'writing/js/ai_feedback_loading.js' %}?v=1" defer></script>
+<script src="{% static 'writing/js/task1_practice.js' %}?v=5" defer></script>
 {% endblock %}

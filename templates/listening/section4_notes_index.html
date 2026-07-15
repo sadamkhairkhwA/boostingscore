@@ -1,0 +1,21 @@
+{% extends "listening/_base.html" %}
+{% block title %}Section 4 note-taking{% endblock %}
+{% block content %}
+<section class="ll-hero ll-hero--compact">
+  <a href="{% url 'listening:home' %}" class="ll-back">← Listening</a>
+  <h1 class="ll-hero__title">Section 4 note-taking</h1>
+  <p class="ll-hero__sub">Lecture-style audio plays once. Fill the note template as you listen, then check against the answer key.</p>
+</section>
+<section class="ll-sec">
+  <div class="ll-grid">
+    {% for lec in lectures %}
+    <a href="{% url 'listening:section4_notes_session' lec.id %}" class="ll-card {% if not lec.audio_ready %}is-soon{% endif %}">
+      <span class="ll-card__ico"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"/></svg></span>
+      <div class="ll-card__name">{{ lec.title }}</div>
+      <p class="ll-card__desc">{{ lec.template|length }} gaps · plays once</p>
+      <div class="ll-card__foot"><span class="ll-card__cta">{% if lec.audio_ready %}Practise{% else %}Audio pending{% endif %} <span class="ll-arrow">→</span></span></div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

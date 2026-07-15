@@ -12,8 +12,22 @@
 
   const TOPICS = ["all", "environment", "health", "technology", "society", "science", "business", "education"];
   const LEVELS = ["all", "beginner", "intermediate", "advanced"];
-  const EMOJI = { environment: "🌿", health: "🩺", technology: "💻", society: "🏙️", science: "🔬", business: "📊", education: "🎓" };
+  const TOPIC_ICON = { environment: "leaf", health: "heartbeat", technology: "laptop", society: "city", science: "flask", business: "chart", education: "graduation-cap" };
   const TOPIC_LABEL = { environment: "Environment", health: "Health", technology: "Technology", society: "Society", science: "Science", business: "Business", education: "Education" };
+
+  function topicIcon(topic, size) {
+    var slug = TOPIC_ICON[topic] || "book";
+    return typeof BSIcons !== "undefined" ? BSIcons.tile(slug, null, size || "sm") : "";
+  }
+  function clockIcon() {
+    return typeof BSIcons !== "undefined" ? BSIcons.inline("clock", "ok") : "";
+  }
+  function flameIcon() {
+    return typeof BSIcons !== "undefined" ? BSIcons.inline("flame", "warn") : "";
+  }
+  function checkIcon() {
+    return typeof BSIcons !== "undefined" ? BSIcons.check() : "";
+  }
 
   const ARTICLES = [
     {
@@ -176,7 +190,7 @@
   function streakCount() { const s = streakSet(); let d = new Date(`${todayKey()}T00:00:00`); let n = 0; while (s.has(d.toISOString().slice(0, 10))) { n += 1; d.setDate(d.getDate() - 1); } return n; }
 
   function renderStreak() {
-    document.getElementById("gr-streak-title").textContent = `${streakCount()}-day reading streak 🔥`;
+    document.getElementById("gr-streak-title").innerHTML = `${streakCount()}-day reading streak ${flameIcon()}`;
     const labels = ["M", "T", "W", "T", "F", "S", "S"];
     const today = new Date(`${todayKey()}T00:00:00`);
     const monday = new Date(today);
@@ -197,7 +211,7 @@
     document.getElementById("gr-featured-title").textContent = a.title;
     document.getElementById("gr-featured-desc").textContent = a.desc;
     document.getElementById("gr-featured-tags").innerHTML =
-      `<span class="gr-tag">${EMOJI[a.topic]} ${topicLabel(a.topic)}</span>` +
+      `<span class="gr-tag">${topicIcon(a.topic)} ${topicLabel(a.topic)}</span>` +
       `<span class="gr-pill ${levelClass(a.level)}">${levelLabel(a.level)}</span>` +
       `<span class="gr-tag">${a.words} words</span>` +
       `<span class="gr-tag">${a.questions} questions</span>`;
@@ -211,7 +225,7 @@
     const el = document.getElementById("gr-completed-today");
     if (!rows.length) { el.innerHTML = '<p class="gr-muted">No completed articles yet today.</p>'; return; }
     el.innerHTML = rows.map((r) =>
-      `<div class="gr-completed-row"><div class="left"><span class="gr-check">✓</span><div><p class="gr-done-title">${r.title}</p><p class="gr-muted small">${topicLabel(r.topic)} · ${r.score}/${r.total} · ${r.wpm} wpm</p></div></div><span class="gr-pill">Done ✓</span></div>`
+      `<div class="gr-completed-row"><div class="left"><span class="gr-check">${checkIcon()}</span><div><p class="gr-done-title">${r.title}</p><p class="gr-muted small">${topicLabel(r.topic)} · ${r.score}/${r.total} · ${r.wpm} wpm</p></div></div><span class="gr-pill">Done ${checkIcon()}</span></div>`
     ).join("");
   }
 
@@ -229,7 +243,9 @@
     acc.className = `gr-pill ${label === "green" ? "gr-level-beginner" : label === "red" ? "gr-level-advanced" : "gr-level-intermediate"}`;
     acc.textContent = `Accuracy: ${label.toUpperCase()}`;
     document.getElementById("gr-fb-score").textContent = `${score}/5`;
-    document.getElementById("gr-fb-stars").innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="gr-star">${i < score ? "★" : "☆"}</span>`).join("");
+    document.getElementById("gr-fb-stars").innerHTML = Array.from({ length: 5 }, (_, i) =>
+      `<span class="gr-star" aria-hidden="true">${i < score ? (typeof BSIcons !== "undefined" ? BSIcons.inline("star", "warn") : "") : (typeof BSIcons !== "undefined" ? BSIcons.inline("star-outline", "warn") : "")}</span>`
+    ).join("");
     document.getElementById("gr-fb-progress").style.width = `${score * 20}%`;
     document.getElementById("gr-fb-right").textContent = `What you got right: ${f.got_right || "Good coverage of key ideas."}`;
     const missed = document.getElementById("gr-fb-missed");
@@ -265,7 +281,7 @@
       if (!r.ok || !data.ok) throw new Error("analysis failed");
       drawFeedback(data.feedback);
       status.className = "gr-status on";
-      status.textContent = "✓ Summary saved and analysed.";
+      status.innerHTML = `${checkIcon()} Summary saved and analysed.`;
     } catch (_e) {
       status.className = "gr-status warn";
       status.textContent = "Could not analyse right now — summary saved anyway.";
@@ -274,7 +290,7 @@
 
   function renderFilters() {
     document.getElementById("gr-topic-filters").innerHTML = TOPICS.map((t) =>
-      `<button class="gr-filter ${activeTopic === t ? "active" : ""}" data-topic="${t}">${t === "all" ? "All" : `${EMOJI[t]} ${topicLabel(t)}`}</button>`
+      `<button class="gr-filter ${activeTopic === t ? "active" : ""}" data-topic="${t}">${t === "all" ? "All" : `${topicIcon(t)} ${topicLabel(t)}`}</button>`
     ).join("");
     document.getElementById("gr-level-filters").innerHTML = LEVELS.map((l) =>
       `<button class="gr-filter ${activeLevel === l ? "active" : ""}" data-level="${l}">${l === "all" ? "All" : levelLabel(l)}</button>`
@@ -284,7 +300,7 @@
   function renderBrowse() {
     const rows = ARTICLES.filter((a) => (activeTopic === "all" || a.topic === activeTopic) && (activeLevel === "all" || a.level === activeLevel));
     document.getElementById("gr-article-grid").innerHTML = rows.map((a) =>
-      `<article class="gr-article" data-article="${a.id}"><div class="emoji">${EMOJI[a.topic]}</div><span class="gr-pill ${levelClass(a.level)}">${levelLabel(a.level)}</span><h4>${a.title}</h4><p>${a.minutes} min · ${a.words} words</p><p>${topicLabel(a.topic)}</p></article>`
+      `<article class="gr-article" data-article="${a.id}"><div class="gr-article__icon">${topicIcon(a.topic, "md")}</div><span class="gr-pill ${levelClass(a.level)}">${levelLabel(a.level)}</span><h4>${a.title}</h4><p>${a.minutes} min · ${a.words} words</p><p>${topicLabel(a.topic)}</p></article>`
     ).join("");
   }
 
@@ -293,7 +309,7 @@
     if (!readingStart) readingStart = Date.now() - (readingElapsed * 1000);
     readingTimer = setInterval(() => {
       readingElapsed = Math.floor((Date.now() - readingStart) / 1000);
-      document.getElementById("gr-reading-timer").textContent = `⏱ ${fmtTime(readingElapsed)}`;
+      document.getElementById("gr-reading-timer").innerHTML = `${clockIcon()} ${fmtTime(readingElapsed)}`;
     }, 1000);
   }
   function stopReadingTimer() { if (readingTimer) { clearInterval(readingTimer); readingTimer = null; } }
@@ -306,13 +322,15 @@
     setStore(K_CURRENT, a.id);
     document.getElementById("gr-reading-title").textContent = a.title;
     document.getElementById("gr-reading-tags").innerHTML =
-      `<span class="gr-tag">${EMOJI[a.topic]} ${topicLabel(a.topic)}</span>` +
+      `<span class="gr-tag">${topicIcon(a.topic)} ${topicLabel(a.topic)}</span>` +
       `<span class="gr-pill ${levelClass(a.level)}">${levelLabel(a.level)}</span>` +
       `<span class="gr-tag">${a.words} words</span>` +
       `<span class="gr-tag">${a.questions} questions</span>`;
     document.getElementById("gr-reading-body").innerHTML = a.paragraphs.map((p) => `<p>${p}</p>`).join("");
     document.getElementById("gr-reading-vocab-line").innerHTML = a.vocab.map((v) => `<span class="gr-vocab-word ${inDeck(v.word) ? "in-deck" : ""}" data-word="${v.word}">${v.word}</span>`).join(" · ");
-    document.getElementById("gr-bookmark-btn").textContent = safeArr(getStore(K_BOOKMARKS, [])).includes(a.id) ? "Bookmarked ✓" : "Bookmark article";
+    document.getElementById("gr-bookmark-btn").innerHTML = safeArr(getStore(K_BOOKMARKS, [])).includes(a.id)
+      ? 'Bookmarked <span class="bs-icon-inline bs-icon-inline--ok" aria-hidden="true">' + (typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "") + "</span>"
+      : "Bookmark article";
     document.getElementById("gr-word-popup").hidden = true;
   }
 
@@ -328,7 +346,9 @@
     document.getElementById("gr-word-level").textContent = d ? `Level ${d.level} — in deck` : "Not in deck";
     const btn = document.getElementById("gr-word-add");
     btn.dataset.word = word;
-    btn.textContent = d ? "Added ✓" : "Add to deck";
+    btn.innerHTML = d
+      ? 'Added <span class="bs-icon-inline bs-icon-inline--ok" aria-hidden="true">' + (typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "") + "</span>"
+      : "Add to deck";
     btn.disabled = !!d;
     document.getElementById("gr-word-popup").hidden = false;
   }
@@ -464,9 +484,10 @@
     document.getElementById("gr-level-title").textContent = `${level} level`;
     document.getElementById("gr-level-req").textContent = "Requirement: keep average 4/5+ and maintain streak activity.";
     document.getElementById("gr-level-progress").style.width = `${pct}%`;
+    const passedMark = typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "";
     document.getElementById("gr-level-cards").innerHTML =
-      `<div class="gr-level-card"><h4>Beginner</h4><p class="gr-muted small">Complete 3 sessions</p><p class="gr-pill">Passed ✓</p></div>` +
-      `<div class="gr-level-card"><h4>Intermediate</h4><p class="gr-muted small">Average 3+/5 across 8 sessions</p><p class="gr-pill">${level === "Beginner" ? "Locked" : level === "Intermediate" ? "In progress" : "Passed ✓"}</p></div>` +
+      `<div class="gr-level-card"><h4>Beginner</h4><p class="gr-muted small">Complete 3 sessions</p><p class="gr-pill">Passed ${passedMark}</p></div>` +
+      `<div class="gr-level-card"><h4>Intermediate</h4><p class="gr-muted small">Average 3+/5 across 8 sessions</p><p class="gr-pill">${level === "Beginner" ? "Locked" : level === "Intermediate" ? "In progress" : "Passed " + passedMark}</p></div>` +
       `<div class="gr-level-card"><h4>Advanced</h4><p class="gr-muted small">Average 4+/5 across 20 sessions</p><p class="gr-pill">${level === "Advanced" ? "In progress" : "Locked"}</p></div>`;
     const by = {};
     hist.forEach((h) => { by[h.topic] = by[h.topic] || { c: 0, t: 0 }; by[h.topic].c += h.score; by[h.topic].t += h.total; });
@@ -504,7 +525,7 @@
     const hist = safeArr(getStore(K_HISTORY, []));
     document.getElementById("gr-history-list").innerHTML = hist.length
       ? hist.slice(0, 30).map((h) =>
-          `<div class="gr-history-row"><div><p class="gr-done-title">${EMOJI[h.topic]} ${h.title}</p><p class="gr-muted small">${topicLabel(h.topic)} · ${h.date} · ${h.wpm} wpm</p></div><span class="gr-pill ${h.score / h.total >= 0.8 ? "gr-level-beginner" : h.score / h.total >= 0.6 ? "gr-level-intermediate" : "gr-level-advanced"}">${h.score}/${h.total}</span></div>`
+          `<div class="gr-history-row"><div><p class="gr-done-title">${topicIcon(h.topic, "sm")} ${h.title}</p><p class="gr-muted small">${topicLabel(h.topic)} · ${h.date} · ${h.wpm} wpm</p></div><span class="gr-pill ${h.score / h.total >= 0.8 ? "gr-level-beginner" : h.score / h.total >= 0.6 ? "gr-level-intermediate" : "gr-level-advanced"}">${h.score}/${h.total}</span></div>`
         ).join("")
       : '<p class="gr-muted">No history yet.</p>';
     const ids = safeArr(getStore(K_BOOKMARKS, []));
@@ -557,7 +578,7 @@
     document.getElementById("gr-flashcard").addEventListener("click", () => { if (!vocabState) return; vocabState.flipped = !vocabState.flipped; renderFlashcard(); });
     document.getElementById("gr-flash-hard").addEventListener("click", () => { vocabState.hard += 1; vocabState.idx += 1; vocabState.flipped = false; renderFlashcard(); });
     document.getElementById("gr-flash-easy").addEventListener("click", () => { vocabState.easy += 1; vocabState.idx += 1; vocabState.flipped = false; renderFlashcard(); });
-    document.getElementById("gr-save-vocab").addEventListener("click", () => { const a = currentArticle(); a.vocab.forEach((v) => addDeck({ word: v.word, topic: a.topic, level: 1, def: v.def })); const s = document.getElementById("gr-save-vocab-msg"); s.className = "gr-status on"; s.textContent = `✓ Added to ${topicLabel(a.topic)} deck — appears in Smart review tomorrow.`; renderReading(); renderProgress(); });
+    document.getElementById("gr-save-vocab").addEventListener("click", () => { const a = currentArticle(); a.vocab.forEach((v) => addDeck({ word: v.word, topic: a.topic, level: 1, def: v.def })); const s = document.getElementById("gr-save-vocab-msg"); s.className = "gr-status on"; s.innerHTML = (typeof BSIcons !== "undefined" ? BSIcons.inline("check", "ok") : "") + ` Added to ${topicLabel(a.topic)} deck — appears in Smart review tomorrow.`; renderReading(); renderProgress(); });
     document.getElementById("gr-summary-input").addEventListener("input", (e) => { document.getElementById("gr-summary-count").textContent = `${wordCount(e.target.value)} words`; });
     document.getElementById("gr-summary-analyse").addEventListener("click", analyseSummary);
     document.getElementById("gr-challenge-start").addEventListener("click", () => {
@@ -610,6 +631,8 @@
 
   function init() {
     bootstrap();
+    var timerIc = document.querySelector(".gr-timer__ic");
+    if (timerIc && typeof BSIcons !== "undefined") timerIc.innerHTML = BSIcons.inline("clock", "ok");
     renderTodayAll();
     renderFilters();
     renderBrowse();

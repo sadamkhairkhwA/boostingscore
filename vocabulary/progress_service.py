@@ -10,6 +10,8 @@ from django.utils import timezone
 
 from boostingscore.models import UserProfile
 
+from vocabulary.icon_registry import TOPIC_ICONS, resolve_icon
+
 from .models import CustomCard, CustomDeck, VocabularyProgress, Word
 
 
@@ -289,13 +291,13 @@ def times_marked_hard_map_for_student(student) -> dict[str, int]:
     return m
 
 
-TOPIC_DECK_EMOJI = {
-    Word.TOPIC_ENVIRONMENT: "🌿",
-    Word.TOPIC_HEALTH: "🏥",
-    Word.TOPIC_TECHNOLOGY: "💻",
-    Word.TOPIC_EDUCATION: "🎓",
-    Word.TOPIC_SOCIETY: "👥",
-    CustomCard.TOPIC_OTHER: "⭐",
+TOPIC_DECK_ICON = {
+    Word.TOPIC_ENVIRONMENT: TOPIC_ICONS["environment"],
+    Word.TOPIC_HEALTH: TOPIC_ICONS["health"],
+    Word.TOPIC_TECHNOLOGY: TOPIC_ICONS["technology"],
+    Word.TOPIC_EDUCATION: TOPIC_ICONS["education"],
+    Word.TOPIC_SOCIETY: TOPIC_ICONS["society"],
+    CustomCard.TOPIC_OTHER: TOPIC_ICONS["other"],
 }
 
 
@@ -387,7 +389,7 @@ def topic_decks_for_studio(user, now, vocab_level: int | None = None) -> list[di
             {
                 "slug": slug,
                 "label": labels.get(slug, slug),
-                "emoji": TOPIC_DECK_EMOJI.get(slug, "📖"),
+                "emoji": TOPIC_DECK_ICON.get(slug, "book"),
                 "word_count": word_count,
                 "mastered_count": mastered,
                 "due_count": due_count,
@@ -458,7 +460,7 @@ def custom_decks_for_studio(user, now, vocab_level: int | None = None) -> list[d
             {
                 "slug": f"deck-{d.pk}",
                 "label": d.name,
-                "emoji": "📚",
+                "emoji": resolve_icon(getattr(d, "emoji", None), "folder"),
                 "word_count": word_count,
                 "mastered_count": mastered,
                 "due_count": due_count,

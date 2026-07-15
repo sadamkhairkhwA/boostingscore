@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}{{ skill.title }}{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
@@ -9,10 +9,10 @@
   <section class="wt1-wrap">
     <a class="wt1-back" href="{% url 'writing:skills_hub' %}">← All skills</a>
     <div class="wt1-card">
-      <h1 class="wt1-title wt1-title--list">✏️ {{ skill.title }}</h1>
+      <h1 class="wt1-title wt1-title--list"><span aria-hidden="true">{% bs_icon "pen" "purple" "sm" %}</span> {{ skill.title }}</h1>
       <p class="wt1-sub">{{ skill.desc }}</p>
       {% if from_feedback %}
-      <div class="wr-rec"><strong>🔗 Linked from your feedback</strong><p>This skill is recommended for {{ criterion }} based on your recent submission.</p></div>
+      <div class="wr-rec"><strong><span aria-hidden="true">{% bs_icon "link" "blue" "sm" %}</span> Linked from your feedback</strong><p>This skill is recommended for {{ criterion }} based on your recent submission.</p></div>
       {% endif %}
       <div class="wr-tabs"><button class="wt1-btn wt1-btn--dark" type="button" data-skill-tab="learn">Learn</button><button class="wt1-btn wt1-btn--outline" type="button" data-skill-tab="practice">Practise</button><button class="wt1-btn wt1-btn--outline" type="button" data-skill-tab="examples">Examples</button></div>
       <div id="skill-learn"><p>Rules and explanations for {{ skill.title }}. Keep output concise and accurate.</p></div>

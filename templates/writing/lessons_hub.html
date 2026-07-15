@@ -1,26 +1,64 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Writing Lessons{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'writing/css/lesson_flow.css' %}?v=4">
 {% endblock %}
 {% block content %}
-<div class="wt1-page">
+<div class="wt1-page wl-flow">
   <section class="wt1-wrap">
     <h1 class="wt1-title wt1-title--hero">Writing Lessons</h1>
-    <p class="wt1-sub">Learn to write every IELTS question type. Structure, stages, common mistakes, examiner expectations.</p>
-    <div class="wr-tabs"><button class="wt1-btn wt1-btn--dark" type="button" data-tab="t1">📊 Task 1</button><button class="wt1-btn wt1-btn--outline" type="button" data-tab="t2">✍️ Task 2</button></div>
-    <div id="wr-lessons-t1">
+    <p class="wt1-sub">Each lesson: read the guide, practise one focused skill, then get AI feedback before moving on.</p>
+    <p class="wt1-sub"><a href="{% url 'writing:grammar_mistakes' %}">Common grammar mistakes checklist →</a></p>
+
+    <div class="wl-hub-progress">
+      <div class="wl-hub-progress__bar">
+        <span style="width:{% if lesson_total %}{% widthratio lesson_done lesson_total 100 %}{% else %}0{% endif %}%"></span>
+      </div>
+      <span class="wl-hub-progress__count">{{ lesson_done }} / {{ lesson_total }} complete</span>
+    </div>
+
+    <div class="wr-tabs">
+      <button class="wt1-btn wt1-btn--dark" type="button" data-tab="t1"><span aria-hidden="true">{% bs_icon "chart" "blue" "sm" %}</span> Task 1</button>
+      <button class="wt1-btn wt1-btn--outline" type="button" data-tab="t2"><span aria-hidden="true">{% bs_icon "pen" "purple" "sm" %}</span> Task 2</button>
+    </div>
+
+    <div id="wr-lessons-t1" class="wl-hub-list">
       {% for l in task1_lessons %}
-      <details class="wr-row"{% if forloop.first %} open{% endif %}>
-        <summary><span class="ic">{{ l.icon }}</span><div><strong>{{ l.title }}</strong><p>{{ l.subtitle }}</p></div><span class="tag">{% if l.id in done_ids %}Done ✓{% else %}{{ l.level }}{% endif %}</span></summary>
-        <div class="wr-row-body"><p>{{ l.content }}</p><a href="{% url 'writing:lesson_detail' l.id %}">Open lesson →</a></div>
-      </details>
+      <a class="wl-hub-card{% if l.id in done_ids %} is-done{% endif %}" href="{% url 'writing:lesson_detail' l.id %}">
+        <span class="wl-hub-card__icon" aria-hidden="true">{% bs_icon l.icon %}</span>
+        <span class="wl-hub-card__body">
+          <strong>{{ l.title }}</strong>
+          <span>{{ l.subtitle }}</span>
+        </span>
+        <span class="wl-hub-card__cta">
+          {% if l.id in done_ids %}
+          <span class="wl-badge wl-badge--ready">Done</span>
+          {% else %}
+          <span class="wl-hub-level">{{ l.level }}</span>
+          {% endif %}
+        </span>
+      </a>
       {% endfor %}
     </div>
-    <div id="wr-lessons-t2" class="ti-hidden">
+
+    <div id="wr-lessons-t2" class="wl-hub-list wl-hidden">
       {% for l in task2_lessons %}
-      <details class="wr-row"><summary><span class="ic">{{ l.icon }}</span><div><strong>{{ l.title }}</strong><p>{{ l.subtitle }}</p></div><span class="tag">{% if l.id in done_ids %}Done ✓{% else %}{{ l.level }}{% endif %}</span></summary><div class="wr-row-body"><p>{{ l.content }}</p><a href="{% url 'writing:lesson_detail' l.id %}">Open lesson →</a></div></details>
+      <a class="wl-hub-card{% if l.id in done_ids %} is-done{% endif %}" href="{% url 'writing:lesson_detail' l.id %}">
+        <span class="wl-hub-card__icon" aria-hidden="true">{% bs_icon l.icon %}</span>
+        <span class="wl-hub-card__body">
+          <strong>{{ l.title }}</strong>
+          <span>{{ l.subtitle }}</span>
+        </span>
+        <span class="wl-hub-card__cta">
+          {% if l.id in done_ids %}
+          <span class="wl-badge wl-badge--ready">Done</span>
+          {% else %}
+          <span class="wl-hub-level">{{ l.level }}</span>
+          {% endif %}
+        </span>
+      </a>
       {% endfor %}
     </div>
   </section>
@@ -31,11 +69,33 @@
 (() => {
   const t1 = document.getElementById("wr-lessons-t1");
   const t2 = document.getElementById("wr-lessons-t2");
-  document.querySelectorAll(".wr-tabs [data-tab]").forEach(btn => btn.addEventListener("click", () => {
-    const isT1 = btn.dataset.tab === "t1";
-    t1.classList.toggle("ti-hidden", !isT1);
-    t2.classList.toggle("ti-hidden", isT1);
-  }));
+  const btns = document.querySelectorAll(".wr-tabs [data-tab]");
+  if (!t1 || !t2 || !btns.length) return;
+
+  function tabFromUrl() {
+    const q = new URLSearchParams(window.location.search).get("task");
+    return q === "2" ? "t2" : "t1";
+  }
+
+  function applyTab(tab) {
+    const isT1 = tab === "t1";
+    t1.classList.toggle("wl-hidden", !isT1);
+    t2.classList.toggle("wl-hidden", isT1);
+    btns.forEach((b) => {
+      const active = b.dataset.tab === tab;
+      b.classList.toggle("wt1-btn--dark", active);
+      b.classList.toggle("wt1-btn--outline", !active);
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.set("task", isT1 ? "1" : "2");
+    history.replaceState(null, "", url);
+  }
+
+  btns.forEach((btn) => {
+    btn.addEventListener("click", () => applyTab(btn.dataset.tab));
+  });
+
+  applyTab(tabFromUrl());
 })();
 </script>
 {% endblock %}

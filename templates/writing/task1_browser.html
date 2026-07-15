@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Writing — Task 1{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
@@ -14,7 +14,7 @@
     <div class="wt1-type-grid">
       {% for card in type_cards %}
       <a class="wt1-type-card" href="{% url 'writing:task1_question_list' card.slug %}">
-        <div class="wt1-type-card__emoji">{{ card.emoji }}</div>
+        <div class="wt1-type-card__emoji" aria-hidden="true">{% bs_icon card.emoji %}</div>
         <h3>{{ card.name }}</h3>
         <p>{{ card.description }}</p>
         <div class="wt1-type-card__meta">{{ card.done }} / {{ card.total }} done</div>

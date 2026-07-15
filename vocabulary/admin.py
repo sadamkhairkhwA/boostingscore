@@ -1,11 +1,13 @@
 from django.contrib import admin
 
 from .models import (
-    TypeItAttempt,
+    AiUsageLog,
     CustomCard,
     CustomDeck,
     CustomDeckWord,
+    DailyAiUsage,
     TopicIELTSWordCache,
+    TypeItAttempt,
     TypeItResult,
     UserProfile,
     VocabularyProgress,
@@ -15,7 +17,7 @@ from .models import (
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "level", "streak", "best_streak", "placement_completed")
+    list_display = ("user", "plan", "level", "streak", "best_streak", "placement_completed")
 
 
 @admin.register(TopicIELTSWordCache)
@@ -61,3 +63,18 @@ class CustomCardAdmin(admin.ModelAdmin):
 @admin.register(CustomDeckWord)
 class CustomDeckWordAdmin(admin.ModelAdmin):
     list_display = ("word", "deck", "created_at")
+
+
+@admin.register(DailyAiUsage)
+class DailyAiUsageAdmin(admin.ModelAdmin):
+    list_display = ("user", "usage_date", "count")
+    list_filter = ("usage_date",)
+    search_fields = ("user__username",)
+
+
+@admin.register(AiUsageLog)
+class AiUsageLogAdmin(admin.ModelAdmin):
+    list_display = ("user", "feature", "created_at")
+    list_filter = ("feature", "created_at")
+    search_fields = ("user__username", "feature")
+    readonly_fields = ("user", "feature", "created_at")

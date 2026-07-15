@@ -1,0 +1,68 @@
+{% load bs_icons %}
+<div class="rs-strat-card rs-strat-card--full">
+  <h2 class="rs-strat-title">{{ lesson.title }}</h2>
+  <p class="rs-strat-desc">{{ lesson.description }}</p>
+
+  {% if lesson.learn_layout == "skim" %}
+  <div class="rs-exbox">
+    <div class="rs-exbox-lbl">{{ lesson.learn.example_label }}</div>
+    <p class="rs-passage">{{ lesson.learn.passage_html|safe }}</p>
+    <p class="rs-ex-foot">{{ lesson.learn.footnote }}</p>
+  </div>
+
+  {% elif lesson.learn_layout == "keywords" %}
+  <div class="rs-exbox">
+    <div class="rs-exbox-lbl">Question</div>
+    <p class="rs-passage" style="margin-bottom:10px;">{{ lesson.learn.question_html|safe }}</p>
+    <div class="rs-exbox-lbl">Passage (synonyms)</div>
+    <p class="rs-passage">{{ lesson.learn.passage_html|safe }}</p>
+    <p class="rs-ex-foot">{{ lesson.learn.footnote }}</p>
+  </div>
+
+  {% elif lesson.learn_layout == "mapping" %}
+  <div class="rs-exbox">
+    <div class="rs-exbox-lbl">Example map</div>
+    {% for row in lesson.learn.map_rows %}
+    <div class="rs-map-row">
+      <span class="rs-map-para">{{ row.para }}</span>
+      <span class="rs-map-label">{{ row.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% elif lesson.learn_layout == "tfng" %}
+  <div class="rs-exbox">
+    <div class="rs-exbox-lbl">Statement</div>
+    <p class="rs-tfng-statement">{{ lesson.learn.statement }}</p>
+    <div class="rs-exbox-lbl">Passage</div>
+    <p class="rs-passage">{{ lesson.learn.passage_html|safe }}</p>
+    <div><span class="rs-tfng-answer">{{ lesson.learn.answer_label }}</span></div>
+    <p class="rs-ex-foot">{{ lesson.learn.footnote }}</p>
+  </div>
+
+  {% elif lesson.learn_layout == "timebox" %}
+  <div class="rs-exbox">
+    <div class="rs-exbox-lbl">60-minute visual split</div>
+    <div class="rs-timebar">
+      <div class="rs-timebar-seg rs-timebar-seg--1">Part 1 · 20 min</div>
+      <div class="rs-timebar-seg rs-timebar-seg--2">Part 2 · 20 min</div>
+      <div class="rs-timebar-seg rs-timebar-seg--3">Part 3 · 20 min</div>
+    </div>
+    <p class="rs-ex-foot">{{ lesson.learn.footnote }}</p>
+  </div>
+
+  {% elif lesson.learn_layout == "gapfill" %}
+  <div class="rs-exbox">
+    <p class="rs-gap-sentence">{{ lesson.learn.gap_sentence|safe }}</p>
+    <div class="rs-gap-opts">
+      {% for opt in lesson.learn.gap_options %}
+      <span class="rs-gap-opt rs-gap-opt--{% if opt.ok %}ok{% else %}bad{% endif %}">
+        {{ opt.text }}
+        {% if opt.ok %}{% bs_icon "check" "green" "sm" %}{% else %}{% bs_icon "x" "red" "sm" %}{% endif %}
+        {{ opt.note }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>

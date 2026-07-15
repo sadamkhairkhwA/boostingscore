@@ -1,30 +1,96 @@
-BEGINNER = (
-    "money, bank, shop, buy, sell, price, cost, profit, loss, tax, job, work, company, boss, employee, salary, wage, office, "
-    "meeting, email, phone, customer, product, service, market, trade, export, import, contract, deal, sign, pay, invoice, "
-    "receipt, budget, spend, save, invest, loan, debt, interest, stock, share, brand, advertise, promote, launch, start, grow, "
-    "expand, close, fail, succeed, partner, team, manager, director, interview, hire, fire, resign, retire, promotion"
+"""Business and work topic word bank, balanced by part of speech."""
+
+BEGINNER_NOUNS = (
+    "profit", "revenue", "employee", "employer", "salary", "wage", "investment",
+    "customer", "product", "service", "industry", "market", "economy", "budget",
+    "management", "workforce", "productivity", "competition", "entrepreneur",
+    "corporation", "job satisfaction", "working hours", "career path",
+    "small business", "job market", "work-life balance", "remote work",
+    "customer service", "supply and demand", "business owner", "company profit",
+    "economic growth", "employment rate", "trade agreement", "consumer demand",
+    "job security", "labour market", "business strategy", "market share",
+    "financial loss",
+)
+BEGINNER_VERBS = (
+    "invest", "manage", "employ", "recruit", "produce", "sell", "purchase",
+    "compete", "negotiate", "earn", "expand", "advertise", "budget", "outsource",
+    "supervise", "collaborate", "profit", "market", "trade", "deliver",
+)
+BEGINNER_ADJECTIVES = (
+    "commercial", "financial", "economic", "profitable", "competitive",
+    "corporate", "professional", "productive", "efficient", "lucrative",
+    "affordable", "innovative", "entrepreneurial", "flexible", "reliable",
+    "skilled", "unemployed", "self-employed", "prosperous", "marketable",
+)
+BEGINNER_ADVERBS = (
+    "financially", "commercially", "increasingly", "professionally", "efficiently",
+    "globally",
 )
 
-STANDARD = (
-    "entrepreneurship, business model, revenue stream, profit margin, cash flow, working capital, balance sheet, income statement, "
-    "return on investment, market share, competitive advantage, supply chain, logistics, operations management, human resources, "
-    "recruitment, talent management, performance review, corporate culture, organisational structure, merger, acquisition, "
-    "joint venture, franchise, startup ecosystem, venture capital, angel investor, seed funding, IPO, stock market, dividend, "
-    "shareholder, stakeholder, corporate governance, board of directors, CEO, CFO, COO, business strategy, SWOT analysis, "
-    "market research, consumer behaviour, brand identity, digital marketing, content marketing, SEO, social media marketing, "
-    "email marketing, customer acquisition, customer retention, loyalty programme, e-commerce, omnichannel, supply and demand, "
-    "price elasticity, economies of scale, outsourcing, offshoring, nearshoring, B2B, B2C, SaaS, subscription model, platform business, "
-    "data-driven decision, business intelligence, KPI, OKR"
+STANDARD_NOUNS = (
+    "entrepreneurship", "globalisation", "outsourcing", "monopoly",
+    "market share", "profit margin", "corporate culture", "job automation",
+    "economic downturn", "consumer behaviour", "brand loyalty", "start-up",
+    "stock market", "supply chain", "business model", "cash flow",
+    "return on investment", "market demand", "labour force", "trade deficit",
+    "economic recession", "gig economy", "workplace diversity", "career progression",
+    "corporate responsibility", "market fluctuation", "employee retention",
+    "financial incentive", "business venture", "economic policy",
+    "workforce productivity", "consumer confidence", "competitive advantage",
+    "occupational stress", "income inequality",
+)
+STANDARD_VERBS = (
+    "allocate", "generate", "diversify", "streamline", "implement", "maximise",
+    "minimise", "outsource", "restructure", "undermine", "capitalise",
+    "incentivise", "monopolise", "forecast", "downsize", "innovate", "expand",
+    "prioritise", "subsidise", "leverage", "sustain", "commercialise",
+    "privatise", "nationalise", "franchise",
+)
+STANDARD_ADJECTIVES = (
+    "lucrative", "profitable", "competitive", "sustainable", "cost-effective",
+    "viable", "prevalent", "beneficial", "detrimental", "substantial",
+    "flourishing", "stagnant", "volatile", "monopolistic", "strategic",
+    "prosperous", "recessionary", "scalable", "innovative", "widespread",
+    "prohibitive", "market-driven", "profit-oriented",
+)
+STANDARD_ADVERBS = (
+    "consequently", "notably", "significantly", "considerably", "arguably",
+    "whereas", "thereby", "subsequently", "predominantly",
 )
 
-ADVANCED = (
-    "disruptive innovation, blue ocean strategy, value chain analysis, Porter's five forces, resource-based view, dynamic capabilities, "
-    "absorptive capacity, ambidextrous organisation, organisational learning, knowledge management, tacit knowledge, explicit knowledge, "
-    "intellectual capital, human capital, social capital, agency theory, principal-agent problem, information asymmetry, adverse selection, "
-    "moral hazard, transaction cost economics, institutional theory, legitimacy theory, stakeholder theory, shareholder primacy, "
-    "ESG investing, impact investing, triple bottom line, circular economy business, regenerative business, B corporation, social enterprise, "
-    "corporate social responsibility, greenwashing, purpose-driven brand, brand equity, customer lifetime value, net promoter score, "
-    "unit economics, contribution margin, EBITDA, enterprise value, discounted cash flow, weighted average cost of capital, capital asset pricing model, "
-    "efficient market hypothesis, behavioural finance, prospect theory, loss aversion, nudge theory, game theory, prisoner's dilemma, Nash equilibrium, "
-    "auction theory, mechanism design, market microstructure, high-frequency trading, algorithmic trading, quantitative easing, monetary policy transmission, fiscal multiplier"
+ADVANCED_NOUNS = (
+    "market saturation", "economic stagnation", "fiscal policy", "monetary policy",
+    "corporate governance", "vertical integration", "economies of scale",
+    "market volatility", "capital investment", "productivity growth",
+    "labour exploitation", "wealth distribution", "economic disparity",
+    "market equilibrium", "disruptive innovation", "corporate accountability",
+    "occupational mobility", "financial sustainability", "trade liberalisation",
+    "workforce automation", "profit maximisation", "economic resilience",
+    "consumerism", "entrepreneurial ecosystem", "structural unemployment",
 )
+ADVANCED_VERBS = (
+    "capitalise", "consolidate", "monopolise", "underpin", "exacerbate",
+    "mitigate", "spearhead", "revolutionise", "destabilise", "circumvent",
+    "engender", "curtail", "bolster", "perpetuate", "counteract", "expedite",
+    "reinvest", "liquidate", "amortise", "reinforce", "diversify",
+)
+ADVANCED_ADJECTIVES = (
+    "lucrative", "unprecedented", "volatile", "systemic", "far-reaching",
+    "monopolistic", "recessionary", "profound", "disproportionate", "negligible",
+    "cumulative", "indispensable", "salient", "multifaceted", "inextricable",
+    "burgeoning", "exploitative", "resilient", "entrenched", "prohibitive",
+    "nascent",
+)
+ADVANCED_ADVERBS = (
+    "arguably", "ostensibly", "invariably", "markedly", "conversely",
+    "nonetheless", "disproportionately", "substantially", "fundamentally",
+)
+
+BEGINNER = BEGINNER_NOUNS + BEGINNER_VERBS + BEGINNER_ADJECTIVES + BEGINNER_ADVERBS
+STANDARD = STANDARD_NOUNS + STANDARD_VERBS + STANDARD_ADJECTIVES + STANDARD_ADVERBS
+ADVANCED = ADVANCED_NOUNS + ADVANCED_VERBS + ADVANCED_ADJECTIVES + ADVANCED_ADVERBS
+
+NOUNS = BEGINNER_NOUNS + STANDARD_NOUNS + ADVANCED_NOUNS
+VERBS = BEGINNER_VERBS + STANDARD_VERBS + ADVANCED_VERBS
+ADJECTIVES = BEGINNER_ADJECTIVES + STANDARD_ADJECTIVES + ADVANCED_ADJECTIVES
+ADVERBS = BEGINNER_ADVERBS + STANDARD_ADVERBS + ADVANCED_ADVERBS

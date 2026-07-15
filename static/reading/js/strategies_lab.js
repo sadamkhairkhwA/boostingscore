@@ -11,24 +11,7 @@
     return Array.prototype.slice.call((root || document).querySelectorAll(sel));
   }
 
-  /* ——— Main vs skills sub-tabs ——— */
-  function initMainTabs() {
-    qsa(document, ".rs-main-tab").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var key = btn.getAttribute("data-rs-tab");
-        qsa(document, ".rs-main-tab").forEach(function (b) {
-          var on = b.getAttribute("data-rs-tab") === key;
-          b.classList.toggle("active", on);
-          b.setAttribute("aria-selected", on ? "true" : "false");
-        });
-        qsa(document, ".rs-main-panel").forEach(function (p) {
-          p.classList.toggle("active", p.getAttribute("data-rs-panel") === key);
-        });
-      });
-    });
-  }
-
-  function initSkillTabs() {
+  /* ——— Skills lab sub-tabs ——— */
     qsa(document, ".rs-skill-tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var key = btn.getAttribute("data-rs-skill");
@@ -289,7 +272,6 @@
   }
 
   onReady(function () {
-    initMainTabs();
     initSkillTabs();
     initScanning();
     initSkimming();

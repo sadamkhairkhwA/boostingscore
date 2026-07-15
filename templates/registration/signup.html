@@ -62,8 +62,12 @@
 
       <form method="post" novalidate id="signup-form">
         {% csrf_token %}
+        <label class="auth-label" for="id_email">Email</label>
+        <input id="id_email" class="auth-input" type="email" name="email" placeholder="you@example.com" autocomplete="email" value="{{ form.email.value|default:'' }}" autofocus required>
+        <p class="auth-field-msg" data-for="id_email">We'll use this for your account and support.</p>
+
         <label class="auth-label" for="id_username">Username</label>
-        <input id="id_username" class="auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" minlength="3" autofocus required>
+        <input id="id_username" class="auth-input" type="text" name="username" placeholder="Choose a username" autocomplete="username" minlength="3" value="{{ form.username.value|default:'' }}" required>
         <p class="auth-field-msg" data-for="id_username">At least 3 characters.</p>
 
         <label class="auth-label" for="id_password1">Password</label>
@@ -88,15 +92,16 @@
 <div class="auth-footerline">
   © 2026 BoostingScore
   · <a href="/">Home</a>
-  · <a href="/#about">Privacy</a>
-  · <a href="/#about">Terms</a>
-  · <a href="/#about">Contact</a>
+  · <a href="{% url 'privacy' %}">Privacy</a>
+  · <a href="{% url 'terms' %}">Terms</a>
+  · <a href="{% url 'contact' %}">Contact</a>
 </div>
 
 <script>
 (function(){
   var form = document.getElementById('signup-form');
   if(!form) return;
+  var em = document.getElementById('id_email');
   var u  = document.getElementById('id_username');
   var p1 = document.getElementById('id_password1');
   var p2 = document.getElementById('id_password2');
@@ -108,6 +113,13 @@
     el.classList.toggle('auth-input--error', !!bad);
   }
 
+  function checkEmail(show){
+    var v = (em.value || '').trim();
+    var bad = !v || v.indexOf('@') < 1 || v.indexOf('.') < 0;
+    if(bad){ if(show) set(em, 'Enter a valid email address.', true); }
+    else set(em, "We'll use this for your account and support.", false);
+    return !bad;
+  }
   function checkUser(show){
     var bad = u.value.trim().length < 3;
     if(bad){ if(show) set(u, 'Username must be at least 3 characters.', true); }
@@ -129,7 +141,8 @@
   }
 
   form.addEventListener('submit', function(e){
-    var ok = checkUser(true);
+    var ok = checkEmail(true);
+    ok = checkUser(true) && ok;
     ok = checkPass(true) && ok;
     ok = checkConfirm(true) && ok;
     if(!ok) e.preventDefault();
@@ -137,6 +150,7 @@
 
   // Once a field has shown an error, keep re-checking it live so it clears
   // as soon as the input becomes valid.
+  em.addEventListener('input', function(){ if(em.classList.contains('auth-input--error')) checkEmail(true); });
   u.addEventListener('input',  function(){ if(u.classList.contains('auth-input--error'))  checkUser(true); });
   p1.addEventListener('input', function(){ if(p1.classList.contains('auth-input--error')) checkPass(true); checkConfirm(p2.classList.contains('auth-input--error')); });
   p2.addEventListener('input', function(){ if(p2.classList.contains('auth-input--error')) checkConfirm(true); });

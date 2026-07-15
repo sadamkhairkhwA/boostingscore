@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load writing_tags %}
+{% load writing_tags bs_icons %}
 
 {% block title %}Your results — IELTS Writing{% endblock %}
 
@@ -165,7 +165,7 @@
       </p>
       <p class="essay-hl-legend text-muted" style="font-size: 0.9rem; margin-bottom: 0.75rem">
         <mark class="hl-issue-major">Red</mark> serious · <mark class="hl-issue-minor">Yellow</mark> minor ·
-        <mark class="hl-good">Green ★</mark> strong
+        <mark class="hl-good">Green {% bs_icon "star" "amber" "sm" %}</mark> strong
       </p>
       <div class="fb-final-essay essay-highlight-body">{{ essay.student_answer|essay_highlights:essay.feedback_highlights }}</div>
     </section>

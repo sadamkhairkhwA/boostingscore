@@ -1,0 +1,26 @@
+.diag-page { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+.diag-head { margin-bottom: 24px; }
+.diag-title { margin: 0 0 8px; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+.diag-sub { margin: 0; color: #6b7280; font-size: 15px; line-height: 1.55; }
+.diag-section { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 0.5px solid #e8e8e6; }
+.diag-section__title { margin: 0 0 14px; font-size: 15px; font-weight: 700; color: #3B6D11; text-transform: uppercase; letter-spacing: 0.04em; }
+.diag-q { margin-bottom: 16px; }
+.diag-q__prompt { margin: 0 0 8px; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.diag-q__opts { display: flex; flex-direction: column; gap: 6px; }
+.diag-opt { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; padding: 10px 12px; border: 0.5px solid #e8e8e6; border-radius: 8px; cursor: pointer; }
+.diag-opt:has(input:checked) { border-color: #3B6D11; background: #f4f9ee; }
+.diag-opt input { margin-top: 2px; accent-color: #3B6D11; }
+.diag-submit, .diag-btn { display: inline-flex; align-items: center; justify-content: center; font: inherit; font-weight: 600; font-size: 14px; padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer; text-decoration: none; }
+.diag-submit, .diag-btn--primary { background: #3B6D11; color: #fff; }
+.diag-btn { background: #fff; border: 0.5px solid #e8e8e6; color: #374151; margin-right: 8px; }
+.diag-overall { text-align: center; padding: 24px; background: #eaf3de; border-radius: 16px; margin-bottom: 20px; }
+.diag-overall__num { font-size: 3rem; font-weight: 800; color: #27500a; line-height: 1; }
+.diag-overall__lbl { font-size: 14px; font-weight: 600; color: #3B6D11; margin-top: 6px; }
+.diag-skills { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 24px; }
+.diag-skill { display: flex; justify-content: space-between; padding: 12px 14px; border: 0.5px solid #e8e8e6; border-radius: 10px; background: #fff; }
+.diag-skill__name { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: capitalize; }
+.diag-skill__band { font-size: 18px; font-weight: 800; color: #3B6D11; }
+.diag-recs__title { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+.diag-recs__list { margin: 0 0 24px; padding-left: 1.25rem; line-height: 1.8; }
+.diag-recs__list a { color: #3B6D11; font-weight: 600; }
+.diag-actions { display: flex; flex-wrap: wrap; gap: 8px; }

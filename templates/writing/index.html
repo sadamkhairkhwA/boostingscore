@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bs_icons %}
 {% block title %}Writing — Boosting Score{% endblock %}
 
 {% block extra_css %}
@@ -74,7 +75,7 @@
   </div>
 
   <a class="bs-card bs-writing-para bs-animate bs-delay-3" href="{% if user.is_authenticated %}{% url 'writing:paraphrase' %}{% else %}{% url 'login' %}?next={% url 'writing:paraphrase' %}{% endif %}">
-    <div class="bs-writing-para-icon">✎</div>
+    <div class="bs-writing-para-icon">{% bs_icon "pen" "purple" "md" %}</div>
     <div>
       <div class="bs-writing-title bs-writing-para-title">Paraphrase practice</div>
       <div class="bs-writing-desc bs-writing-para-desc">Shorter practice — rewrite an AI paragraph in your own words with level-matched feedback.</div>

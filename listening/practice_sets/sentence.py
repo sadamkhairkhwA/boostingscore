@@ -1,0 +1,273 @@
+"""Sentence completion practice sets (IELTS Section Four, Band 6-7+)."""
+
+_TEST_1 = {
+    "test_number": 1,
+    "id": "sentence-test-1",
+    "title": "Section Four: Urban beekeeping",
+    "audio": "sentence_test1.mp3",
+    "instructions": "Questions 1-5. Complete the sentences below. Write ONE WORD ONLY for each answer.",
+    "lines": [
+        ("NARRATOR", "Section Four. You will hear part of a lecture about urban beekeeping."),
+        ("NARRATOR", "First, you have some time to look at questions 1 to 5."),
+        ("M2", "People often think city bees depend mostly on roadside flowers, yet most of their usable energy actually comes from nectar."),
+        ("M2", "In spring, constant cool weather is less harmful than sudden shifts in temperature, which can unsettle a whole colony."),
+        ("M2", "Another advantage of rooftop hives is social: residents who never spoke before often build a local community around shared care."),
+        ("M2", "Inspectors also warn beginners not to ignore early infection signs, because disease spreads quickly between nearby boxes."),
+        ("M2", "And although honey sales help, the biggest contribution is improved pollination of fruit and vegetables in city gardens."),
+    ],
+    "questions": [
+        {
+            "id": "q1",
+            "render": "text",
+            "text": "The main energy source collected by urban bees is ____. ",
+            "answer": ["nectar"],
+            "explanation": "The lecturer contrasts flowers with nectar as the useful energy source.",
+        },
+        {
+            "id": "q2",
+            "render": "text",
+            "text": "Sudden changes in ____ can weaken a colony in spring.",
+            "answer": ["temperature"],
+            "explanation": "Steady cool conditions are contrasted with sudden temperature shifts.",
+        },
+        {
+            "id": "q3",
+            "render": "text",
+            "text": "Shared rooftop hives can strengthen neighbourhood ____. ",
+            "answer": ["community"],
+            "explanation": "The lecture says residents build a local community around hive care.",
+        },
+        {
+            "id": "q4",
+            "render": "text",
+            "text": "If left unchecked, ____ can move between nearby hives.",
+            "answer": ["disease"],
+            "explanation": "The warning is about infection spreading from one colony to others.",
+        },
+        {
+            "id": "q5",
+            "render": "text",
+            "text": "The major ecological benefit mentioned is better ____. ",
+            "answer": ["pollination"],
+            "explanation": "The speaker says pollination is the biggest contribution, not honey income.",
+        },
+    ],
+}
+
+_TEST_2 = {
+    "test_number": 2,
+    "id": "sentence-test-2",
+    "title": "Section Four: Microplastics",
+    "audio": "sentence_test2.mp3",
+    "instructions": "Questions 1-5. Complete the sentences below. Write ONE WORD ONLY for each answer.",
+    "lines": [
+        ("NARRATOR", "Section Four. You will hear part of a lecture on microplastics."),
+        ("NARRATOR", "First, you have some time to look at questions 1 to 5."),
+        ("M2", "These tiny fragments are not just litter. They can carry toxins that attach to their surfaces in seawater."),
+        ("M2", "A common source is laundry: each wash of synthetic clothing releases thousands of fibres, even when filters are installed."),
+        ("M2", "Scientists have also detected particles in mountain snow, showing that wind-driven atmospheric travel is significant."),
+        ("M2", "When contaminants build up progressively in fish and then in larger predators, we describe this as bioaccumulation."),
+        ("M2", "So current policy aims first at prevention through packaging redesign, not only at coastal clean-up projects."),
+    ],
+    "questions": [
+        {
+            "id": "q1",
+            "render": "text",
+            "text": "Microplastic particles may transport harmful ____. ",
+            "answer": ["toxins"],
+            "explanation": "The lecture states that toxins attach to plastic surfaces.",
+        },
+        {
+            "id": "q2",
+            "render": "text",
+            "text": "Washing synthetic clothes releases plastic ____. ",
+            "answer": ["fibres"],
+            "explanation": "Laundry is identified as a major source of released fibres.",
+        },
+        {
+            "id": "q3",
+            "render": "text",
+            "text": "Finding particles in mountain snow confirms ____ transport.",
+            "answer": ["atmospheric"],
+            "explanation": "The speaker links mountain findings to wind-driven atmospheric movement.",
+        },
+        {
+            "id": "q4",
+            "render": "text",
+            "text": "Chemical build-up through food chains is called ____. ",
+            "answer": ["bioaccumulation"],
+            "explanation": "The term is given directly after describing contaminant increase in predators.",
+        },
+        {
+            "id": "q5",
+            "render": "text",
+            "text": "The preferred long-term strategy is ____. ",
+            "answer": ["prevention"],
+            "explanation": "The lecture prioritizes prevention over relying only on clean-up activity.",
+        },
+    ],
+}
+
+_TEST_3 = {
+    "test_number": 3,
+    "id": "sentence-test-3",
+    "title": "Section Four: Sleep and memory",
+    "audio": "sentence_test3.mp3",
+    "instructions": "Questions 1-5. Complete the sentences below. Write ONE WORD ONLY for each answer.",
+    "lines": [
+        ("NARRATOR", "Section Four. You will hear part of a lecture on sleep and memory."),
+        ("NARRATOR", "First, you have some time to look at questions 1 to 5."),
+        ("M2", "Research now suggests sleep does more than block distraction; it supports active processing of what we study."),
+        ("M2", "In slow-wave sleep, fragile learning traces become stable through a process known as consolidation."),
+        ("M2", "Experiments also show timing matters: learners with the same revision period can produce different retention scores."),
+        ("M2", "Rapid-eye-movement sleep seems especially helpful for integration, where separate ideas are linked into wider patterns."),
+        ("M2", "That is why a short review before bed often beats late-night cramming followed by very little rest."),
+    ],
+    "questions": [
+        {
+            "id": "q1",
+            "render": "text",
+            "text": "Sleep contributes to active memory ____. ",
+            "answer": ["processing"],
+            "explanation": "The speaker says sleep actively processes learning, not merely protects it.",
+        },
+        {
+            "id": "q2",
+            "render": "text",
+            "text": "Deep sleep supports memory ____. ",
+            "answer": ["consolidation"],
+            "explanation": "Consolidation is named as the process stabilizing fragile traces.",
+        },
+        {
+            "id": "q3",
+            "render": "text",
+            "text": "Study timing can affect later ____ scores.",
+            "answer": ["retention"],
+            "explanation": "The lecturer references different retention results with equal study time.",
+        },
+        {
+            "id": "q4",
+            "render": "text",
+            "text": "REM sleep helps the ____ of separate ideas.",
+            "answer": ["integration"],
+            "explanation": "Integration is defined as linking separate ideas into a pattern.",
+        },
+        {
+            "id": "q5",
+            "render": "text",
+            "text": "Studying late without rest is described as ____. ",
+            "answer": ["cramming"],
+            "explanation": "The final comparison contrasts a short review with late-night cramming.",
+        },
+    ],
+}
+
+_TEST_4 = {
+    "test_number": 4,
+    "id": "sentence-test-4",
+    "title": "Section Four: Vertical farming",
+    "audio": "sentence_test4.mp3",
+    "instructions": "Questions 1-5. Complete the sentences below. Write ONE WORD ONLY for each answer.",
+    "lines": [
+        ("NARRATOR", "Section Four. You will hear part of a lecture about vertical farming."),
+        ("NARRATOR", "First, you have some time to look at questions 1 to 5."),
+        ("M2", "Unlike traditional agriculture, vertical systems produce food in stacked layers inside controlled indoor spaces."),
+        ("M2", "Most sites rely on hydroponics, where water is recirculated, so total usage drops sharply."),
+        ("M2", "Even with efficient lighting, operators say electricity remains the cost that most affects profit."),
+        ("M2", "At present, leafy crops are practical, while grain crops are usually too expensive in these systems."),
+        ("M2", "Because production is close to consumers, shorter supply chains can add resilience during transport disruption."),
+    ],
+    "questions": [
+        {
+            "id": "q1",
+            "render": "text",
+            "text": "Vertical farms grow crops in stacked ____. ",
+            "answer": ["layers"],
+            "explanation": "The lecture contrasts stacked layers with wide open fields.",
+        },
+        {
+            "id": "q2",
+            "render": "text",
+            "text": "Hydroponic systems save water through ____. ",
+            "answer": ["recirculation"],
+            "explanation": "Water is reused rather than discarded after one pass.",
+        },
+        {
+            "id": "q3",
+            "render": "text",
+            "text": "The most important running cost is ____. ",
+            "answer": ["electricity"],
+            "explanation": "Profitability is said to depend strongly on electricity prices.",
+        },
+        {
+            "id": "q4",
+            "render": "text",
+            "text": "____ crops are currently more suitable than grains.",
+            "answer": ["leafy"],
+            "explanation": "Leafy crops are singled out as the practical option.",
+        },
+        {
+            "id": "q5",
+            "render": "text",
+            "text": "Local production can increase supply-chain ____. ",
+            "answer": ["resilience"],
+            "explanation": "The speaker links shorter supply routes with resilience in disruption.",
+        },
+    ],
+}
+
+_TEST_5 = {
+    "test_number": 5,
+    "id": "sentence-test-5",
+    "title": "Section Four: Bird migration",
+    "audio": "sentence_test5.mp3",
+    "instructions": "Questions 1-5. Complete the sentences below. Write ONE WORD ONLY for each answer.",
+    "lines": [
+        ("NARRATOR", "Section Four. You will hear part of a lecture on bird migration."),
+        ("NARRATOR", "First, you have some time to look at questions 1 to 5."),
+        ("M2", "Current fieldwork combines satellite tags with radar records and long-term climate observations."),
+        ("M2", "For many species, the strongest seasonal trigger is changing daylight, rather than temperature alone."),
+        ("M2", "Navigation uses multiple cues, including stars, familiar landmarks, and the Earth's magnetic field."),
+        ("M2", "Migrating flocks depend on stopover wetlands where they can feed and refuel before the next stage."),
+        ("M2", "Climate shifts can bring birds to breeding grounds too early, creating timing mismatches with insect peaks."),
+    ],
+    "questions": [
+        {
+            "id": "q1",
+            "render": "text",
+            "text": "Researchers combine satellite tagging with ____ records.",
+            "answer": ["radar"],
+            "explanation": "Radar data is listed with satellite and climate data.",
+        },
+        {
+            "id": "q2",
+            "render": "text",
+            "text": "A key migration signal is changes in ____. ",
+            "answer": ["daylight"],
+            "explanation": "The lecture says daylight is often a stronger trigger than temperature.",
+        },
+        {
+            "id": "q3",
+            "render": "text",
+            "text": "Birds use the Earth's ____ field for orientation.",
+            "answer": ["magnetic"],
+            "explanation": "Magnetic cues are named as one navigation source.",
+        },
+        {
+            "id": "q4",
+            "render": "text",
+            "text": "At stopover sites, birds can ____ before continuing.",
+            "answer": ["refuel"],
+            "explanation": "Wetlands are described as places to feed and refuel.",
+        },
+        {
+            "id": "q5",
+            "render": "text",
+            "text": "Earlier arrival may lead to seasonal ____. ",
+            "answer": ["mismatches"],
+            "explanation": "The final point is about timing mismatches with insect emergence.",
+        },
+    ],
+}
+
+TESTS = [_TEST_1, _TEST_2, _TEST_3, _TEST_4, _TEST_5]

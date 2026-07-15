@@ -1,11 +1,12 @@
-{% load static %}
+{% load static bs_icons %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IELTS Academic Reading · Test 1 — Boosting Score</title>
-  <link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=8">
+  <title>{{ test_payload.testTitleBar|default:"IELTS Academic Reading" }} — Boosting Score</title>
+  <link rel="stylesheet" href="{% static 'css/bs-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'reading/css/academic_reading_test.css' %}?v=9">
 </head>
 <body class="art-body">
   {% csrf_token %}
@@ -17,7 +18,7 @@
   >
     <header class="art-topbar">
       <div class="art-topbar__left">
-        <span class="art-topbar__title">IELTS Academic Reading · Test 1</span>
+        <span class="art-topbar__title">{{ test_payload.testTitleBar|default:"IELTS Academic Reading" }}</span>
       </div>
       <div class="art-topbar__center">
         <span class="art-topbar__timer-label">Time remaining</span>
@@ -33,7 +34,7 @@
     </header>
 
     <div class="art-help-bar art-help-bar--hidden" id="art-help-bar" role="region" aria-label="Help">
-      <button type="button" class="art-help-bar__close" id="art-help-close" aria-label="Close help">✕</button>
+      <button type="button" class="art-help-bar__close" id="art-help-close" aria-label="Close help">{% bs_icon "x" "red" "sm" %}</button>
       <p><strong>How this practice test works:</strong> Use the part tabs to move between sections. Choose your answers and type gap-fill answers in the boxes — nothing is marked until you press <strong>Submit test</strong>. Your timer starts when the page loads. You can hide the passage to focus on questions. After submit, your score, band estimate, and an answer summary appear, and the result is saved to your profile.</p>
     </div>
 
@@ -60,6 +61,7 @@
   <div id="art-results" class="art-results art-results--hidden"></div>
 
   {{ test_payload|json_script:"art-data" }}
-  <script src="{% static 'reading/js/academic_reading_test.js' %}?v=8" defer></script>
+  <script src="{% static 'js/bs-icons.js' %}"></script>
+  <script src="{% static 'reading/js/academic_reading_test.js' %}?v=9" defer></script>
 </body>
 </html>

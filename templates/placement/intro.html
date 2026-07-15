@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if is_retake %}Retake placement{% else %}Find your level{% endif %} — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/placement.css' %}?v=3">
+</head>
+<body class="pl-body">
+  <header class="pl-top">
+    <a href="{% url 'home' %}" class="pl-logo">Boosting<span>Score</span></a>
+  </header>
+
+  <main class="pl-main">
+    <article class="pl-card pl-card--hero">
+      <p class="pl-eyebrow">{% if is_retake %}Retake{% else %}Welcome{% endif %}</p>
+      <h1 class="pl-h1">Let's find your level</h1>
+      <p class="pl-lead">
+        About 20 questions — takes most people under 10 minutes. It estimates your band range and personalises your study plan.
+        Fully auto-graded — free for everyone, no AI checks used.
+      </p>
+      <div class="pl-hero-actions">
+        {% if is_retake %}
+        <form method="post" action="{% url 'placement_retake' %}">
+          {% csrf_token %}
+          <button type="submit" class="pl-btn pl-btn--primary">Start placement test</button>
+        </form>
+        <a href="{% url 'home' %}" class="pl-link-btn">Back to dashboard</a>
+        {% else %}
+        <a href="{% url 'placement_test' %}" class="pl-btn pl-btn--primary">Start placement test</a>
+        <form method="post" action="{% url 'placement_skip' %}" class="pl-skip-form">
+          {% csrf_token %}
+          <button type="submit" class="pl-link-btn">Skip for now</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+  </main>
+</body>
+</html>

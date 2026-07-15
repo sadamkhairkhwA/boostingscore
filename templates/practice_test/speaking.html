@@ -176,6 +176,7 @@
 
   </section>
 
+{% include "includes/speaking_ai_notice.html" %}
 {% endblock %}
 
 
@@ -246,6 +247,11 @@
   }
 
   $('mic-record').addEventListener('click', async function(){
+    if (window.__bsSpeakingNoticePending) {
+      var notice = document.getElementById('bs-speak-notice');
+      if (notice) notice.hidden = false;
+      return;
+    }
     var s;
     try { s = await getMicStream(); } catch(e){ return; }
     micChunks = [];
@@ -472,6 +478,11 @@
     // Hard gate: refuse to record unless the examiner video has finished
     // (this gate is only opened by afterQuestionVideo()).
     if (!recordingAllowed) return;
+    if (window.__bsSpeakingNoticePending) {
+      var notice = document.getElementById('bs-speak-notice');
+      if (notice) notice.hidden = false;
+      return;
+    }
     var s;
     try { s = await getMicStream(); }
     catch(e){ alert('We could not access your microphone.'); return; }

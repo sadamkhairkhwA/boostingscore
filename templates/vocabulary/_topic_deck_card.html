@@ -1,10 +1,11 @@
 {# deck, wizard (bool). Context: user, study_mode, current_topic #}
+{% load bs_icons %}
 <div
   class="vocab-topic-deck-card vocab-topic-deck-card--{{ deck.slug }}{% if not wizard %}{% if deck.is_custom_deck %}{% if active_deck and deck.deck_pk == active_deck.pk %} is-current{% endif %}{% elif deck.slug == current_topic %}{% if deck.slug != 'other' or not active_deck %} is-current{% endif %}{% endif %}{% endif %}"
   {% if wizard %}data-topic-slug="{{ deck.slug }}"{% endif %}
 >
   <div class="vocab-topic-deck-card__top">
-    <span class="vocab-topic-deck-card__emoji" aria-hidden="true">{{ deck.emoji }}</span>
+    <span class="vocab-topic-deck-card__emoji" aria-hidden="true">{% bs_icon deck.emoji "green" "md" %}</span>
     {% if user.is_authenticated %}
       {% if deck.last_studied is None and deck.word_count > 0 %}
         <span class="vocab-topic-deck-card__badge vocab-topic-deck-card__badge--new">New</span>

@@ -1,22 +1,89 @@
-{% extends "base.html" %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Placement results — BoostingScore</title>
+  <link rel="stylesheet" href="{% static 'css/placement.css' %}?v=3">
+</head>
+<body class="pl-body">
+  <header class="pl-top">
+    <a href="{% url 'home' %}" class="pl-logo">Boosting<span>Score</span></a>
+  </header>
 
-{% block title %}Placement results — Boosting Score{% endblock %}
+  <main class="pl-main">
+    <article class="pl-card">
+      <p class="pl-eyebrow">Placement result</p>
+      <h1 class="pl-h1 pl-h1--sm">Estimated level</h1>
+      <div class="pl-band">{{ results.band_range|default:"Band 5.0–5.5" }}</div>
+      <p class="pl-disclaimer">
+        {{ results.disclaimer|default:"This is a quick estimate — a full practice test gives a more accurate picture." }}
+        <a href="{% url 'practice_test:enter_test' 1 %}">Practice Test 1</a>
+      </p>
+    </article>
 
-{% block content %}
-  <div style="max-width: 520px; margin: 0 auto; text-align: center">
-    <h1 class="page-title">Your results</h1>
-    <p class="lead lead--center" style="margin-bottom: 2rem">
-      You answered {{ correct }} out of {{ total }} questions correctly ({{ percent }}%).
-    </p>
-    <div class="card card--white" style="text-align: left; margin-bottom: 1.5rem">
-      <p class="stat-card__label">Your vocabulary level</p>
-      <p class="stat-card__value" style="font-size: 1.75rem">
-        Level {{ level }} — {{ level_name }}
-      </p>
-      <p class="text-muted" style="margin: 1rem 0 0">
-        Vocabulary topics and decks will show words at this level. You can retake the test from your profile if you want to change it.
-      </p>
+    <article class="pl-card">
+      <h2 class="pl-h2">Section snapshot</h2>
+      <div class="pl-bars">
+        <div class="pl-bar">
+          <div class="pl-bar__meta">
+            <span>Vocabulary</span>
+            <strong>{{ results.sections.vocabulary.label|default:"Developing" }}</strong>
+          </div>
+          <div class="pl-bar__track"><div class="pl-bar__fill" style="width: {{ results.sections.vocabulary.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="pl-bar">
+          <div class="pl-bar__meta">
+            <span>Grammar</span>
+            <strong>{{ results.sections.grammar.label|default:"Developing" }}</strong>
+          </div>
+          <div class="pl-bar__track"><div class="pl-bar__fill" style="width: {{ results.sections.grammar.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="pl-bar">
+          <div class="pl-bar__meta">
+            <span>Reading</span>
+            <strong>{{ results.sections.reading.label|default:"Developing" }}</strong>
+          </div>
+          <div class="pl-bar__track"><div class="pl-bar__fill" style="width: {{ results.sections.reading.pct|default:0 }}%"></div></div>
+        </div>
+        <div class="pl-bar">
+          <div class="pl-bar__meta">
+            <span>Writing</span>
+            <strong>{{ results.sections.writing.label|default:"Developing" }}</strong>
+          </div>
+          <div class="pl-bar__track"><div class="pl-bar__fill" style="width: {{ results.sections.writing.pct|default:0 }}%"></div></div>
+        </div>
+      </div>
+    </article>
+
+    {% if results.advice %}
+    <article class="pl-card">
+      <h2 class="pl-h2">Your advice</h2>
+      <ul class="pl-advice">
+        {% for item in results.advice %}
+        <li class="pl-advice__item">
+          <p>{{ item.text }}</p>
+          {% if item.href %}
+          <a class="pl-advice__cta" href="{{ item.href }}">{{ item.cta }} →</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endif %}
+
+    <div class="pl-actions">
+      <a href="{% url 'home' %}" class="pl-btn pl-btn--primary">Go to my dashboard</a>
+      {% if can_retake %}
+      <form method="post" action="{% url 'placement_retake' %}">
+        {% csrf_token %}
+        <button type="submit" class="pl-btn pl-btn--ghost">Retake placement</button>
+      </form>
+      {% elif days_left %}
+      <p class="pl-retake-note">Retake available in {{ days_left }} day{{ days_left|pluralize }}.</p>
+      {% endif %}
     </div>
-    <a class="btn btn--primary btn--lg" href="{% url 'vocabulary:home' %}">Start studying</a>
-  </div>
-{% endblock %}
+  </main>
+</body>
+</html>

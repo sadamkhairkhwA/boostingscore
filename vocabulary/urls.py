@@ -18,6 +18,9 @@ urlpatterns = [
     path("studio/session/save-pending/", views.flashcard_save_pending_api, name="flashcard_save_pending"),
     path("studio/custom-deck/", views.deck_create, name="deck_create"),
     path("studio/custom-deck/save/", views.deck_create_save, name="deck_create_save"),
+    path("studio/custom-deck/<int:deck_id>/", views.custom_deck_hub, name="custom_deck"),
+    path("studio/custom-deck/<int:deck_id>/edit/", views.deck_edit, name="deck_edit"),
+    path("studio/custom-deck/<int:deck_id>/delete/", views.deck_delete, name="deck_delete"),
     path("api/flashcard-set-generate/", views.flashcard_set_generate, name="flashcard_set_generate"),
     path("api/custom-ai-image/", views.custom_ai_image_preview, name="custom_ai_image_preview"),
     path("api/generate-ielts-vocab/", views.generate_ielts_vocab_api, name="generate_ielts_vocab"),
@@ -25,6 +28,11 @@ urlpatterns = [
     path("quiz/setup/", views.quiz_setup, name="quiz_setup"),
     path("quiz/session/", views.quiz_session, name="quiz_session"),
     path("quiz/api/topic-words/<str:topic>/", views.quiz_topic_words_api, name="quiz_topic_words"),
+    path(
+        "quiz/api/custom-deck-words/<int:deck_id>/",
+        views.quiz_custom_deck_words_api,
+        name="quiz_custom_deck_words",
+    ),
     path("type-it/", views.type_it_deck, name="type_it_deck"),
     # Specific paths must come before ``type-it/<str:deck_id>/`` so e.g. ``feedback`` is not captured as a deck slug.
     path("type-it/session/", views.type_it_session, name="type_it_session"),

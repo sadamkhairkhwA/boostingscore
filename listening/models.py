@@ -26,3 +26,23 @@ class ListeningPracticeAttempt(models.Model):
 
     def __str__(self):
         return f"{self.student.username} — {self.question_type} {self.score}/{self.total}"
+
+
+class ListeningTypeCycle(models.Model):
+    """Tracks which practice sets a user has finished in the current cycle per type."""
+
+    student = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="listening_type_cycles"
+    )
+    question_type = models.CharField(max_length=40)
+    completed_set_ids = models.JSONField(default=list, blank=True)
+    cycle_number = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("student", "question_type")]
+        ordering = ["question_type"]
+
+    def __str__(self):
+        n = len(self.completed_set_ids or [])
+        return f"{self.student.username} — {self.question_type} cycle {self.cycle_number} ({n} done)"

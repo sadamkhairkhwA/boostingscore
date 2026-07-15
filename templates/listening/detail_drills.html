@@ -1,0 +1,17 @@
+{% extends "listening/_base.html" %}
+{% load static %}
+{% block title %}Numbers, dates & spelling{% endblock %}
+{% block content %}
+<section class="ll-hero ll-hero--compact">
+  <a href="{% url 'listening:home' %}" class="ll-back">← Listening</a>
+  <h1 class="ll-hero__title">Numbers, dates &amp; spelling</h1>
+  <p class="ll-hero__sub">Short clips — type exactly what you hear. Instant feedback after each answer.</p>
+</section>
+<section class="ll-sec">
+  <div id="ld-drills-host" class="ld-drills"></div>
+  <script type="application/json" id="ld-drills-data">{{ drills_json|safe }}</script>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'listening/js/detail_drills.js' %}?v=1"></script>
+{% endblock %}

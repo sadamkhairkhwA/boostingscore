@@ -72,6 +72,21 @@ class LessonProgress(models.Model):
         unique_together = ("user", "lesson_id")
 
 
+class LessonPracticeAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    lesson_id = models.CharField(max_length=100)
+    attempt_number = models.PositiveIntegerField()
+    response_text = models.TextField()
+    word_count = models.PositiveIntegerField(default=0)
+    ready = models.BooleanField(default=False)
+    feedback_json = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ("user", "lesson_id", "attempt_number")
+
+
 class SkillProgress(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     skill_id = models.CharField(max_length=100)
@@ -79,3 +94,12 @@ class SkillProgress(models.Model):
 
     class Meta:
         unique_together = ("user", "skill_id")
+
+
+class GrammarTopicProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    topic_id = models.CharField(max_length=100)
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "topic_id")

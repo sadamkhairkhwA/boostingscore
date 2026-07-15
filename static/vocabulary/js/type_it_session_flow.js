@@ -39,19 +39,30 @@
   function stars5(n) {
     var x = Math.max(1, Math.min(5, Math.round(Number(n) || 0)));
     var out = "";
-    for (var i = 1; i <= 5; i++) out += i <= x ? "★" : "☆";
+    for (var i = 1; i <= 5; i++) {
+      out += i <= x
+        ? (window.BSIcons ? BSIcons.inline("star", "warn") : "")
+        : (window.BSIcons ? BSIcons.inline("star-outline", "warn") : "");
+    }
     return out;
   }
   function starsHero(total, outOf) {
     var x;
     if (outOf === 10) x = Math.max(1, Math.min(5, Math.round((total * 5) / 10)));
     else x = Math.max(1, Math.min(5, Math.round(Number(total) || 0)));
-    var out = "";
-    for (var i = 1; i <= 5; i++) out += i <= x ? "★" : "☆";
-    return out;
+    return stars5(x);
   }
   function cur() {
     return words[idx];
+  }
+  function okBadge() {
+    return (window.BSIcons ? BSIcons.inline("check", "ok") : "") + " Good";
+  }
+  function badBadge() {
+    return (window.BSIcons ? BSIcons.cross() : "") + " Needs work";
+  }
+  function checkMark() {
+    return window.BSIcons ? BSIcons.inline("check", "ok") : "";
   }
   function passes(mode, total) {
     var m = mode || "both";
@@ -98,8 +109,8 @@
       else if (i < ai) cls += " ti-s-step--done";
       else if (i === ai) cls += " ti-s-step--active";
       var txt = labels[i];
-      if (k === "select") txt = "Select ✓";
-      else if (i < ai) txt = labels[i] + " ✓";
+      if (k === "select") txt = "Select " + checkMark();
+      else if (i < ai) txt = labels[i] + " " + checkMark();
       parts.push(sep + '<span class="' + cls + '" data-step="' + k + '">' + txt + "</span>");
     }
     stepsBar.innerHTML = parts.join("");
@@ -119,7 +130,7 @@
           i +
           '" role="tab">' +
           escapeHtml(String(i + 1) + " " + w.word) +
-          (meta.passed ? " ✓" : "") +
+          (meta.passed ? " " + checkMark() : "") +
           "</button>"
         );
       })
@@ -195,7 +206,7 @@
       .join("");
     stageSummary.innerHTML =
       '<div class="ti-sum-inner">' +
-      '<div class="ti-sum-icon" aria-hidden="true">🎉</div>' +
+      '<div class="ti-sum-icon" aria-hidden="true">' + (typeof BSIcons !== "undefined" ? BSIcons.tile("trophy", "amber", "lg") : "") + '</div>' +
       '<h2 class="ti-sum-title">Session complete</h2>' +
       '<p class="ti-sum-sub">' +
       n +
@@ -304,7 +315,7 @@
       '<div class="ti-task" id="ti-task-def-wrap"><div class="ti-task-h"><span class="ti-task-num">1</span><div><h3 class="ti-task-title">Write the definition from memory</h3><p class="ti-task-sub">Don\'t look back. Write in your own words.</p></div></div><textarea id="ti-def" class="ti-area" placeholder="What does this word mean?..."></textarea><div class="ti-count" id="ti-def-c">0 words</div></div>' +
       '<div class="ti-task" id="ti-task-sent-wrap"><div class="ti-task-h"><span class="ti-task-num">2</span><div><h3 class="ti-task-title">Write a sentence using this word</h3><p class="ti-task-sub">One IELTS-style sentence. Use the word correctly.</p></div></div><textarea id="ti-sent" class="ti-area" placeholder="Write your sentence here..."></textarea><div class="ti-count" id="ti-sent-c">0 words</div></div>';
     stageTest.innerHTML =
-      '<div class="ti-banner"><span>🧠</span><div><strong>Definition and example are now hidden</strong><div>Recall from memory. This is what makes vocabulary stick.</div></div></div>' +
+      '<div class="ti-banner"><span aria-hidden="true">' + (typeof BSIcons !== "undefined" ? BSIcons.tile("brain", "purple", "sm") : "") + '</span><div><strong>Definition and example are now hidden</strong><div>Recall from memory. This is what makes vocabulary stick.</div></div></div>' +
       '<div class="ti-card ti-card--test-word">' +
       '<h2 class="ti-word">' +
       escapeHtml(w.word) +
@@ -319,7 +330,7 @@
       "</strong></span></div></div>" +
       tasks +
       '<button id="ti-assist-link" class="ti-link-red" type="button">I can\'t remember — show definition</button>' +
-      '<div id="ti-assist-confirm" class="ti-assist-box ti-hidden"><strong>⚠ This marks your attempt as assisted</strong><div>Even a wrong attempt helps you learn more than looking it up.</div><div class="ti-actions"><button id="ti-assist-yes" class="ti-btn ti-btn--dark" type="button">Show anyway</button><button id="ti-assist-no" class="ti-btn ti-btn--outline" type="button">Cancel</button></div></div>' +
+      '<div id="ti-assist-confirm" class="ti-assist-box ti-hidden"><strong>' + (typeof BSIcons !== "undefined" ? BSIcons.warn() : "") + ' This marks your attempt as assisted</strong><div>Even a wrong attempt helps you learn more than looking it up.</div><div class="ti-actions"><button id="ti-assist-yes" class="ti-btn ti-btn--dark" type="button">Show anyway</button><button id="ti-assist-no" class="ti-btn ti-btn--outline" type="button">Cancel</button></div></div>' +
       '<div id="ti-assist-def" class="ti-assist-box ti-hidden"><span class="ti-assist-tag">Assisted</span>' +
       escapeHtml(w.definition) +
       "</div>" +
@@ -455,7 +466,7 @@
         " " +
         ds +
         '/5</div><div>' +
-        (ds >= 4 ? "✓ Good" : "✗ Needs work") +
+        (ds >= 4 ? okBadge() : badBadge()) +
         '</div><div class="ti-fbox ti-fbox--good"><strong>What was good</strong><div>' +
         escapeHtml(fb.definition_good || "") +
         "</div></div>" +
@@ -477,7 +488,7 @@
         " " +
         ss +
         '/5</div><div>' +
-        (ss >= 4 ? "✓ Good" : "✗ Needs work") +
+        (ss >= 4 ? okBadge() : badBadge()) +
         '</div><div class="ti-fbox ti-fbox--good"><strong>What was good</strong><div>' +
         escapeHtml(fb.sentence_good || "") +
         "</div></div>" +

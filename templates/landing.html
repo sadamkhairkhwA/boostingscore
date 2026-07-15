@@ -1,11 +1,12 @@
-{% load static %}<!DOCTYPE html>
+{% load static bs_icons %}<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BoostingScore — Reach your target IELTS band with AI feedback</title>
-  <meta name="description" content="Vocabulary, Reading and Writing practice with live AI feedback, inline highlights, and a streak that keeps you moving. Built for IELTS.">
-  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=2">
+  <meta name="description" content="Full IELTS practice across Reading, Writing, Listening and Speaking — with AI band scoring, practice tests, and 1,400+ graded vocabulary words.">
+  <link rel="stylesheet" href="{% static 'css/bs-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=3">
 </head>
 <body class="ld-body">
 
@@ -13,8 +14,8 @@
 <div class="ld-anno">
   <div class="ld-anno__inner">
     <span class="ld-anno__dot" aria-hidden="true"></span>
-    <span>New · AI feedback v2 is live — try Task 1 &amp; Task 2 free</span>
-    <a href="{% url 'signup' %}" class="ld-anno__link">Learn more →</a>
+    <span>Now live — free while in early access</span>
+    <a href="{% url 'signup' %}" class="ld-anno__link">Get started →</a>
   </div>
 </div>
 
@@ -55,42 +56,20 @@
     </h1>
 
     <p class="ld-sub">
-      Vocabulary, Reading and Writing practice with live AI feedback, inline highlights,
-      and a streak that keeps you moving — built for IELTS.
+      All four IELTS skills — Reading, Writing, Listening and Speaking — with AI band scoring, full practice tests, and vocabulary that sticks.
     </p>
 
     <div class="ld-cta">
       <a href="{% url 'signup' %}" class="ld-btn ld-btn--green ld-btn--lg">
         Start for free <span class="ld-btn__arrow" aria-hidden="true">→</span>
       </a>
-      <a href="#how" class="ld-watch">
-        <span class="ld-watch__play" aria-hidden="true">
-          <svg viewBox="0 0 12 12" width="10" height="10"><path fill="currentColor" d="M2.5 1.5v9l8-4.5z"/></svg>
-        </span>
-        <span class="ld-watch__txt">
-          <small>Watch the full video</small>
-          <b>See how it works <span aria-hidden="true">↗</span></b>
-        </span>
-      </a>
     </div>
 
-    <p class="ld-cta__note">No credit card. No setup. Free to start.</p>
+    <p class="ld-cta__note">No credit card. No setup.</p>
 
-    <!-- Trust row -->
-    <div class="ld-trust" aria-label="Social proof">
-      <div class="ld-avatars" aria-hidden="true">
-        <span class="ld-av ld-av--1">A</span>
-        <span class="ld-av ld-av--2">M</span>
-        <span class="ld-av ld-av--3">S</span>
-        <span class="ld-av ld-av--4">J</span>
-        <span class="ld-av ld-av--5">+</span>
-      </div>
-      <div class="ld-trust__text">
-        <div class="ld-stars" aria-hidden="true">
-          <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-        </div>
-        <span>Trusted by <b>1,400+ IELTS students</b> practising daily</span>
-      </div>
+    <!-- Product facts (replaces fake social proof) -->
+    <div class="ld-trust ld-trust--facts" aria-label="Product facts">
+      <p class="ld-trust__facts">Full IELTS practice — 4 skills, 1,400+ graded words, AI band scoring on writing and speaking.</p>
     </div>
   </div>
 
@@ -140,7 +119,7 @@
 <section class="ld-stats">
   <div class="ld-stats__grid">
     <div class="ld-stat"><div class="ld-stat__num">1,400+</div><div class="ld-stat__lbl">IELTS vocabulary words</div></div>
-    <div class="ld-stat"><div class="ld-stat__num">8</div><div class="ld-stat__lbl">Topic categories</div></div>
+    <div class="ld-stat"><div class="ld-stat__num">4</div><div class="ld-stat__lbl">Skills in one place</div></div>
     <div class="ld-stat"><div class="ld-stat__num">Band 9</div><div class="ld-stat__lbl">AI scoring scale</div></div>
   </div>
 </section>
@@ -154,83 +133,83 @@
   </header>
 
   <div class="ld-tabs" role="tablist" aria-label="Features">
-    <button class="ld-tab is-on" data-tab="vocab"    role="tab" aria-selected="true">📚 Vocabulary</button>
-    <button class="ld-tab"        data-tab="typeit"  role="tab">⌨️ Type-it</button>
-    <button class="ld-tab"        data-tab="writing" role="tab">✍️ Writing</button>
-    <button class="ld-tab"        data-tab="reading" role="tab">📖 Reading</button>
-    <button class="ld-tab"        data-tab="lessons" role="tab">🎯 Lessons</button>
-    <button class="ld-tab"        data-tab="streak"  role="tab">🔥 Streak</button>
+    <button class="ld-tab is-on" data-tab="practice" role="tab" aria-selected="true">{% bs_icon "clipboard" "navy" "sm" %} Practice tests</button>
+    <button class="ld-tab" data-tab="writing" role="tab">{% bs_icon "pen" "purple" "sm" %} Writing</button>
+    <button class="ld-tab" data-tab="speaking" role="tab">{% bs_icon "volume" "blue" "sm" %} Speaking</button>
+    <button class="ld-tab" data-tab="listening" role="tab">{% bs_icon "headphones" "green" "sm" %} Listening</button>
+    <button class="ld-tab" data-tab="reading" role="tab">{% bs_icon "book" "green" "sm" %} Reading</button>
+    <button class="ld-tab" data-tab="vocab" role="tab">{% bs_icon "cards" "green" "sm" %} Vocabulary</button>
   </div>
 
-  <div class="ld-feat" data-pane="vocab" role="tabpanel">
-    <div class="ld-feat__icon">📚</div>
-    <h3 class="ld-feat__title">Vocabulary</h3>
-    <p class="ld-feat__sub">1,400+ IELTS-graded words organised by topic and difficulty.</p>
+  <div class="ld-feat" data-pane="practice" role="tabpanel">
+    <div class="ld-feat__icon" aria-hidden="true">{% bs_icon "clipboard" "navy" "lg" %}</div>
+    <h3 class="ld-feat__title">Practice tests</h3>
+    <p class="ld-feat__sub">A full four-section IELTS simulation with a band score at the end.</p>
     <ul class="ld-checks">
-      <li>1,400+ IELTS words graded by difficulty and topic</li>
-      <li>Topics: Health, Technology, Environment, Society and more</li>
-      <li>Three levels: Beginner, Standard, Advanced</li>
-      <li>Spaced repetition with simple definitions, synonyms and examples</li>
-    </ul>
-  </div>
-
-  <div class="ld-feat ld-hidden" data-pane="typeit" role="tabpanel">
-    <div class="ld-feat__icon">⌨️</div>
-    <h3 class="ld-feat__title">Type-it</h3>
-    <p class="ld-feat__sub">Write definitions and sentences from memory — AI scores them instantly.</p>
-    <ul class="ld-checks">
-      <li>Write the definition from memory</li>
-      <li>Write one IELTS-style sentence using the word</li>
-      <li>AI gives an instant verdict: correct / partial / incorrect</li>
-      <li>Shows the correct definition, synonyms and a better sentence</li>
+      <li>Full 4-section IELTS simulation</li>
+      <li>Speaking with examiner videos and AI scoring</li>
+      <li>Reading, Writing, Listening and Speaking in one run</li>
+      <li>Band score at the end</li>
     </ul>
   </div>
 
   <div class="ld-feat ld-hidden" data-pane="writing" role="tabpanel">
-    <div class="ld-feat__icon">✍️</div>
+    <div class="ld-feat__icon" aria-hidden="true">{% bs_icon "pen" "purple" "lg" %}</div>
     <h3 class="ld-feat__title">Writing</h3>
-    <p class="ld-feat__sub">Real IELTS questions with 4-criterion AI feedback and inline highlights.</p>
+    <p class="ld-feat__sub">Academic Task 1 and Task 2 with 4-criterion AI feedback and inline highlights.</p>
     <ul class="ld-checks">
-      <li>Bar charts, line graphs, pie charts, maps, process diagrams, Task 2 essays</li>
-      <li>Inline highlights: green = well written, red = grammar, amber = weak word</li>
-      <li>4-criterion scoring across Task achievement, Coherence, Lexical, Grammar</li>
-      <li>Band 7 model answer + personalised skill links</li>
+      <li>Charts, maps, processes and Task 2 essay types</li>
+      <li>Inline highlights for strengths, grammar and weak wording</li>
+      <li>Scores across Task achievement, Coherence, Lexical resource and Grammar</li>
+      <li>Lessons, grammar hub and paraphrase practice to raise the band</li>
+    </ul>
+  </div>
+
+  <div class="ld-feat ld-hidden" data-pane="speaking" role="tabpanel">
+    <div class="ld-feat__icon" aria-hidden="true">{% bs_icon "volume" "blue" "lg" %}</div>
+    <h3 class="ld-feat__title">Speaking</h3>
+    <p class="ld-feat__sub">Examiner-style practice with recording, transcription and AI scoring.</p>
+    <ul class="ld-checks">
+      <li>Examiner video plays — then you record your answer</li>
+      <li>Whisper transcribes your speech</li>
+      <li>AI scores the four IELTS speaking criteria</li>
+      <li>Study bank of common questions, phrases, pronunciation and tips</li>
+    </ul>
+  </div>
+
+  <div class="ld-feat ld-hidden" data-pane="listening" role="tabpanel">
+    <div class="ld-feat__icon" aria-hidden="true">{% bs_icon "headphones" "green" "lg" %}</div>
+    <h3 class="ld-feat__title">Listening</h3>
+    <p class="ld-feat__sub">Practise one IELTS question type at a time with short clips and tips.</p>
+    <ul class="ld-checks">
+      <li>Six question types: multiple choice, gap-fill, sentence, matching, map and short answer</li>
+      <li>Five focused tests per type with audio that plays once</li>
+      <li>Answers and explanations after each set</li>
+      <li>Strategy tips for every question type</li>
     </ul>
   </div>
 
   <div class="ld-feat ld-hidden" data-pane="reading" role="tabpanel">
-    <div class="ld-feat__icon">📖</div>
+    <div class="ld-feat__icon" aria-hidden="true">{% bs_icon "book" "green" "lg" %}</div>
     <h3 class="ld-feat__title">Reading</h3>
-    <p class="ld-feat__sub">Academic passages with the exam question types and a live timer.</p>
+    <p class="ld-feat__sub">Academic papers, question-type practice and strategies for the 60-minute test.</p>
     <ul class="ld-checks">
-      <li>IELTS academic passages, exam-style</li>
-      <li>True / False / Not Given question type</li>
-      <li>Matching, gap fill and other key question types</li>
-      <li>Timed practice that mirrors the real exam</li>
+      <li>Full academic reading tests (40 questions, 3 parts, 60 minutes)</li>
+      <li>Learn and practise each question type with focused sets</li>
+      <li>Strategies and time plans for TFNG, headings, matching and more</li>
+      <li>General reading for broader fluency alongside Academic prep</li>
     </ul>
   </div>
 
-  <div class="ld-feat ld-hidden" data-pane="lessons" role="tabpanel">
-    <div class="ld-feat__icon">🎯</div>
-    <h3 class="ld-feat__title">Lessons</h3>
-    <p class="ld-feat__sub">18 structured lessons that walk you through Task 1 and Task 2.</p>
+  <div class="ld-feat ld-hidden" data-pane="vocab" role="tabpanel">
+    <div class="ld-feat__icon" aria-hidden="true">{% bs_icon "cards" "green" "lg" %}</div>
+    <h3 class="ld-feat__title">Vocabulary</h3>
+    <p class="ld-feat__sub">1,400+ IELTS-graded words with spaced repetition and multiple study methods.</p>
     <ul class="ld-checks">
-      <li>18 structured lessons for Task 1 and Task 2</li>
-      <li>Strong vs weak examples shown with highlights</li>
-      <li>Common mistakes called out clearly</li>
-      <li>Examiner tips on what really raises the band</li>
-    </ul>
-  </div>
-
-  <div class="ld-feat ld-hidden" data-pane="streak" role="tabpanel">
-    <div class="ld-feat__icon">🔥</div>
-    <h3 class="ld-feat__title">Streak</h3>
-    <p class="ld-feat__sub">Tiny daily habits that compound into real band-score gains.</p>
-    <ul class="ld-checks">
-      <li>Daily streak counter that rewards consistency</li>
-      <li>Level progression: Beginner → Intermediate → Advanced</li>
-      <li>Best band score tracking across attempts</li>
-      <li>Weekly heatmap of practice activity</li>
+      <li>1,400+ IELTS words graded by difficulty and topic</li>
+      <li>Flashcards with spaced repetition</li>
+      <li>Quick quiz, Type it, word lists and favoured words</li>
+      <li>Topic decks covering Health, Technology, Environment and more</li>
     </ul>
   </div>
 </section>
@@ -244,18 +223,18 @@
   <ol class="ld-steps">
     <li class="ld-step">
       <span class="ld-step__num">1</span>
-      <h3>Learn and practise vocabulary daily</h3>
-      <p>Study IELTS words. Use Type-it to write definitions and sentences from memory. The AI tells you immediately whether you understood correctly.</p>
+      <h3>Learn the skills and vocabulary</h3>
+      <p>Build IELTS words with flashcards, then study writing lessons, listening tips and speaking strategies so you know how each question type works.</p>
     </li>
     <li class="ld-step">
       <span class="ld-step__num">2</span>
-      <h3>Write Task 1 and Task 2 essays</h3>
-      <p>Choose a real question, write your response, and get band scores across all four criteria with inline highlights showing exactly where to improve.</p>
+      <h3>Practise with AI feedback</h3>
+      <p>Write Task 1 and Task 2, record Speaking answers, and drill Reading and Listening by type. AI scores your work and shows where to improve.</p>
     </li>
     <li class="ld-step">
       <span class="ld-step__num">3</span>
-      <h3>Follow the personalised skill links</h3>
-      <p>Every feedback links directly to Writing Skills exercises targeted to your exact weaknesses — so improvement happens where it matters most.</p>
+      <h3>Take a full practice test</h3>
+      <p>Sit a complete four-section simulation under exam conditions, then review your overall band score and the feedback for each skill.</p>
     </li>
   </ol>
 </section>
@@ -265,33 +244,36 @@
   <header class="ld-sec__head">
     <p class="ld-eyebrow">PRICING</p>
     <h2 class="ld-h2">Simple, fair pricing</h2>
-    <p class="ld-sec__sub">Start free. Upgrade when you’re ready.</p>
+    <p class="ld-sec__sub">Start free. Pro launches soon.</p>
   </header>
   <div class="ld-price__grid">
     <article class="ld-price">
       <h3 class="ld-price__name">Free</h3>
       <div class="ld-price__amount">$0<span>/month</span></div>
       <ul class="ld-checks">
-        <li>50 vocabulary words</li>
-        <li>5 Type-it sessions per day</li>
-        <li>3 writing attempts per month</li>
-        <li>Core writing lessons</li>
+        <li>1 full practice test (all 4 sections)</li>
+        <li>1 academic reading test</li>
+        <li>Flashcards with 1,400+ IELTS words and spaced repetition</li>
+        <li>Listening multiple-choice practice (5 tests + tips)</li>
+        <li>1 scored writing attempt each for Task 1 and Task 2</li>
         <li>Streak tracking</li>
       </ul>
       <a href="{% url 'signup' %}" class="ld-btn ld-btn--outline ld-btn--full">Get started</a>
     </article>
     <article class="ld-price ld-price--pro">
-      <span class="ld-pro-badge">Most popular</span>
       <h3 class="ld-price__name">Pro</h3>
       <div class="ld-price__amount">$9<span>/month</span></div>
       <ul class="ld-checks">
-        <li>All 1,400+ vocabulary words</li>
-        <li>Unlimited Type-it sessions</li>
-        <li>Unlimited writing attempts</li>
-        <li>All 18 lessons + 32 skills</li>
-        <li>Full AI feedback + model answers</li>
+        <li>All 5 practice tests</li>
+        <li>All reading tests and question-type practice</li>
+        <li>All listening question types and drills</li>
+        <li>Full Speaking study section</li>
+        <li>All writing lessons, grammar hub, and paraphrase practice</li>
+        <li>All vocabulary study methods</li>
+        <li>50 AI checks per day</li>
       </ul>
-      <a href="{% url 'signup' %}" class="ld-btn ld-btn--green ld-btn--full">Start free trial</a>
+      <button type="button" class="ld-btn ld-btn--muted ld-btn--full" disabled>Coming soon</button>
+      <p class="ld-price__note">Pro launches soon — early users get everything free for now.</p>
     </article>
   </div>
 </section>
@@ -303,18 +285,33 @@
     <h2 class="ld-h2">Common questions</h2>
   </header>
   <div class="ld-faq__list">
-    <details class="ld-q"><summary>Do I need a credit card to sign up?</summary><div>No — the free plan needs no card and no setup. You can practise vocabulary and try a few writing attempts immediately.</div></details>
-    <details class="ld-q"><summary>How is AI feedback different from a human teacher?</summary><div>It’s instant, available 24/7, and targeted to your exact mistakes in each submission. It complements (rather than replaces) coaching by giving you fast, repeatable practice.</div></details>
-    <details class="ld-q"><summary>What band score can BoostingScore help me reach?</summary><div>BoostingScore is designed to move students from Band 5–6 to Band 7+ by tightening vocabulary, fixing recurring grammar mistakes, and improving structure across Task 1 and Task 2.</div></details>
-    <details class="ld-q"><summary>Can I cancel my subscription anytime?</summary><div>Yes — cancel anytime. You’ll keep access until the end of the current billing period.</div></details>
-    <details class="ld-q"><summary>How long does it take to see improvement?</summary><div>Most students see clear improvement in 2–3 weeks of daily practice, especially in vocabulary range and Task 1 structure.</div></details>
+    <details class="ld-q">
+      <summary>Do I need a credit card to sign up?</summary>
+      <div>No. The free plan needs no credit card and no setup. Create an account and start practising straight away.</div>
+    </details>
+    <details class="ld-q">
+      <summary>Is the AI scoring accurate?</summary>
+      <div>The scorer is trained on IELTS band descriptors across all four criteria for Writing and Speaking. Treat it as a clear guide for improvement — not an official exam score from Cambridge, IDP or the British Council.</div>
+    </details>
+    <details class="ld-q">
+      <summary>Does it include Speaking practice?</summary>
+      <div>Yes. In the practice test, examiner videos play, you record your answer, Whisper transcribes it, and AI scores you on the four IELTS speaking criteria. There is also a Speaking study section with questions, phrases, pronunciation notes and tips.</div>
+    </details>
+    <details class="ld-q">
+      <summary>Is it for Academic or General Training?</summary>
+      <div>Practice tests and the full reading papers are Academic-focused. Writing covers Academic Task 1 and Task 2. Listening and Speaking are shared across both modules. There is also a General reading area for broader fluency practice.</div>
+    </details>
+    <details class="ld-q">
+      <summary>How long does it take to see improvement?</summary>
+      <div>It depends on your starting level and how often you practise. Many people notice clearer structure and fewer repeated mistakes within a few weeks of short, regular sessions — especially when they review AI feedback and retry the same skill.</div>
+    </details>
   </div>
 </section>
 
 <!-- Final CTA -->
 <section class="ld-final">
   <h2 class="ld-h2">Ready to reach your target band?</h2>
-  <p class="ld-sub">Join thousands of IELTS students practising smarter with AI feedback.</p>
+  <p class="ld-sub">Start practising smarter with AI feedback — free.</p>
   <a href="{% url 'signup' %}" class="ld-btn ld-btn--green ld-btn--lg">Start for free — no card needed</a>
 </section>
 
@@ -325,17 +322,18 @@
   <div class="ld-footer__inner">
     <a href="#top" class="ld-logo ld-logo--sm">Boosting<span>Score</span></a>
     <div class="ld-footer__links">
-      <a href="#about">Privacy</a>
-      <a href="#about">Terms</a>
-      <a href="#about">Contact</a>
+      <a href="{% url 'privacy' %}">Privacy</a>
+      <a href="{% url 'terms' %}">Terms</a>
+      <a href="{% url 'contact' %}">Contact</a>
     </div>
     <div class="ld-footer__copy">© 2026 BoostingScore</div>
   </div>
+  <p class="ld-footer__legal">IELTS is a registered trademark of its owners. BoostingScore is not affiliated with IELTS, IDP, the British Council, or Cambridge.</p>
 </footer>
 
+<script src="{% static 'js/bs-icons.js' %}"></script>
 <script>
 (() => {
-  // Smooth scroll for nav links
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
       const id = a.getAttribute('href').slice(1);
@@ -347,14 +345,12 @@
     });
   });
 
-  // Mobile nav toggle
   const toggle = document.querySelector('[data-nav-toggle]');
   const nav = document.querySelector('.ld-nav');
   if (toggle && nav) {
     toggle.addEventListener('click', () => nav.classList.toggle('is-open'));
   }
 
-  // Feature tabs
   const tabs  = Array.from(document.querySelectorAll('.ld-tab'));
   const panes = Array.from(document.querySelectorAll('.ld-feat'));
   tabs.forEach(t => t.addEventListener('click', () => {
@@ -367,7 +363,6 @@
     panes.forEach(p => p.classList.toggle('ld-hidden', p.dataset.pane !== key));
   }));
 
-  // Animate hero band bars in once
   requestAnimationFrame(() => {
     document.querySelectorAll('.ld-bar i').forEach(b => {
       const w = getComputedStyle(b).getPropertyValue('--w').trim() || '0%';

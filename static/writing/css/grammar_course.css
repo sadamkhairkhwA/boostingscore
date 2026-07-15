@@ -1,0 +1,287 @@
+/* Writing grammar course — study/reference pages */
+
+.wg-page {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.wg-back {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+
+.wg-back:hover {
+  color: #3b6d11;
+}
+
+.wg-hub-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+
+.wg-hub-progress__bar {
+  flex: 1;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.wg-hub-progress__bar > span {
+  display: block;
+  height: 100%;
+  background: #3b6d11;
+  border-radius: 999px;
+}
+
+.wg-hub-progress__count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.wg-hub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wg-hub-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #fff;
+  border: 0.5px solid #d1d5db;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.wg-hub-card:hover {
+  border-color: #3b6d11;
+  box-shadow: 0 0 0 1px #3b6d11;
+}
+
+.wg-hub-card.is-done {
+  border-color: #c5ddb3;
+}
+
+.wg-hub-card__icon {
+  flex-shrink: 0;
+}
+
+.wg-hub-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wg-hub-card__body strong {
+  display: block;
+  font-size: 14px;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.wg-hub-card__body span {
+  display: block;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.wg-hub-card__cta {
+  flex-shrink: 0;
+}
+
+.wg-hub-arrow {
+  font-size: 16px;
+  color: #9ca3af;
+}
+
+.wg-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wg-badge--done {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+/* Topic detail */
+.wg-card {
+  background: #fff;
+  border: 0.5px solid #d1d5db;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 12px;
+}
+
+.wg-card__title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.wg-card__text {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #4b5563;
+}
+
+.wg-card__text:last-of-type {
+  margin-bottom: 14px;
+}
+
+.wg-golden {
+  background: #f9fdf5;
+  border: 0.5px solid #c0dd97;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.wg-golden__lbl {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3b6d11;
+  margin-bottom: 6px;
+}
+
+.wg-golden__txt {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.wg-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wg-pair__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.wg-pair__row--bad {
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
+.wg-pair__row--ok {
+  background: #eaf3de;
+  color: #1f2937;
+}
+
+.wg-pair__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.wg-pill {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.wg-pill--bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.wg-pill--ok {
+  background: #d4e8c0;
+  color: #3b6d11;
+}
+
+.wg-hl {
+  background: #d4e8c0;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+.wg-pair__fix {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.wg-mistakes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wg-mistakes li {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.wg-mistakes__bad {
+  display: block;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.wg-mistakes__fix {
+  display: block;
+  color: #3b6d11;
+  font-weight: 600;
+}
+
+.wg-mistakes__fix::before {
+  content: "→ ";
+  font-weight: 700;
+}
+
+.wg-topic-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.wg-topic-nav .wt1-btn {
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .wg-topic-nav .wt1-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

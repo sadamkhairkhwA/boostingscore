@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Quiz setup — Boosting Score{% endblock %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/quiz_methods.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/vocab_word_checklist.css' %}?v=1" />
 {% endblock %}
 {% block body_class %}qq-setup-page{% endblock %}
 {% block content %}
-<div class="bs-page qq-setup" id="qq-setup-root" data-session-url="{{ quiz_session_url|escape }}" data-topic-words-url="{{ quiz_topic_words_url|escape }}">
+<div class="bs-page qq-setup" id="qq-setup-root" data-session-url="{{ quiz_session_url|escape }}" data-topic-words-url="{{ quiz_topic_words_url|escape }}" data-custom-deck-words-url="{{ quiz_custom_deck_words_url|escape }}">
   {% if request.GET.error == 'minwords' %}
   <p class="qq-banner qq-banner--warn" role="alert">Pick at least three words before starting the quiz.</p>
   {% endif %}
@@ -32,19 +33,32 @@
       <span class="qq-step-label">
         {% if forloop.counter == 1 %}Topic{% elif forloop.counter == 2 %}Words{% elif forloop.counter == 3 %}Method{% else %}Start{% endif %}
       </span>
-      <span class="qq-step-check" aria-hidden="true">✓</span>
+      <span class="qq-step-check" aria-hidden="true">{% bs_icon "check" "green" "sm" %}</span>
     </button>
     {% endfor %}
   </nav>
 
   <section class="qq-panel" id="qq-panel-1" data-panel="1">
     <h2 class="qq-panel-title">Pick a topic</h2>
-    <p class="qq-panel-sub">Select one IELTS topic — vocabulary for that theme loads in the next step.</p>
+    <p class="qq-panel-sub">Select one IELTS topic or one of your custom decks — its words load in the next step.</p>
     <div class="qq-pills" id="qq-topic-pills" role="group" aria-label="Topic">
       {% for k,v in topics %}
       <button type="button" class="qq-pill" data-topic="{{ k }}">{{ v }}</button>
       {% endfor %}
     </div>
+    {% if custom_quiz_decks or under_min_custom_decks %}
+    <div class="qq-source-row">
+      <p class="qq-source-row__label">My decks</p>
+      <div class="qq-pills" id="qq-deck-pills" role="group" aria-label="My decks">
+        {% for deck in custom_quiz_decks %}
+        <button type="button" class="qq-pill" data-deck-id="{{ deck.id }}">{{ deck.name }}</button>
+        {% endfor %}
+        {% for deck in under_min_custom_decks %}
+        <span class="qq-pill qq-pill--disabled" aria-disabled="true">{{ deck.name }} · needs 3+ cards</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     <p class="qq-selected-line" id="qq-topic-selected">Selected: <span id="qq-topic-label">—</span></p>
   </section>
 
@@ -60,8 +74,18 @@
       </div>
     </div>
     <p class="qq-count" id="qq-word-count" aria-live="polite">0 words selected</p>
+    <div class="vocab-check-legend" id="qq-word-legend" hidden>
+      <span class="vocab-check-legend__item">
+        <svg class="vocab-check-legend__icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="1" y="1" width="18" height="18" rx="4" fill="#3B6D11"/><path d="M6 10l3 3 5-6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Selected
+      </span>
+      <span class="vocab-check-legend__item">
+        <svg class="vocab-check-legend__icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="17" rx="3.5" fill="none" stroke="#c8c8c4" stroke-width="1.5"/></svg>
+        Not selected
+      </span>
+    </div>
     <p class="qq-inline-err" id="qq-step2-err" hidden>Choose at least three words to continue.</p>
-    <div class="qq-word-grid" id="qq-word-grid"></div>
+    <div class="vocab-check-grid qq-word-checklist" id="qq-word-grid"></div>
     <p class="qq-loading" id="qq-words-loading" hidden>Loading words…</p>
     <p class="qq-inline-err" id="qq-words-err" hidden></p>
   </section>
@@ -73,32 +97,32 @@
     <div class="qq-method-grid" role="radiogroup" aria-label="Testing method">
       <button type="button" class="qq-method qq-method--mc" data-method="mc" aria-pressed="false">
         <span class="qq-method-badge qq-method-badge--rec" aria-hidden="true">Recommended</span>
-        <span class="qq-method-icon" aria-hidden="true">🔤</span>
+        <span class="qq-method-icon" aria-hidden="true">{% bs_icon "letters" "purple" "md" %}</span>
         <span class="qq-method-name">Multiple choice</span>
         <span class="qq-method-desc">Pick the correct definition from four options</span>
       </button>
       <button type="button" class="qq-method qq-method--tf" data-method="truefalse" aria-pressed="false">
-        <span class="qq-method-icon" aria-hidden="true">⚖️</span>
+        <span class="qq-method-icon" aria-hidden="true">{% bs_icon "scale" "navy" "md" %}</span>
         <span class="qq-method-name">True / False</span>
         <span class="qq-method-desc">Is this definition correct?</span>
       </button>
       <button type="button" class="qq-method qq-method--fb" data-method="fillblank" aria-pressed="false">
-        <span class="qq-method-icon" aria-hidden="true">✏️</span>
+        <span class="qq-method-icon" aria-hidden="true">{% bs_icon "pen" "purple" "md" %}</span>
         <span class="qq-method-name">Fill in the blank</span>
         <span class="qq-method-desc">Complete the sentence with the missing word</span>
       </button>
       <button type="button" class="qq-method qq-method--match" data-method="match" aria-pressed="false">
-        <span class="qq-method-icon" aria-hidden="true">🔗</span>
+        <span class="qq-method-icon" aria-hidden="true">{% bs_icon "link" "blue" "md" %}</span>
         <span class="qq-method-name">Match the pairs</span>
         <span class="qq-method-desc">Connect words to their definitions</span>
       </button>
       <button type="button" class="qq-method qq-method--spell" data-method="type" aria-pressed="false">
-        <span class="qq-method-icon" aria-hidden="true">⌨️</span>
+        <span class="qq-method-icon" aria-hidden="true">{% bs_icon "keyboard" "navy" "md" %}</span>
         <span class="qq-method-name">Spell it</span>
         <span class="qq-method-desc">Type the word from its definition</span>
       </button>
       <button type="button" class="qq-method qq-method--listen" data-method="listen" aria-pressed="false">
-        <span class="qq-method-icon" aria-hidden="true">🎧</span>
+        <span class="qq-method-icon" aria-hidden="true">{% bs_icon "headphones" "green" "md" %}</span>
         <span class="qq-method-name">Listen &amp; answer</span>
         <span class="qq-method-desc">Hear the word, choose the meaning</span>
       </button>
@@ -134,16 +158,30 @@
 {% block extra_js %}
 <script>
 (function () {
-  var STORAGE_KEY = "quizSetupV1";
+  var CHECK_OFF =
+    '<svg class="vocab-check-row__icon" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">' +
+    '<rect x="1.5" y="1.5" width="17" height="17" rx="3.5" fill="none" stroke="#c8c8c4" stroke-width="1.5"/></svg>';
+  var CHECK_ON =
+    '<svg class="vocab-check-row__icon" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">' +
+    '<rect x="1" y="1" width="18" height="18" rx="4" fill="#3B6D11"/>' +
+    '<path d="M6 10l3 3 5-6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  var STORAGE_KEY = "quizSetupV2";
   var root = document.getElementById("qq-setup-root");
   if (!root) return;
 
   var SESSION_URL = root.getAttribute("data-session-url") || "";
   var TW_TEMPLATE = root.getAttribute("data-topic-words-url") || "";
+  var CDW_TEMPLATE = root.getAttribute("data-custom-deck-words-url") || "";
 
   var TOPIC_LABELS = {
     {% for k,v in topics %}
     "{{ k|escapejs }}": "{{ v|escapejs }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+  var CUSTOM_DECK_LABELS = {
+    {% for deck in custom_quiz_decks %}
+    "{{ deck.id }}": "{{ deck.name|escapejs }}"{% if not forloop.last %},{% endif %}
     {% endfor %}
   };
 
@@ -157,9 +195,10 @@
   };
 
   var state = {
-    v: 1,
+    v: 2,
     step: 1,
-    topic: "",
+    sourceType: "",
+    sourceId: "",
     wordIds: [],
     method: "",
     batch: "10",
@@ -172,8 +211,9 @@
       var raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       var o = JSON.parse(raw);
-      if (!o || o.v !== 1) return;
-      state.topic = o.topic || "";
+      if (!o || o.v !== 2) return;
+      state.sourceType = o.sourceType || "";
+      state.sourceId = o.sourceId || "";
       state.wordIds = Array.isArray(o.wordIds) ? o.wordIds.map(Number).filter(function (n) { return !isNaN(n); }) : [];
       state.method = o.method || "";
       state.batch = o.batch || "10";
@@ -185,9 +225,10 @@
   function saveState() {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        v: 1,
+        v: 2,
         step: state.step,
-        topic: state.topic,
+        sourceType: state.sourceType,
+        sourceId: state.sourceId,
         wordIds: state.wordIds,
         method: state.method,
         batch: state.batch,
@@ -200,14 +241,26 @@
     return TW_TEMPLATE.replace("__topic__", topic);
   }
 
+  function customDeckWordsUrl(deckId) {
+    return CDW_TEMPLATE.replace("__deck__", deckId);
+  }
+
+  function selectedSourceLabel() {
+    if (state.sourceType === "topic" && state.sourceId) return TOPIC_LABELS[state.sourceId] || state.sourceId;
+    if (state.sourceType === "deck" && state.sourceId) return CUSTOM_DECK_LABELS[String(state.sourceId)] || ("Deck " + state.sourceId);
+    return "";
+  }
+
   var els = {
     tabs: Array.prototype.slice.call(document.querySelectorAll(".qq-step")),
     panels: [1,2,3,4].map(function (n) { return document.getElementById("qq-panel-" + n); }),
     back: document.getElementById("qq-back"),
     next: document.getElementById("qq-next"),
     topicPills: document.querySelectorAll("#qq-topic-pills .qq-pill"),
+    deckPills: document.querySelectorAll("#qq-deck-pills .qq-pill[data-deck-id]"),
     topicLabel: document.getElementById("qq-topic-label"),
     wordGrid: document.getElementById("qq-word-grid"),
+    wordLegend: document.getElementById("qq-word-legend"),
     wordCount: document.getElementById("qq-word-count"),
     wordsLoading: document.getElementById("qq-words-loading"),
     wordsErr: document.getElementById("qq-words-err"),
@@ -249,9 +302,12 @@
     els.back.hidden = s <= 1;
     els.next.hidden = s >= 4;
 
-    if (els.topicLabel) els.topicLabel.textContent = state.topic ? (TOPIC_LABELS[state.topic] || state.topic) : "—";
+    if (els.topicLabel) els.topicLabel.textContent = selectedSourceLabel() || "—";
     els.topicPills.forEach(function (p) {
-      p.classList.toggle("is-on", p.getAttribute("data-topic") === state.topic);
+      p.classList.toggle("is-on", state.sourceType === "topic" && p.getAttribute("data-topic") === state.sourceId);
+    });
+    els.deckPills.forEach(function (p) {
+      p.classList.toggle("is-on", state.sourceType === "deck" && p.getAttribute("data-deck-id") === state.sourceId);
     });
 
     updateWordCount();
@@ -265,7 +321,7 @@
     });
 
     if (s === 4) {
-      els.sumTopic.textContent = state.topic ? (TOPIC_LABELS[state.topic] || state.topic) : "—";
+      els.sumTopic.textContent = selectedSourceLabel() || "—";
       els.sumWords.textContent = state.wordIds.length + " selected";
       els.sumMethod.textContent = state.method ? (METHOD_LABELS[state.method] || state.method) : "—";
       els.sumBatch.textContent = state.batch === "all" ? "All" : state.batch;
@@ -278,10 +334,11 @@
   }
 
   function fetchWords() {
-    if (!state.topic) return Promise.resolve();
+    if (!state.sourceType || !state.sourceId) return Promise.resolve();
     els.wordsLoading.hidden = false;
     els.wordsErr.hidden = true;
-    return fetch(topicWordsUrl(state.topic), { credentials: "same-origin" })
+    var url = state.sourceType === "deck" ? customDeckWordsUrl(state.sourceId) : topicWordsUrl(state.sourceId);
+    return fetch(url, { credentials: "same-origin" })
       .then(function (r) {
         if (!r.ok) throw new Error("Could not load words");
         return r.json();
@@ -302,21 +359,31 @@
     if (!els.wordGrid) return;
     var selected = new Set(state.wordIds);
     els.wordGrid.innerHTML = "";
+    if (els.wordLegend) els.wordLegend.hidden = state.wordsMeta.length === 0;
     state.wordsMeta.forEach(function (w) {
       var id = w.id;
+      var isOn = selected.has(id);
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "qq-chip" + (selected.has(id) ? " is-on" : "");
-      btn.textContent = w.word;
+      btn.className = "vocab-check-row" + (isOn ? " is-selected" : "");
       btn.setAttribute("data-id", id);
+      btn.innerHTML =
+        '<span class="vocab-check-row__icon">' +
+        (isOn ? CHECK_ON : CHECK_OFF) +
+        "</span>" +
+        '<span class="vocab-check-row__text">' +
+        (w.word || "") +
+        "</span>";
       btn.addEventListener("click", function () {
         if (selected.has(id)) {
           selected.delete(id);
           state.wordIds = state.wordIds.filter(function (x) { return x !== id; });
         } else {
+          selected.add(id);
           state.wordIds.push(id);
         }
-        btn.classList.toggle("is-on", selected.has(id));
+        btn.classList.toggle("is-selected", selected.has(id));
+        btn.querySelector(".vocab-check-row__icon").outerHTML = selected.has(id) ? CHECK_ON : CHECK_OFF;
         saveState();
         updateWordCount();
       });
@@ -326,7 +393,17 @@
 
   els.topicPills.forEach(function (p) {
     p.addEventListener("click", function () {
-      state.topic = p.getAttribute("data-topic") || "";
+      state.sourceType = "topic";
+      state.sourceId = p.getAttribute("data-topic") || "";
+      state.wordIds = [];
+      saveState();
+      render();
+    });
+  });
+  els.deckPills.forEach(function (p) {
+    p.addEventListener("click", function () {
+      state.sourceType = "deck";
+      state.sourceId = p.getAttribute("data-deck-id") || "";
       state.wordIds = [];
       saveState();
       render();
@@ -366,7 +443,7 @@
     els.step2Err.hidden = true;
     els.step3Err.hidden = true;
     if (state.step === 1) {
-      if (!state.topic) return;
+      if (!state.sourceType || !state.sourceId) return;
       setStep(2);
       fetchWords();
       return;
@@ -391,7 +468,7 @@
   els.back.addEventListener("click", function () {
     if (state.step <= 1) return;
     setStep(state.step - 1);
-    if (state.step === 2 && state.topic) fetchWords();
+    if (state.step === 2 && state.sourceType && state.sourceId) fetchWords();
   });
 
   els.tabs.forEach(function (tab) {
@@ -399,17 +476,19 @@
       var n = parseInt(tab.getAttribute("data-step"), 10);
       if (isNaN(n)) return;
       if (n > state.maxStep) return;
-      if (n === 2 && state.topic) fetchWords();
+      if (n === 2 && state.sourceType && state.sourceId) fetchWords();
       setStep(n);
     });
   });
 
   els.start.addEventListener("click", function () {
     var params = new URLSearchParams();
-    params.set("topic", state.topic);
     params.set("words", state.wordIds.join(","));
     params.set("quiz_types", state.method);
     params.set("quiz_limit", state.batch === "all" ? "all" : state.batch);
+    params.set("from_setup", "1");
+    if (state.sourceType === "deck") params.set("deck_id", state.sourceId);
+    else params.set("topic", state.sourceId);
     window.location.href = SESSION_URL + "?" + params.toString();
   });
 
@@ -418,7 +497,7 @@
       try {
         sessionStorage.removeItem(STORAGE_KEY);
       } catch (e) {}
-      state = { v: 1, step: 1, topic: "", wordIds: [], method: "", batch: "10", maxStep: 1, wordsMeta: [] };
+      state = { v: 2, step: 1, sourceType: "", sourceId: "", wordIds: [], method: "", batch: "10", maxStep: 1, wordsMeta: [] };
       if (els.wordGrid) els.wordGrid.innerHTML = "";
       render();
     });
@@ -430,12 +509,8 @@
   });
 
   loadState();
-  if (state.topic && state.step >= 2) fetchWords().then(function () {
+  if (state.sourceType && state.sourceId && state.step >= 2) fetchWords().then(function () {
     renderWordChips();
-    state.wordIds.forEach(function (id) {
-      var btn = els.wordGrid.querySelector('[data-id="' + id + '"]');
-      if (btn) btn.classList.add("is-on");
-    });
     updateWordCount();
   });
   render();

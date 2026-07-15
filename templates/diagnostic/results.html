@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Diagnostic results{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/diagnostic.css' %}?v=1">
+{% endblock %}
+{% block content %}
+<div class="diag-page">
+  <header class="diag-head">
+    <h1 class="diag-title">Your starting point</h1>
+    {% if just_finished %}
+    <p class="diag-sub">Based on your quick diagnostic — use this as a guide, not an official IELTS score.</p>
+    {% else %}
+    <p class="diag-sub">Your saved diagnostic estimate.</p>
+    {% endif %}
+  </header>
+
+  {% if results.overall_band %}
+  <div class="diag-overall">
+    <div class="diag-overall__num">{{ results.overall_band }}</div>
+    <div class="diag-overall__lbl">Estimated overall band</div>
+  </div>
+  {% endif %}
+
+  <div class="diag-skills">
+    {% for skill, band in results.skill_bands.items %}
+    <div class="diag-skill">
+      <span class="diag-skill__name">{{ skill|title }}</span>
+      <span class="diag-skill__band">{{ band }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if results.recommendations %}
+  <section class="diag-recs">
+    <h2 class="diag-recs__title">Start here</h2>
+    <ul class="diag-recs__list">
+      {% for rec in results.recommendations %}
+      <li><a href="{% url rec.url_name %}">{{ rec.label }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <div class="diag-actions">
+    <a href="{% url 'home' %}" class="diag-btn diag-btn--primary">Go to dashboard</a>
+    <a href="{% url 'welcome' %}" class="diag-btn">Set study level</a>
+  </div>
+</div>
+{% endblock %}

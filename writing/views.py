@@ -2,16 +2,38 @@ import json
 import re
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 from django.urls import reverse
 from openai import OpenAI
 
+from boostingscore.plan_limits import (
+    FEATURE_WRITING_GRAMMAR,
+    FEATURE_WRITING_LESSONS,
+    FEATURE_WRITING_PARAPHRASE,
+    FEATURE_WRITING_TASK1,
+    FEATURE_WRITING_TASK2,
+    ai_limit_json,
+    guard_ai_check,
+    guard_feature,
+    user_can,
+)
 from vocabulary.streak_utils import bump_streak_for_user
 
-from .models import Essay
-from .models import LessonProgress, SkillProgress, WritingTask1Attempt, WritingTask2Attempt
+from .lesson_lectures import get_lesson_lecture
+from .lesson_practice_data import get_lesson_practice
+from .models import (
+    Essay,
+    GrammarTopicProgress,
+    LessonPracticeAttempt,
+    LessonProgress,
+    SkillProgress,
+    WritingTask1Attempt,
+    WritingTask2Attempt,
+)
 from .task1_charts import render_question_chart
 from .task1_content import (
     TASK_INSTRUCTION,
@@ -21,6 +43,8 @@ from .task1_content import (
     question_type_list,
 )
 from .content import LESSONS, SKILL_MAP, SKILLS, TASK2_QUESTIONS, TASK2_TYPE_META
+from .grammar_content import GRAMMAR_TOPICS, get_grammar_topic
+from .paraphrase_content import PARAPHRASE_TOPICS, pick_sentence
 
 CRITERION_META = {
     "task_achievement": {
@@ -201,48 +225,192 @@ def task2(request):
 
 @login_required
 def paraphrase(request):
-    default_source = (
-        "Many governments are investing in public transport in order to reduce traffic congestion in cities."
-    )
-    tip = None
-    source = default_source
-    attempt = ""
-    if request.method == "POST":
-        source = request.POST.get("source_text") or default_source
-        attempt = request.POST.get("paraphrase_text") or ""
-        if settings.OPENAI_API_KEY:
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                max_tokens=800,
-                temperature=0.3,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You help IELTS students paraphrase. Return concise JSON with keys: feedback (string), score (1-9).",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Original:\n{source}\n\nStudent paraphrase:\n{attempt}",
-                    },
-                ],
-            )
-            raw = completion.choices[0].message.content or ""
-            tip = _extract_json(raw) or {"feedback": raw, "score": 6}
-        else:
-            tip = {"feedback": "Add OPENAI_API_KEY for live feedback.", "score": 0}
-        bump_streak_for_user(request.user)
-
+    blocked = guard_feature(request, FEATURE_WRITING_PARAPHRASE)
+    if blocked:
+        return blocked
+    initial = pick_sentence(topic="all")
     return render(
         request,
         "writing/paraphrase.html",
         {
-            "source_text": source,
-            "paraphrase_text": attempt,
-            "tip": tip,
+            "topics": PARAPHRASE_TOPICS,
+            "initial_sentence": initial["sentence"],
+            "initial_topic": initial["topic"],
+            "initial_topic_label": initial["topic_label"],
             **_streak_ctx(request),
         },
     )
+
+
+PARAPHRASE_TECHNIQUE_KEYS = (
+    "synonym_replacement",
+    "word_form_change",
+    "voice_change",
+    "clause_structure_change",
+)
+
+
+def _normalize_paraphrase_feedback(data: dict) -> dict:
+    techniques_raw = data.get("techniques") or {}
+    if not isinstance(techniques_raw, dict):
+        techniques_raw = {}
+    techniques = {
+        key: bool(techniques_raw.get(key))
+        for key in PARAPHRASE_TECHNIQUE_KEYS
+    }
+
+    similarity = str(data.get("similarity") or "medium").strip().lower()
+    if similarity not in {"low", "medium", "high"}:
+        similarity = "medium"
+
+    models_raw = data.get("model_paraphrases") or []
+    if not isinstance(models_raw, list):
+        models_raw = []
+    model_paraphrases = []
+    for item in models_raw[:3]:
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text") or "").strip()
+        if not text:
+            continue
+        model_paraphrases.append(
+            {
+                "technique": str(item.get("technique") or "").strip(),
+                "label": str(item.get("label") or item.get("technique") or "").strip(),
+                "text": text,
+            }
+        )
+
+    band = _safe_float(data.get("band_score") or data.get("score"), 6.0)
+    band = max(1.0, min(9.0, band))
+    verdict = str(data.get("verdict") or "").strip()
+    if not verdict:
+        verdict = f"Band {band:.1f} — reasonable attempt; keep varying structure and vocabulary."
+
+    return {
+        "band_score": band,
+        "verdict": verdict,
+        "techniques": techniques,
+        "feedback": str(data.get("feedback") or "").strip(),
+        "similarity": similarity,
+        "similarity_note": str(data.get("similarity_note") or "").strip(),
+        "model_paraphrases": model_paraphrases,
+    }
+
+
+def _paraphrase_eval(source_text: str, paraphrase_text: str) -> dict | None:
+    if not settings.OPENAI_API_KEY:
+        return _normalize_paraphrase_feedback(
+            {
+                "band_score": 0,
+                "verdict": "Configure OpenAI to receive live feedback.",
+                "techniques": {k: False for k in PARAPHRASE_TECHNIQUE_KEYS},
+                "feedback": "Add OPENAI_API_KEY for detailed technique-based feedback.",
+                "similarity": "medium",
+                "similarity_note": "",
+                "model_paraphrases": [],
+            }
+        )
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = f"""You are an IELTS Writing coach evaluating a paraphrase exercise.
+
+SOURCE SENTENCE:
+{source_text}
+
+STUDENT'S PARAPHRASE:
+{paraphrase_text}
+
+Analyse the student's paraphrase carefully. Detect which paraphrasing TECHNIQUES they actually used (be accurate — only mark true if clearly present):
+1. synonym_replacement — key content words swapped for different words (not just one word)
+2. word_form_change — same idea expressed with a different word class (noun↔verb↔adjective, e.g. "investment" → "invest", "pollution" → "pollute")
+3. voice_change — active↔passive transformation (or clear equivalent)
+4. clause_structure_change — sentence reorganised (clause order, subordination, splitting/merging, different grammatical frame)
+
+Also judge:
+- Overall quality as an IELTS band-style score (1–9)
+- How close the wording is to the source: similarity = "low", "medium", or "high" (high = too close / mostly copied — warn them)
+- Write feedback as 1–2 sentences: one strength + the single most useful improvement, phrased in terms of the techniques (e.g. "You replaced vocabulary well but kept the same structure — try changing the grammar too")
+
+Provide 2–3 model_paraphrases of the SOURCE sentence (not the student's text). Each must use a DIFFERENT technique from the list above and include a short label naming that technique.
+
+Return ONLY valid JSON with these keys:
+- band_score: float 1–9
+- verdict: string — one short line combining band + overall judgement (e.g. "Band 6.5 — meaning clear, but wording stays too close to the original")
+- techniques: object with boolean keys synonym_replacement, word_form_change, voice_change, clause_structure_change
+- feedback: string (1–2 sentences as described)
+- similarity: "low" | "medium" | "high"
+- similarity_note: string — one sentence on overlap with source; if similarity is high, warn that it is too close for IELTS paraphrasing
+- model_paraphrases: array of 2–3 objects, each {{"technique": "snake_case key", "label": "short human label", "text": "model paraphrase of SOURCE"}}"""
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.25,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Return JSON only. Be accurate about which techniques the student used. "
+                        "Model paraphrases must be of the SOURCE sentence only."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+        raw = completion.choices[0].message.content or "{}"
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            data = _extract_json(raw) or {}
+        return _normalize_paraphrase_feedback(data)
+    except Exception:
+        return None
+
+
+@login_required
+def paraphrase_sentence_api(request):
+    topic = (request.GET.get("topic") or "all").strip().lower()
+    exclude = request.GET.get("exclude") or ""
+    valid = {code for code, _ in PARAPHRASE_TOPICS}
+    if topic not in valid:
+        topic = "all"
+    return JsonResponse({"ok": True, **pick_sentence(topic=topic, exclude=exclude)})
+
+
+@login_required
+@require_POST
+def paraphrase_check(request):
+    blocked = guard_feature(request, FEATURE_WRITING_PARAPHRASE, json_response=True)
+    if blocked:
+        return blocked
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        body = {}
+    source = (body.get("source_text") or "").strip()
+    attempt = (body.get("paraphrase_text") or "").strip()
+    if not source:
+        return JsonResponse(
+            {"ok": False, "error": "Enter a source sentence before checking."},
+            status=400,
+        )
+    if _word_count(attempt) < 3:
+        return JsonResponse(
+            {"ok": False, "error": "Write your paraphrase before checking."},
+            status=400,
+        )
+    if settings.OPENAI_API_KEY:
+        if guard_ai_check(request.user, "paraphrase", will_call_openai=True):
+            return ai_limit_json()
+    feedback = _paraphrase_eval(source, attempt)
+    if feedback is None:
+        return JsonResponse(
+            {"ok": False, "error": "Couldn't check your answer. Try again."},
+            status=502,
+        )
+    bump_streak_for_user(request.user)
+    return JsonResponse({"ok": True, "feedback": feedback})
 
 
 def _task1_topbar_ctx():
@@ -410,6 +578,9 @@ def task1_question_list(request, question_type):
 
 @login_required
 def task1_question_page(request, question_type, question_id):
+    blocked = guard_feature(request, FEATURE_WRITING_TASK1)
+    if blocked:
+        return blocked
     question = get_question(question_type, question_id)
     if not question:
         raise Http404("Question not found")
@@ -513,9 +684,18 @@ def task1_feedback_page(request, question_type, question_id):
     if request.method != "POST":
         return redirect("writing:task1_question_page", question_type=question_type, question_id=question_id)
 
+    blocked = guard_feature(request, FEATURE_WRITING_TASK1)
+    if blocked:
+        return blocked
+
     response_text = (request.POST.get("response_text") or "").strip()
     word_count = _word_count(response_text)
     time_taken_seconds = int(request.POST.get("time_taken_seconds") or 0)
+    if settings.OPENAI_API_KEY:
+        err = guard_ai_check(request.user, "writing_task1", will_call_openai=True)
+        if err:
+            messages.error(request, err)
+            return redirect("writing:task1_question_page", question_type=question_type, question_id=question_id)
     payload = _task1_eval_feedback(
         TYPE_META[question_type]["name"],
         question["prompt"],
@@ -625,9 +805,9 @@ def task1_feedback_page_by_id(request, question_id):
             "ann_good_count": len(green),
             "time_used_mmss": _fmt_mmss(attempt.time_taken_seconds),
             "show_submit": False,
-            "show_try_again_top": True,
+            "show_try_again_top": user_can(request.user, FEATURE_WRITING_TASK1),
             "questions_url": reverse("writing:task1_question_list", kwargs={"question_type": question_type}),
-            "try_again_url": reverse("writing:task1_question_page", kwargs={"question_type": question_type, "question_id": question["id"]}),
+            "try_again_url": reverse("writing:task1_question_page", kwargs={"question_type": question_type, "question_id": question["id"]}) if user_can(request.user, FEATURE_WRITING_TASK1) else "",
             **_task1_topbar_ctx(),
             **_streak_ctx(request),
         },
@@ -700,7 +880,9 @@ def writing_home(request):
         .first()
     )
     lesson_done = LessonProgress.objects.filter(user=user).values("lesson_id").distinct().count()
-    skill_done = SkillProgress.objects.filter(user=user).values("skill_id").distinct().count()
+    grammar_done = (
+        GrammarTopicProgress.objects.filter(user=user).values("topic_id").distinct().count()
+    )
     return render(
         request,
         "writing/writing_hub.html",
@@ -709,9 +891,9 @@ def writing_home(request):
             "task2_best": t2_best,
             "recent_attempts": _latest_attempts(user),
             "lesson_done": lesson_done,
-            "lesson_total": 18,
-            "skill_done": skill_done,
-            "skill_total": 32,
+            "lesson_total": len(LESSONS),
+            "grammar_done": grammar_done,
+            "grammar_total": len(GRAMMAR_TOPICS),
             **_streak_ctx(request),
         },
     )
@@ -750,6 +932,9 @@ def task2_question_list(request, essay_type):
 
 @login_required
 def task2_question_page(request, essay_type, q_id):
+    blocked = guard_feature(request, FEATURE_WRITING_TASK2)
+    if blocked:
+        return blocked
     q = _task2_get_question(essay_type, q_id)
     if not q:
         raise Http404("Question not found")
@@ -821,9 +1006,17 @@ def task2_feedback_page(request, essay_type, q_id):
         if not attempt:
             return redirect("writing:task2_question_page", essay_type=essay_type, q_id=q_id)
     else:
+        blocked = guard_feature(request, FEATURE_WRITING_TASK2)
+        if blocked:
+            return blocked
         txt = (request.POST.get("response_text") or "").strip()
         wc = _word_count(txt)
         tsec = int(request.POST.get("time_taken_seconds") or 0)
+        if settings.OPENAI_API_KEY:
+            err = guard_ai_check(request.user, "writing_task2", will_call_openai=True)
+            if err:
+                messages.error(request, err)
+                return redirect("writing:task2_question_page", essay_type=essay_type, q_id=q_id)
         feedback = _task2_eval_feedback(TASK2_TYPE_META[essay_type]["name"], q["prompt"], txt, wc)
         attempt = WritingTask2Attempt.objects.create(
             user=request.user,
@@ -874,11 +1067,11 @@ def task2_feedback_page(request, essay_type, q_id):
             "weakest_score": scores[weakest_key],
             "time_used_mmss": _fmt_mmss(attempt.time_taken_seconds),
             "show_submit": False,
-            "show_try_again_top": True,
+            "show_try_again_top": user_can(request.user, FEATURE_WRITING_TASK2),
             "task1_topbar_title": "IELTS Academic — Writing Task 2",
             "task1_timer_seed": "40:00",
             "questions_url": reverse("writing:task2_question_list", kwargs={"essay_type": essay_type}),
-            "try_again_url": reverse("writing:task2_question_page", kwargs={"essay_type": essay_type, "q_id": q["id"]}),
+            "try_again_url": reverse("writing:task2_question_page", kwargs={"essay_type": essay_type, "q_id": q["id"]}) if user_can(request.user, FEATURE_WRITING_TASK2) else "",
             **_streak_ctx(request),
         },
     )
@@ -886,21 +1079,264 @@ def task2_feedback_page(request, essay_type, q_id):
 
 @login_required
 def lessons_hub(request):
+    blocked = guard_feature(request, FEATURE_WRITING_LESSONS)
+    if blocked:
+        return blocked
     done_ids = set(LessonProgress.objects.filter(user=request.user).values_list("lesson_id", flat=True))
     t1 = [l for l in LESSONS if l["task"] == "task1"]
     t2 = [l for l in LESSONS if l["task"] == "task2"]
-    return render(request, "writing/lessons_hub.html", {"task1_lessons": t1, "task2_lessons": t2, "done_ids": done_ids, **_streak_ctx(request)})
+    return render(
+        request,
+        "writing/lessons_hub.html",
+        {
+            "task1_lessons": t1,
+            "task2_lessons": t2,
+            "done_ids": done_ids,
+            "lesson_done": len(done_ids),
+            "lesson_total": len(LESSONS),
+            **_streak_ctx(request),
+        },
+    )
+
+
+def _lesson_practice_feedback_defaults():
+    return {
+        "ready": False,
+        "what_you_did_well": ["You attempted the task — keep practising."],
+        "mistakes_and_fixes": [],
+        "how_to_improve": ["Review the lesson and try again with a clearer focus on the target skill."],
+        "model_answer": "",
+    }
+
+
+def _lesson_practice_eval(lesson, practice, student_response, word_count):
+    defaults = _lesson_practice_feedback_defaults()
+    if not settings.OPENAI_API_KEY:
+        return defaults
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = f"""You are an experienced IELTS Writing examiner.
+
+Lesson: {lesson["title"]}
+Skill to assess (ONLY this skill — ignore other aspects): {practice["skill_focus"]}
+
+Practice task for the student:
+{practice["instruction"]}
+
+Source material / prompt:
+{practice["prompt_context"]}
+
+Student answer ({word_count} words):
+{student_response}
+
+Evaluate ONLY whether the student demonstrated the skill this lesson teaches. Be fair and constructive.
+- "ready": true only if there are NO major mistakes for this specific skill (minor wording issues are OK).
+- "ready": false if there are significant errors in the target skill (e.g. overview with too much detail, intro with data, weak thesis, missing TEEL structure).
+
+Return ONLY valid JSON with no markdown:
+{{
+  "ready": true or false,
+  "what_you_did_well": ["1-3 specific strengths"],
+  "mistakes_and_fixes": [
+    {{"problem": "exact quote from student text", "why": "why it is a problem for this skill", "corrected": "improved version"}}
+  ],
+  "how_to_improve": ["1-2 concrete actionable suggestions"],
+  "model_answer": "A Band 7+ model answer for this exact practice task only"
+}}"""
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.2,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "You are precise, fair, and return JSON only."},
+                {"role": "user", "content": prompt},
+            ],
+        )
+        raw = completion.choices[0].message.content or "{}"
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            data = _extract_json(raw) or {}
+        defaults.update(data or {})
+        defaults["ready"] = bool(defaults.get("ready"))
+        defaults["what_you_did_well"] = list(defaults.get("what_you_did_well") or [])[:3]
+        defaults["mistakes_and_fixes"] = list(defaults.get("mistakes_and_fixes") or [])
+        defaults["how_to_improve"] = list(defaults.get("how_to_improve") or [])[:2]
+        defaults["model_answer"] = str(defaults.get("model_answer") or "")
+        return defaults
+    except Exception:
+        return None
 
 
 @login_required
 def lesson_detail(request, lesson_id):
+    blocked = guard_feature(request, FEATURE_WRITING_LESSONS)
+    if blocked:
+        return blocked
     lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
     if not lesson:
         raise Http404("Lesson not found")
-    if request.method == "POST" and request.POST.get("mark_done") == "1":
+    practice = get_lesson_practice(lesson_id)
+    if not practice:
+        raise Http404("Practice task not found")
+    lecture = get_lesson_lecture(lesson_id)
+    if not lecture:
+        raise Http404("Lesson content not found")
+    attempts = list(
+        LessonPracticeAttempt.objects.filter(user=request.user, lesson_id=lesson_id).order_by("-attempt_number")
+    )
+    is_complete = LessonProgress.objects.filter(user=request.user, lesson_id=lesson_id).exists()
+    latest = attempts[0] if attempts else None
+    return render(
+        request,
+        "writing/lesson_detail.html",
+        {
+            "lesson": lesson,
+            "lecture": lecture,
+            "practice": practice,
+            "attempts": attempts,
+            "latest_attempt": latest,
+            "is_complete": is_complete,
+            "lesson_total": len(LESSONS),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+@require_POST
+def lesson_practice_check(request, lesson_id):
+    blocked = guard_feature(request, FEATURE_WRITING_LESSONS, json_response=True)
+    if blocked:
+        return blocked
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if not lesson:
+        return JsonResponse({"ok": False, "error": "Lesson not found."}, status=404)
+    practice = get_lesson_practice(lesson_id)
+    if not practice:
+        return JsonResponse({"ok": False, "error": "Practice task not found."}, status=404)
+
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        body = {}
+    response_text = (body.get("response_text") or "").strip()
+    word_count = _word_count(response_text)
+    if word_count < 5:
+        return JsonResponse({"ok": False, "error": "Write at least 5 words before checking."}, status=400)
+
+    if settings.OPENAI_API_KEY:
+        err = guard_ai_check(request.user, "lesson_practice", will_call_openai=True)
+        if err:
+            return ai_limit_json()
+
+    feedback = _lesson_practice_eval(lesson, practice, response_text, word_count)
+    if feedback is None:
+        return JsonResponse({"ok": False, "error": "Couldn't check your answer. Try again."}, status=502)
+
+    last_num = (
+        LessonPracticeAttempt.objects.filter(user=request.user, lesson_id=lesson_id)
+        .order_by("-attempt_number")
+        .values_list("attempt_number", flat=True)
+        .first()
+    ) or 0
+    attempt = LessonPracticeAttempt.objects.create(
+        user=request.user,
+        lesson_id=lesson_id,
+        attempt_number=last_num + 1,
+        response_text=response_text,
+        word_count=word_count,
+        ready=bool(feedback.get("ready")),
+        feedback_json=feedback,
+    )
+    completed = False
+    if attempt.ready:
         LessonProgress.objects.get_or_create(user=request.user, lesson_id=lesson_id)
-        return redirect("writing:lesson_detail", lesson_id=lesson_id)
-    return render(request, "writing/lesson_detail.html", {"lesson": lesson, **_streak_ctx(request)})
+        completed = True
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "attempt_number": attempt.attempt_number,
+            "word_count": word_count,
+            "ready": attempt.ready,
+            "completed": completed,
+            "feedback": feedback,
+        }
+    )
+
+
+@login_required
+def grammar_hub(request):
+    blocked = guard_feature(request, FEATURE_WRITING_GRAMMAR)
+    if blocked:
+        return blocked
+    done_ids = set(
+        GrammarTopicProgress.objects.filter(user=request.user).values_list("topic_id", flat=True)
+    )
+    return render(
+        request,
+        "writing/grammar_hub.html",
+        {
+            "topics": GRAMMAR_TOPICS,
+            "done_ids": done_ids,
+            "grammar_done": len(done_ids),
+            "grammar_total": len(GRAMMAR_TOPICS),
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def grammar_topic(request, topic_id):
+    blocked = guard_feature(request, FEATURE_WRITING_GRAMMAR)
+    if blocked:
+        return blocked
+    topic = get_grammar_topic(topic_id)
+    if not topic:
+        raise Http404("Grammar topic not found")
+    GrammarTopicProgress.objects.get_or_create(user=request.user, topic_id=topic_id)
+    done_ids = set(
+        GrammarTopicProgress.objects.filter(user=request.user).values_list("topic_id", flat=True)
+    )
+    topic_ids = [t["id"] for t in GRAMMAR_TOPICS]
+    idx = topic_ids.index(topic_id)
+    prev_topic = GRAMMAR_TOPICS[idx - 1] if idx > 0 else None
+    next_topic = GRAMMAR_TOPICS[idx + 1] if idx < len(GRAMMAR_TOPICS) - 1 else None
+    return render(
+        request,
+        "writing/grammar_topic.html",
+        {
+            "topic": topic,
+            "is_done": topic_id in done_ids,
+            "grammar_done": len(done_ids),
+            "grammar_total": len(GRAMMAR_TOPICS),
+            "prev_topic": prev_topic,
+            "next_topic": next_topic,
+            **_streak_ctx(request),
+        },
+    )
+
+
+@login_required
+def grammar_mistakes(request):
+    blocked = guard_feature(request, FEATURE_WRITING_GRAMMAR)
+    if blocked:
+        return blocked
+    from boostingscore.review_schedule import mark_section_reviewed
+    from .grammar_mistakes_content import GRAMMAR_MISTAKES, SELF_CHECK_ITEMS
+
+    mark_section_reviewed(request.user, "writing_grammar")
+    return render(
+        request,
+        "writing/grammar_mistakes.html",
+        {
+            "mistakes": GRAMMAR_MISTAKES,
+            "checklist": SELF_CHECK_ITEMS,
+            **_streak_ctx(request),
+        },
+    )
 
 
 @login_required

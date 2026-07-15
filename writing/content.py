@@ -1,9 +1,9 @@
 TASK2_TYPE_META = {
-    "opinion": {"name": "Opinion", "emoji": "💬", "description": "Do you agree or disagree?"},
-    "discussion": {"name": "Discussion", "emoji": "⚖️", "description": "Discuss both views"},
-    "problem": {"name": "Problem/Solution", "emoji": "❓", "description": "Causes and solutions"},
-    "advantages": {"name": "Advantages", "emoji": "📊", "description": "Do benefits outweigh drawbacks?"},
-    "double-question": {"name": "Double Question", "emoji": "🧩", "description": "Answer two direct questions"},
+    "opinion": {"name": "Opinion", "emoji": "chat", "description": "Do you agree or disagree?"},
+    "discussion": {"name": "Discussion", "emoji": "scale", "description": "Discuss both views"},
+    "problem": {"name": "Problem/Solution", "emoji": "quiz", "description": "Causes and solutions"},
+    "advantages": {"name": "Advantages", "emoji": "chart", "description": "Do benefits outweigh drawbacks?"},
+    "double-question": {"name": "Double Question", "emoji": "puzzle", "description": "Answer two direct questions"},
 }
 
 TASK2_QUESTIONS = [
@@ -25,18 +25,18 @@ TASK2_QUESTIONS = [
 ]
 
 LESSONS = [
-    {"id": "t1-structure", "task": "task1", "section": "core", "icon": "🏗️", "title": "Task 1 Structure — the 4-paragraph formula", "subtitle": "Introduction · Overview · Body 1 · Body 2", "level": "Essential", "content": "Use a four-paragraph structure: paraphrased introduction, overview of key trends, and two body paragraphs with grouped comparisons and precise data."},
-    {"id": "t1-intro", "task": "task1", "section": "core", "icon": "✍️", "title": "How to write the Introduction", "subtitle": "Paraphrasing the prompt · what to avoid", "level": "Essential", "content": "Paraphrase the question with accurate vocabulary, keep it concise, and avoid opinions or extra details in Task 1 introductions."},
-    {"id": "t1-overview", "task": "task1", "section": "core", "icon": "👁️", "title": "How to write the Overview", "subtitle": "The most important paragraph", "level": "Essential", "content": "Your overview should identify the biggest trends, highest/lowest values, or notable changes without too many numbers."},
-    {"id": "t1-body", "task": "task1", "section": "core", "icon": "📝", "title": "How to write the Body paragraphs", "subtitle": "Selecting data · grouping · comparisons", "level": "Essential", "content": "Group related data points and compare them directly. Use figures to support every key statement."},
-    {"id": "t1-qtypes", "task": "task1", "section": "qtypes", "icon": "📊", "title": "Bar charts and line graphs", "subtitle": "Trends · comparisons · time periods", "level": "Standard", "content": "Focus on trend verbs, proportional comparison language, and period-by-period changes."},
-    {"id": "t1-pie-table", "task": "task1", "section": "qtypes", "icon": "🥧", "title": "Pie charts and tables", "subtitle": "Proportions · selecting key data", "level": "Standard", "content": "Prioritise dominant segments and significant contrasts. Avoid listing all numbers mechanically."},
-    {"id": "t1-process", "task": "task1", "section": "qtypes", "icon": "⚙️", "title": "Process diagrams", "subtitle": "Sequencing and passive voice", "level": "Standard", "content": "Use sequencing words and passive structures where the actor is unknown or unimportant."},
-    {"id": "t1-map", "task": "task1", "section": "qtypes", "icon": "🗺️", "title": "Maps", "subtitle": "Location and change over time", "level": "Standard", "content": "Highlight major transformations and preserve clear spatial references with location phrases."},
-    {"id": "t2-structure", "task": "task2", "section": "core", "icon": "🏗️", "title": "Task 2 Essay Structure", "subtitle": "Introduction · Body 1 · Body 2 · Conclusion", "level": "Essential", "content": "Present a clear thesis, build one central idea per body paragraph, and end with a concise conclusion."},
-    {"id": "t2-intro", "task": "task2", "section": "core", "icon": "✍️", "title": "How to write the Introduction", "subtitle": "Paraphrase + clear position", "level": "Essential", "content": "Paraphrase the task and state your position directly in one clear thesis sentence."},
-    {"id": "t2-teel", "task": "task2", "section": "core", "icon": "📝", "title": "How to write Body paragraphs — TEEL", "subtitle": "Topic sentence · explanation · example · link", "level": "Essential", "content": "Use a strong topic sentence, then explain, support with examples, and link back to the thesis."},
-    {"id": "t2-conclusion", "task": "task2", "section": "core", "icon": "🏁", "title": "How to write the Conclusion", "subtitle": "Summarise and restate position", "level": "Essential", "content": "Summarise your key points briefly and restate your opinion without introducing new arguments."},
+    {"id": "t1-structure", "task": "task1", "section": "core", "icon": "structure", "title": "Task 1 Structure — the 4-paragraph formula", "subtitle": "Introduction · Overview · Body 1 · Body 2", "level": "Essential", "content": "Use a four-paragraph structure: paraphrased introduction, overview of key trends, and two body paragraphs with grouped comparisons and precise data."},
+    {"id": "t1-intro", "task": "task1", "section": "core", "icon": "pen", "title": "How to write the Introduction", "subtitle": "Paraphrasing the prompt · what to avoid", "level": "Essential", "content": "Paraphrase the question with accurate vocabulary, keep it concise, and avoid opinions or extra details in Task 1 introductions."},
+    {"id": "t1-overview", "task": "task1", "section": "core", "icon": "eye", "title": "How to write the Overview", "subtitle": "The most important paragraph", "level": "Essential", "content": "Your overview should identify the biggest trends, highest/lowest values, or notable changes without too many numbers."},
+    {"id": "t1-body", "task": "task1", "section": "core", "icon": "write", "title": "How to write the Body paragraphs", "subtitle": "Selecting data · grouping · comparisons", "level": "Essential", "content": "Group related data points and compare them directly. Use figures to support every key statement."},
+    {"id": "t1-qtypes", "task": "task1", "section": "qtypes", "icon": "chart", "title": "Bar charts and line graphs", "subtitle": "Trends · comparisons · time periods", "level": "Standard", "content": "Focus on trend verbs, proportional comparison language, and period-by-period changes."},
+    {"id": "t1-pie-table", "task": "task1", "section": "qtypes", "icon": "pie", "title": "Pie charts and tables", "subtitle": "Proportions · selecting key data", "level": "Standard", "content": "Prioritise dominant segments and significant contrasts. Avoid listing all numbers mechanically."},
+    {"id": "t1-process", "task": "task1", "section": "qtypes", "icon": "process", "title": "Process diagrams", "subtitle": "Sequencing and passive voice", "level": "Standard", "content": "Use sequencing words and passive structures where the actor is unknown or unimportant."},
+    {"id": "t1-map", "task": "task1", "section": "qtypes", "icon": "map", "title": "Maps", "subtitle": "Location and change over time", "level": "Standard", "content": "Highlight major transformations and preserve clear spatial references with location phrases."},
+    {"id": "t2-structure", "task": "task2", "section": "core", "icon": "structure", "title": "Task 2 Essay Structure", "subtitle": "Introduction · Body 1 · Body 2 · Conclusion", "level": "Essential", "content": "Present a clear thesis, build one central idea per body paragraph, and end with a concise conclusion."},
+    {"id": "t2-intro", "task": "task2", "section": "core", "icon": "pen", "title": "How to write the Introduction", "subtitle": "Paraphrase + clear position", "level": "Essential", "content": "Paraphrase the task and state your position directly in one clear thesis sentence."},
+    {"id": "t2-teel", "task": "task2", "section": "core", "icon": "write", "title": "How to write Body paragraphs — TEEL", "subtitle": "Topic sentence · explanation · example · link", "level": "Essential", "content": "Use a strong topic sentence, then explain, support with examples, and link back to the thesis."},
+    {"id": "t2-conclusion", "task": "task2", "section": "core", "icon": "check", "title": "How to write the Conclusion", "subtitle": "Summarise and restate position", "level": "Essential", "content": "Summarise your key points briefly and restate your opinion without introducing new arguments."},
 ]
 
 SKILLS = [

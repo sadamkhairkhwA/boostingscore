@@ -6,76 +6,85 @@ from __future__ import annotations
 from .academic_result_meta import RESULT_META_BY_ID
 
 PART1_HTML = """
-<p class="art-pass__kicker">Part 1 · Notices</p>
-<h1 class="art-pass__title">Local services &amp; accommodation</h1>
+<p class="art-pass__kicker">Part 1 · Materials science history</p>
+<h1 class="art-pass__title">Roman concrete and the durability of ancient structures</h1>
 
-<h2 class="art-pass__sub">Text A — Westbridge Public Library</h2>
-<p>Standard membership is free for all Westbridge residents. You may borrow up to <strong>eight</strong> items at any time. The loan period is three weeks, with <strong>one</strong> renewal available by phone or online. Premium membership costs <strong>£25</strong> per year and allows you to borrow up to fifteen items, reserve popular titles in advance, access the digital library from home, and receive priority booking for study rooms. Late fines are <strong>20p</strong> per item per day for standard members. Premium members benefit from a seven-day grace period before fines begin. Lost items must be replaced at cost.</p>
+<p><strong>A</strong><br>
+Concrete is often regarded as a modern industrial material, yet Roman builders developed a related technology more than two thousand years ago. Their construction mixture was used in buildings, bridges, aqueducts and harbour works across a vast empire. Many surviving structures have endured earthquakes, salt spray and long periods of abandonment, prompting scientists to reconsider assumptions about ancient engineering. Roman concrete was not identical to modern Portland-cement concrete, whose manufacture depends on precisely controlled heating and standardized ingredients. Instead, it emerged from practical knowledge of local geology, repeated experimentation and the demands of ambitious public construction. Historians of technology now treat these projects as evidence that large-scale materials innovation can arise outside laboratory settings, provided craft communities share and refine successful practices over generations.</p>
 
-<h2 class="art-pass__sub">Text B — Northfield Sports Centre</h2>
-<p>All fitness classes last forty-five minutes except HIIT and Boxercise, which run for <strong>sixty</strong> minutes. You may book up to seven days in advance online or at reception. Cancellations must be made at least two hours before the class begins; otherwise a <strong>£3</strong> no-show fee applies. Under-16s are not permitted in HIIT or Boxercise sessions. The weekly timetable is as follows. <strong>Monday:</strong> Yoga 7am · Spinning 9am · Pilates 12pm · Boxercise 6pm. <strong>Tuesday:</strong> Aqua aerobics 8am · Yoga 10am · HIIT 5:30pm · Zumba 7pm. <strong>Wednesday:</strong> Spinning 7am · Pilates 9am · Yoga 12pm · Boxercise 6pm. <strong>Thursday:</strong> Aqua aerobics 8am · HIIT 10am · Zumba 5:30pm · Yoga 7pm. <strong>Friday:</strong> Spinning 7am · Yoga 9am · Pilates 12pm. <strong>Saturday:</strong> Aqua aerobics 9am · HIIT 10am · Zumba 11am. <strong>Sunday:</strong> Yoga 10am · Pilates 11am.</p>
+<p><strong>B</strong><br>
+The essential dry component was a volcanic ash called <strong>pozzolan</strong>, named after deposits near the Italian town of Pozzuoli. Builders combined this powder with lime produced by heating limestone, then added water and fragments of stone, brick or ceramic. These larger fragments formed the mixture's <strong>aggregate</strong>, giving bulk to the material while the lime-and-ash paste bound everything together. Contemporary writers, including Vitruvius, described the value of certain volcanic soils, although they did not possess a modern account of the chemical reactions involved. The ash was especially useful because it reacted with lime in water, gradually creating durable mineral compounds.</p>
 
-<h2 class="art-pass__sub">Text C — City University Student Accommodation</h2>
-<p>First-year undergraduates are guaranteed a place in halls if they apply before <strong>1 August</strong>. Standard rooms include a bed, desk, wardrobe, shared kitchen and shared bathroom facilities. En-suite rooms include a private bathroom and cost <strong>£40</strong> per week more than a standard room. A deposit of <strong>£300</strong> is required; this is refunded within twenty-eight days of vacating the room provided there is no damage. Students who wish to leave before the end of their contract must give <strong>eight</strong> weeks’ written notice. The residences are entirely non-smoking and pets are not allowed.</p>
+<p><strong>C</strong><br>
+Roman engineers did not rely upon one universal recipe. Material choices varied according to the purpose of a structure and the resources available nearby. In ordinary walls, builders often used rubble selected for convenience, whereas monumental projects could incorporate carefully graded stones and layers of brick. Research on the dome of the Pantheon suggests that its upper sections contained lighter volcanic rock, reducing the load carried by the supporting walls. Archaeological sampling elsewhere shows similar layering strategies in vaults and terraces, reinforcing the view that weight was managed deliberately. Such variation indicates that Roman construction was neither crude nor accidental. It involved choices about weight, strength and workability, even when those choices were expressed through craft traditions rather than formal scientific theory.</p>
+
+<p><strong>D</strong><br>
+Marine structures have attracted particular attention because several Roman harbours remain stable after centuries of contact with waves. For these works, builders placed a lime-and-ash mixture into wooden forms beneath the surface, where it hardened in contact with <strong>seawater</strong>. Modern analyses indicate that dissolved minerals entered the concrete and encouraged the formation of interlocking <strong>crystals</strong>. Rather than merely resisting water, the material may have changed beneficially during prolonged exposure. This finding contrasts with many modern concretes, in which saltwater can penetrate small openings, corrode reinforcing steel and eventually cause visible cracking.</p>
+
+<p><strong>E</strong><br>
+One influential investigation examined Roman samples containing conspicuous white particles known as lime clasts. Earlier researchers sometimes interpreted these fragments as evidence that mixing had been incomplete. However, a newer explanation proposes that they may result from the deliberate use of quicklime at high temperatures. When a crack develops, water can reach these reactive pieces, allowing dissolved lime to move into the damaged area and form new mineral material. Laboratory studies have shown that some reconstructed mixtures can close narrow fractures, though this does not mean that every Roman structure automatically repaired itself. The evidence instead suggests a potentially useful mechanism whose effectiveness depended on composition and environmental conditions.</p>
+
+<p><strong>F</strong><br>
+The long life of Roman concrete should therefore not be reduced to a single secret ingredient. Its performance reflected the interaction of ash, lime, aggregate, placement methods and the setting in which a building stood. It also benefited from the absence of steel reinforcement, which is often the weak point in contemporary coastal structures. Researchers are now investigating whether lower-temperature cements and locally available industrial by-products could reproduce selected features of the ancient material. Such work is unlikely to replace modern concrete entirely, but it may help reduce the environmental cost of construction, since cement manufacture currently accounts for roughly <strong>8</strong>% of global carbon-dioxide emissions. Even modest gains in durability would matter for bridges, ports and housing that must remain serviceable for decades under harsh conditions.</p>
 """
 
 PART2_HTML = """
-<p class="art-pass__kicker">Part 2 · Workplace</p>
+<p class="art-pass__kicker">Part 2 · Workplace studies</p>
 <h1 class="art-pass__title">Flexible working in the modern workplace</h1>
 
-<p><strong>Paragraph 1</strong><br>
-Flexible and hybrid working arrangements have moved from marginal experiments to mainstream policy in many organisations. Managers now balance employee preferences, operational coverage, and legal duties when designing rosters, while workers negotiate boundaries between home and office in ways that would have seemed radical a generation ago.</p>
+<p><strong>1</strong><br>
+Flexible working describes arrangements that alter when, where or how employees perform their duties. It may include compressed hours, part-time schedules, remote work, job sharing and employee-controlled start and finish times. Although the expression is frequently associated with digital occupations, it also applies to manufacturing, retail and public services, where flexibility may be organised through shift exchanges or predictable rotas. Its expansion has been encouraged by improved communication technology, demographic change and growing recognition that a standard office-based timetable does not suit every worker or every task.</p>
 
-<p><strong>Paragraph 2</strong><br>
-Research by the Chartered Institute of Personnel and Development (CIPD) has repeatedly linked flexible working patterns with lower absenteeism and higher job satisfaction, especially where employees can choose start and finish times within agreed windows. The effect is strongest in knowledge-based sectors where output is measured by results rather than physical presence.</p>
+<p><strong>2</strong><br>
+Advocates often argue that adaptable schedules can improve recruitment and retention. Employees with caring responsibilities, lengthy commutes or health conditions may find conventional attendance requirements unnecessarily restrictive. Surveys commonly report higher <strong>satisfaction</strong> among staff who have some influence over their working pattern, although such findings do not establish that flexibility alone produces this outcome. Organisations that introduce these policies may already possess supportive management cultures, making simple comparisons difficult. Nevertheless, many employers view flexible arrangements as one means of widening the pool of potential applicants.</p>
 
-<p><strong>Paragraph 3</strong><br>
-A widely cited McKinsey survey found that more than <strong>80%</strong> of employees who had worked remotely during major office closures wished to continue with at least partial remote work once restrictions eased. Employers interpreted this as pressure to retain talent, though some also worried about collaboration and mentoring for junior staff.</p>
+<p><strong>3</strong><br>
+The legal position has also shaped discussion. In the United Kingdom, employees have a statutory right to request flexible working after <strong>26</strong> weeks of continuous employment. A request does not create an entitlement to the preferred arrangement: employers can refuse for specified business reasons, such as excessive additional cost or an inability to reorganise work. They must consider applications seriously, yet managers retain discretion. Critics argue that uneven application of that discretion produces inconsistent outcomes across teams. Even so, the formal right has altered expectations by encouraging managers to explain decisions rather than treating conventional hours as the unquestioned default.</p>
 
-<p><strong>Paragraph 4</strong><br>
-In the United Kingdom, employees have a statutory right to <em>request</em> flexible working after <strong>26</strong> weeks of continuous employment; however, employers are not legally obligated to grant every request. They must consider requests seriously and may refuse only where there is a clear business reason. Critics argue that uneven managerial discretion produces inconsistent outcomes across teams.</p>
+<p><strong>4</strong><br>
+Difficulties are not confined to managerial resistance. Informal contact can be reduced when colleagues rarely share the same workplace or hours, and newer employees may find it harder to observe professional practices that are usually learned through proximity. Some managers also report uncertainty about evaluating contribution when they cannot rely on physical presence as a visible signal of effort. These concerns do not necessarily demonstrate lower performance, but they suggest that successful hybrid systems require clear objectives, dependable communication and deliberate opportunities for collaboration.</p>
 
-<p><strong>Paragraph 5</strong><br>
-Alongside benefits, commentators highlight risks of an “always-on” culture, where blurred boundaries lengthen working hours and increase stress. Some organisations have introduced “right to disconnect” guidance, but enforcement remains informal compared with stronger regulatory approaches seen in several <strong>Scandinavian</strong> countries, where employers often face stricter obligations to accommodate flexible schedules.</p>
+<p><strong>5</strong><br>
+Evidence about productivity remains mixed partly because the term covers very different arrangements. A software engineer completing focused coding away from the office faces conditions unlike those of a hospital nurse exchanging shifts with colleagues. Several studies find modest gains where workers have autonomy and suitable equipment, whereas others identify longer working days, blurred boundaries and unequal access to desirable arrangements. The principal issue may therefore be design rather than location. Policies that appear generous on paper can create resentment if senior staff receive discretion while customer-facing employees have little practical choice.</p>
 
-<p><strong>Paragraph 6</strong><br>
-Few analysts expect a full return to rigid nine-to-five routines for every role. Instead, hybrid models are likely to persist, shaped by sector norms, office costs, and evolving legal frameworks. International comparisons suggest that cultural attitudes to trust and measurement will remain as influential as formal legislation.</p>
+<p><strong>6</strong><br>
+For employers, the most credible approach may be to treat flexibility as a continuing organisational process rather than a single benefit. Managers need to identify which duties require simultaneous presence, consult affected teams and review whether opportunities are distributed fairly. The Chartered Institute of Personnel and Development (CIPD) has argued that requests should be considered constructively, but it also notes that implementation requires training and reliable systems. Flexible working is consequently neither a universal remedy nor a temporary concession; its value depends on how carefully it is matched to operational needs and individual circumstances.</p>
 """
 
 PART3_HTML = """
-<p class="art-pass__kicker">Part 3 · Academic reading</p>
+<p class="art-pass__kicker">Part 3 · Cognitive science</p>
 <h1 class="art-pass__title">The cognitive benefits of bilingualism</h1>
 
 <p><strong>A</strong><br>
-For much of the twentieth century, bilingualism was often portrayed as a cognitive burden. Early studies suggested that children who grew up with two languages might be slower to acquire vocabulary in each language and might perform less well on standardised tests. Later research questioned these conclusions, pointing to methodological flaws and to the social disadvantages that many bilingual children faced rather than language processing itself.</p>
+Bilingualism is commonly understood as the regular use of two languages, but this apparently simple definition conceals considerable variation. Some people acquire both languages from infancy, while others learn an additional language through schooling, migration or adult study. Proficiency may be balanced across speaking, reading and listening, or it may be strongly shaped by setting and social purpose. Consequently, researchers increasingly avoid treating bilingual speakers as a uniform group. Questions about cognitive advantage must take account of age of acquisition, frequency of use, literacy, socioeconomic background and the extent to which speakers alternate between languages in daily life.</p>
 
 <p><strong>B</strong><br>
-Ellen Bialystok and colleagues at York University in Canada reported that bilingual adults often outperform monolingual peers on tasks that measure <strong>executive</strong> function — the mental skills involved in switching attention, inhibiting irrelevant information, and holding information in working memory. Bilinguals must constantly manage two active language systems, and this everyday practice may strengthen cognitive control circuits.</p>
+Early research suggested that bilingual speakers might possess superior <strong>executive</strong> control: the collection of processes used to direct attention, suppress irrelevant responses and switch between tasks. The proposal was intuitive. A person who must select one linguistic system while preventing intrusion from another may receive repeated practice in regulating competing information. Experiments using conflict tasks sometimes found that bilingual participants responded more efficiently when distracting signals had to be ignored. These results generated considerable interest because such control is associated with planning, problem solving and the management of complex behaviour.</p>
 
 <p><strong>C</strong><br>
-Longitudinal studies in Canada, Spain, and India have claimed that lifelong bilingualism may delay the onset of dementia symptoms by around four to five years compared with monolingual individuals matched for education and other risk factors. The proposed mechanism is that managing two languages builds “cognitive reserve,” allowing the brain to cope longer with neurodegenerative change.</p>
+However, the initial evidence was not as decisive as popular accounts implied. Studies reporting an advantage were often small, and later investigations with larger samples produced inconsistent results. <strong>Publication</strong> practices may also have amplified positive findings, since striking outcomes are more likely to appear in journals than null results. In addition, bilingual participants have frequently differed from comparison groups in education, immigration history or cultural experience. Such variables can affect test performance independently of language use, making it difficult to attribute a measured difference to bilingualism itself.</p>
 
 <p><strong>D</strong><br>
-Not all findings align. Large-scale analyses, including studies drawing on Scottish health records, have sometimes failed to replicate the dementia-delay effect. Some researchers argue that <strong>publication</strong> bias — the tendency for statistically significant or dramatic results to be published more often — may have inflated early claims. Others note that bilingualism is entangled with migration, education, and socioeconomic variables that are difficult to disentangle fully.</p>
+The most useful contribution of recent work may be methodological rather than celebratory. Researchers now employ longitudinal designs, preregistration and more detailed descriptions of participants' language histories. Instead of asking whether bilingualism creates one universal mental benefit, they investigate which forms of language experience are associated with which outcomes. Daily switching, for example, may impose a different cognitive <strong>burden</strong> from maintaining separate languages in separate environments. This approach has made the field less likely to offer simple conclusions, but more capable of distinguishing genuine effects from artefacts of sampling and measurement.</p>
 
 <p><strong>E</strong><br>
-Neuroimaging studies have reported greater <strong>grey</strong> matter density in the inferior parietal cortex among bilinguals relative to monolinguals in some samples, although effect sizes vary. Such structural differences are suggestive rather than conclusive, and it remains unclear how directly they translate into everyday cognitive performance.</p>
+There is also interest in cognitive ageing. Some clinical studies have reported that bilingual patients receive a dementia diagnosis later than monolingual patients with similar symptoms. One explanation is that sustained linguistic activity contributes to cognitive reserve, allowing individuals to cope with neurological change for longer before impairment becomes apparent. Yet delayed diagnosis is not identical to delayed disease, and it remains uncertain whether language experience changes underlying pathology. Education, occupation, social networks and access to healthcare may all influence both cognitive resilience and the point at which someone seeks clinical assessment.</p>
 
 <p><strong>F</strong><br>
-Economists at the University of Guelph have estimated that, in parts of Canada, bilingual employees enjoy a wage <strong>premium</strong> of roughly three to seven percent compared with otherwise similar monolingual workers, depending on industry and the languages involved. The premium may reflect productivity, access to broader markets, or employer perceptions of flexibility.</p>
+Language use may nevertheless matter in ways that conventional laboratory tasks fail to capture. In conversation, bilingual speakers continuously assess their interlocutor, setting and communicative goal. They may choose a language, mix languages strategically or adjust vocabulary for an audience with uneven knowledge. These practices involve social judgement as well as attention. Their consequences may be subtle, context-dependent and difficult to represent through a short computer-based test. A narrow focus on reaction times may therefore overlook forms of adaptability that are meaningful outside the laboratory.</p>
 
 <p><strong>G</strong><br>
-Educational systems in Canada, Spain, and the United States have expanded <strong>immersion</strong> programmes in which children study academic subjects through a second language. Reviews generally suggest that, when programmes are well resourced, students achieve comparable academic outcomes to peers in single-language tracks while gaining high proficiency in two languages — outcomes that policymakers increasingly view as economically and socially valuable.</p>
+The current consensus is cautious. Bilingualism should not be marketed as a guaranteed route to a cognitive <strong>premium</strong>, but neither should mixed findings be interpreted as evidence that language learning lacks intellectual value. Managing more than one language provides access to relationships, education, employment and cultural participation, benefits that cannot be reduced to a single test score. Future research will need larger and more diverse samples, transparent analysis and repeated measurement across the lifespan. Only then will it be possible to identify when, for whom and under what conditions bilingual experience affects cognition.</p>
 """
 
 INSTRUCTIONS = {
-    1: "Part 1: Read three short texts (A, B, C). Q1–5: Matching. Q6–9: True/False/Not Given. Q10–14: Sentence completion.",
-    2: "Part 2: Read the passage on flexible working. Q15–20: Yes/No/Not Given. Q21–23: Sentence completion. Q24–27: Multiple choice.",
-    3: "Part 3: Read the academic article on bilingualism. Q28–32: Matching paragraphs (A–G). Q33–36: Multiple choice. Q37–40: Summary completion.",
+    1: "Part 1: Read the passage about Roman concrete. Q1–5: Matching information (paragraphs A–F). Q6–9: True/False/Not Given. Q10–14: Sentence completion.",
+    2: "Part 2: Read the passage about flexible working. Q15–20: Yes/No/Not Given. Q21–23: Sentence completion. Q24–27: Multiple choice.",
+    3: "Part 3: Read the academic article on bilingualism. Q28–32: Matching information (paragraphs A–G). Q33–36: Multiple choice. Q37–40: Summary completion.",
 }
 
 PART_META = {
-    1: {"label": "Part 1", "subtitle": "Notices & accommodation", "q_start": 1, "q_end": 14},
+    1: {"label": "Part 1", "subtitle": "Roman concrete", "q_start": 1, "q_end": 14},
     2: {"label": "Part 2", "subtitle": "Flexible working", "q_start": 15, "q_end": 27},
     3: {"label": "Part 3", "subtitle": "Bilingualism", "q_start": 28, "q_end": 40},
 }
@@ -115,67 +124,67 @@ QUESTIONS = [
     _q(
         1,
         1,
-        "match",
+        "para_match",
         "Questions 1–5",
-        "Matching",
-        "Which text (A, B, or C) contains the following information?",
-        "a weekly timetable listing named exercise classes",
-        ["A", "B", "C"],
-        "B",
+        "Matching information",
+        "Which paragraph contains the following information? Choose A–F.",
+        "an account of why coastal structures may become stronger during use",
+        ["A", "B", "C", "D", "E", "F"],
+        "D",
         None,
-        "Text B lists the weekly class schedule.",
+        "Paragraph D explains mineral growth after prolonged contact with seawater.",
     ),
     _q(
         2,
         1,
-        "match",
+        "para_match",
         "Questions 1–5",
-        "Matching",
-        "Which text (A, B, or C) contains the following information?",
-        "different membership tiers that change how many items may be borrowed",
-        ["A", "B", "C"],
-        "A",
+        "Matching information",
+        "Which paragraph contains the following information? Choose A–F.",
+        "a warning against explaining durability by one component alone",
+        ["A", "B", "C", "D", "E", "F"],
+        "F",
         None,
-        "Text A contrasts standard and premium borrowing limits.",
+        "Paragraph F says long life resulted from several interacting factors.",
     ),
     _q(
         3,
         1,
-        "match",
+        "para_match",
         "Questions 1–5",
-        "Matching",
-        "Which text (A, B, or C) contains the following information?",
-        "a higher weekly charge for a room with its own bathroom",
-        ["A", "B", "C"],
+        "Matching information",
+        "Which paragraph contains the following information? Choose A–F.",
+        "evidence that construction mixtures were adjusted for a building's location or purpose",
+        ["A", "B", "C", "D", "E", "F"],
         "C",
         None,
-        "Text C states en-suite rooms cost more per week.",
+        "Paragraph C describes different material choices for different projects.",
     ),
     _q(
         4,
         1,
-        "match",
+        "para_match",
         "Questions 1–5",
-        "Matching",
-        "Which text (A, B, or C) contains the following information?",
-        "a rule that younger customers cannot attend certain high-intensity classes",
-        ["A", "B", "C"],
-        "B",
+        "Matching information",
+        "Which paragraph contains the following information? Choose A–F.",
+        "a revised interpretation of features once regarded as mistakes",
+        ["A", "B", "C", "D", "E", "F"],
+        "E",
         None,
-        "Text B excludes under-16s from HIIT and Boxercise.",
+        "Paragraph E reinterprets lime clasts as potentially deliberate.",
     ),
     _q(
         5,
         1,
-        "match",
+        "para_match",
         "Questions 1–5",
-        "Matching",
-        "Which text (A, B, or C) contains the following information?",
-        "a guarantee of housing for new students if they apply by a stated summer date",
-        ["A", "B", "C"],
-        "C",
+        "Matching information",
+        "Which paragraph contains the following information? Choose A–F.",
+        "the identification of the principal powdered ingredient",
+        ["A", "B", "C", "D", "E", "F"],
+        "B",
         None,
-        "Text C guarantees first-years a place if they apply before 1 August.",
+        "Paragraph B identifies pozzolan as the volcanic ash.",
     ),
     _q(
         6,
@@ -183,12 +192,12 @@ QUESTIONS = [
         "tfng",
         "Questions 6–9",
         "True / False / Not Given",
-        "Do the following statements agree with the information in the texts?",
-        "Premium library members never pay late fines.",
+        "Do the following statements agree with the information in the passage?",
+        "Roman builders used exactly the same formula throughout the empire.",
         ["True", "False", "Not Given"],
         "False",
         None,
-        "They have a seven-day grace period, not unlimited exemption.",
+        "Paragraph C states that recipes varied according to purpose and local resources.",
     ),
     _q(
         7,
@@ -196,12 +205,12 @@ QUESTIONS = [
         "tfng",
         "Questions 6–9",
         "True / False / Not Given",
-        "Do the following statements agree with the information in the texts?",
-        "Pilates is offered at Northfield Sports Centre on both Wednesday and Sunday.",
+        "Do the following statements agree with the information in the passage?",
+        "Vitruvius explained the chemical processes that made volcanic ash effective.",
         ["True", "False", "Not Given"],
-        "True",
+        "False",
         None,
-        "Wednesday lists Pilates 9am; Sunday lists Pilates 11am.",
+        "Paragraph B says contemporary writers did not possess a modern chemical account.",
     ),
     _q(
         8,
@@ -209,12 +218,12 @@ QUESTIONS = [
         "tfng",
         "Questions 6–9",
         "True / False / Not Given",
-        "Do the following statements agree with the information in the texts?",
-        "City University refunds the accommodation deposit immediately on the day a student moves out.",
+        "Do the following statements agree with the information in the passage?",
+        "Some recreated mixtures have sealed small areas of damage under laboratory conditions.",
         ["True", "False", "Not Given"],
-        "False",
+        "True",
         None,
-        "Refund is within twenty-eight days of vacating, not the same day.",
+        "Paragraph E reports that reconstructed mixtures can close narrow fractures.",
     ),
     _q(
         9,
@@ -222,12 +231,12 @@ QUESTIONS = [
         "tfng",
         "Questions 6–9",
         "True / False / Not Given",
-        "Do the following statements agree with the information in the texts?",
-        "Westbridge Public Library charges standard members a joining fee.",
+        "Do the following statements agree with the information in the passage?",
+        "Roman engineers transported volcanic ash from Italy to every province.",
         ["True", "False", "Not Given"],
-        "False",
+        "Not Given",
         None,
-        "Standard membership is free for residents.",
+        "The passage never states how ash was supplied across provinces.",
     ),
     _q(
         10,
@@ -235,12 +244,12 @@ QUESTIONS = [
         "gap",
         "Questions 10–14",
         "Sentence completion",
-        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the texts for each answer.",
-        "Standard library members may borrow up to _____ items at any time.",
+        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
+        "A powder named _____ was combined with lime by ancient builders.",
         None,
-        "eight",
-        ["eight", "8"],
-        "Text A specifies up to eight items.",
+        "pozzolan",
+        ["pozzolan"],
+        "Paragraph B names the volcanic ash pozzolan.",
     ),
     _q(
         11,
@@ -248,12 +257,12 @@ QUESTIONS = [
         "gap",
         "Questions 10–14",
         "Sentence completion",
-        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the texts for each answer.",
-        "Premium library membership costs £_____ per year.",
+        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
+        "Fragments of stone or ceramic supplied bulk as the _____.",
         None,
-        "25",
-        ["25"],
-        "Text A states £25 per year.",
+        "aggregate",
+        ["aggregate"],
+        "Paragraph B calls the larger fragments aggregate.",
     ),
     _q(
         12,
@@ -261,12 +270,12 @@ QUESTIONS = [
         "gap",
         "Questions 10–14",
         "Sentence completion",
-        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the texts for each answer.",
-        "The accommodation deposit for halls is £_____.",
+        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
+        "Making this material contributes roughly _____ percent of planetary carbon dioxide output.",
         None,
-        "300",
-        ["300"],
-        "Text C gives £300.",
+        "8",
+        ["8", "8%"],
+        "Paragraph F gives the figure as roughly 8%.",
     ),
     _q(
         13,
@@ -274,12 +283,12 @@ QUESTIONS = [
         "gap",
         "Questions 10–14",
         "Sentence completion",
-        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the texts for each answer.",
-        "Students leaving early must give _____ weeks’ written notice.",
+        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
+        "Harbour mixtures hardened after being placed in contact with _____.",
         None,
-        "eight",
-        ["eight", "8"],
-        "Text C requires eight weeks’ notice.",
+        "seawater",
+        ["seawater", "sea water"],
+        "Paragraph D identifies seawater.",
     ),
     _q(
         14,
@@ -287,12 +296,12 @@ QUESTIONS = [
         "gap",
         "Questions 10–14",
         "Sentence completion",
-        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the texts for each answer.",
-        "The no-show fee for late class cancellation is £_____.",
+        "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
+        "Mineral growth produced interlocking _____ within submerged structures.",
         None,
-        "3",
-        ["3"],
-        "Text B states a £3 no-show fee.",
+        "crystals",
+        ["crystals"],
+        "Paragraph D refers to interlocking crystals.",
     ),
     _q(
         15,
@@ -301,11 +310,11 @@ QUESTIONS = [
         "Questions 15–20",
         "Yes / No / Not Given",
         "Do the following statements agree with the views of the writer in the passage?",
-        "UK employers must approve every flexible working request they receive.",
+        "Digital jobs are the only occupations in which adaptable arrangements are possible.",
         ["Yes", "No", "Not Given"],
         "No",
         None,
-        "Paragraph 4: employers are not obligated to grant every request.",
+        "Paragraph 1 states the idea also applies to manufacturing, retail and public services.",
     ),
     _q(
         16,
@@ -314,11 +323,11 @@ QUESTIONS = [
         "Questions 15–20",
         "Yes / No / Not Given",
         "Do the following statements agree with the views of the writer in the passage?",
-        "CIPD research has associated flexible working with fewer staff absences.",
+        "Reported employee contentment proves that schedule choice causes better morale.",
         ["Yes", "No", "Not Given"],
-        "Yes",
+        "No",
         None,
-        "Paragraph 2 links flexible patterns with lower absenteeism.",
+        "Paragraph 2 says survey findings do not establish that flexibility alone produces the outcome.",
     ),
     _q(
         17,
@@ -327,11 +336,11 @@ QUESTIONS = [
         "Questions 15–20",
         "Yes / No / Not Given",
         "Do the following statements agree with the views of the writer in the passage?",
-        "Fewer than half of surveyed remote workers wanted any remote work to continue.",
+        "A statutory application must be granted if the employee has a strong personal reason.",
         ["Yes", "No", "Not Given"],
         "No",
         None,
-        "Paragraph 3: over 80% wished to continue at least partial remote work.",
+        "Paragraph 3: employers can refuse for specified business reasons.",
     ),
     _q(
         18,
@@ -340,11 +349,11 @@ QUESTIONS = [
         "Questions 15–20",
         "Yes / No / Not Given",
         "Do the following statements agree with the views of the writer in the passage?",
-        "Scandinavian countries are described as having weaker employer obligations than the UK.",
+        "Physical visibility is a dependable measure of an individual's contribution.",
         ["Yes", "No", "Not Given"],
         "No",
         None,
-        "Paragraph 5 states Scandinavian employers often face stricter obligations.",
+        "Paragraph 4 presents presence only as a signal some managers rely on, not as proof of performance.",
     ),
     _q(
         19,
@@ -353,11 +362,11 @@ QUESTIONS = [
         "Questions 15–20",
         "Yes / No / Not Given",
         "Do the following statements agree with the views of the writer in the passage?",
-        "The writer argues that an “always-on” culture is entirely beneficial for productivity.",
+        "Every study of home-based work has found a modest increase in output.",
         ["Yes", "No", "Not Given"],
         "No",
         None,
-        "Paragraph 5 presents risks and stress linked to always-on culture.",
+        "Paragraph 5 states that evidence about productivity remains mixed.",
     ),
     _q(
         20,
@@ -366,11 +375,11 @@ QUESTIONS = [
         "Questions 15–20",
         "Yes / No / Not Given",
         "Do the following statements agree with the views of the writer in the passage?",
-        "The writer believes every industry will return to fixed nine-to-five schedules soon.",
+        "The CIPD requires organisations to approve all requests for altered schedules.",
         ["Yes", "No", "Not Given"],
         "No",
         None,
-        "Paragraph 6 says few analysts expect a full return for every role.",
+        "Paragraph 6: CIPD argues requests should be considered constructively, not automatically approved.",
     ),
     _q(
         21,
@@ -379,11 +388,11 @@ QUESTIONS = [
         "Questions 21–23",
         "Sentence completion",
         "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
-        "In the UK, employees may request flexible working after _____ weeks of continuous employment.",
+        "Staff become entitled to ask for adaptable schedules once they have been employed for _____ weeks.",
         None,
         "26",
         ["26"],
-        "Paragraph 4 gives 26 weeks.",
+        "Paragraph 3: statutory right after 26 weeks of continuous employment.",
     ),
     _q(
         22,
@@ -392,11 +401,11 @@ QUESTIONS = [
         "Questions 21–23",
         "Sentence completion",
         "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
-        "CIPD research linked flexible working with higher job _____.",
+        "Surveys frequently associate employee choice with higher _____.",
         None,
         "satisfaction",
         ["satisfaction"],
-        "Paragraph 2 mentions higher job satisfaction.",
+        "Paragraph 2 reports higher satisfaction.",
     ),
     _q(
         23,
@@ -405,11 +414,11 @@ QUESTIONS = [
         "Questions 21–23",
         "Sentence completion",
         "Complete the sentences. Write ONE WORD AND/OR A NUMBER from the passage for each answer.",
-        "McKinsey found that more than _____% of remote workers wanted at least partial remote work to continue.",
+        "A hospital nurse swapping rotas faces conditions unlike those of a _____ engineer coding remotely.",
         None,
-        "80",
-        ["80"],
-        "Paragraph 3 states more than 80%.",
+        "software",
+        ["software"],
+        "Paragraph 5 contrasts a software engineer with a hospital nurse.",
     ),
     _q(
         24,
@@ -417,17 +426,17 @@ QUESTIONS = [
         "mc",
         "Questions 24–27",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "According to the passage, what is one risk linked to flexible and remote working?",
+        "Choose the correct letter, A, B, C or D.",
+        "What does the writer suggest makes evidence on output difficult to interpret?",
         [
-            "A. A guaranteed reduction in overall working hours",
-            "B. Junior staff may receive less mentoring",
-            "C. Employers lose all legal duties to consider requests",
-            "D. CIPD data show higher absenteeism in hybrid models",
+            "A. Employees usually overstate the number of hours they work",
+            "B. The label covers arrangements with substantially different conditions",
+            "C. Remote work has only been studied in technology companies",
+            "D. Managers use incompatible methods for recording attendance",
         ],
         "B",
         None,
-        "Paragraph 3 mentions worries about collaboration and mentoring for junior staff.",
+        "Paragraph 5: the term covers very different arrangements.",
     ),
     _q(
         25,
@@ -435,17 +444,17 @@ QUESTIONS = [
         "mc",
         "Questions 24–27",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "UK employers who refuse a flexible working request must",
+        "Choose the correct letter, A, B, C or D.",
+        "What concern is raised about staff who rarely work alongside colleagues?",
         [
-            "A. offer the same arrangement to every employee",
-            "B. show a clear business reason",
-            "C. pay compensation automatically",
-            "D. obtain approval from the CIPD",
+            "A. They may have fewer opportunities to acquire unspoken professional habits",
+            "B. They are likely to reject formal performance reviews",
+            "C. They may need more expensive communication equipment",
+            "D. They usually prefer customer-facing responsibilities",
         ],
-        "B",
+        "A",
         None,
-        "Paragraph 4: refusal only where there is a clear business reason.",
+        "Paragraph 4: newer employees may find it harder to observe professional practices learned through proximity.",
     ),
     _q(
         26,
@@ -453,17 +462,17 @@ QUESTIONS = [
         "mc",
         "Questions 24–27",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "The writer uses Scandinavian countries mainly to illustrate",
+        "Choose the correct letter, A, B, C or D.",
+        "Which approach is most consistent with the writer's conclusion?",
         [
-            "A. identical legal rules to the UK",
-            "B. weaker trade unions than in the UK",
-            "C. stricter expectations on employers in some contexts",
-            "D. lower demand for remote work",
+            "A. Apply one identical schedule to every role",
+            "B. Leave all timing decisions to individual employees",
+            "C. Review arrangements against operational demands and fairness",
+            "D. Restrict altered schedules to senior employees",
         ],
         "C",
         None,
-        "Paragraph 5 contrasts stricter regulatory approaches in Scandinavia.",
+        "Paragraph 6 recommends consulting teams and reviewing whether opportunities are distributed fairly.",
     ),
     _q(
         27,
@@ -471,82 +480,82 @@ QUESTIONS = [
         "mc",
         "Questions 24–27",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "What does the writer suggest about hybrid models?",
+        "Choose the correct letter, A, B, C or D.",
+        "Why might apparently generous schemes create resentment?",
         [
-            "A. They will disappear once office rents fall",
-            "B. They are likely to continue for many roles",
-            "C. They are illegal outside knowledge-based sectors",
-            "D. They remove the need for any managerial discretion",
+            "A. They can give some groups discretion unavailable to others",
+            "B. They require employees to work longer contracted hours",
+            "C. They make staff responsible for buying their own equipment",
+            "D. They prevent managers from discussing workplace needs",
         ],
-        "B",
+        "A",
         None,
-        "Paragraph 6 states hybrid models are likely to persist.",
+        "Paragraph 5: resentment if senior staff receive discretion while others have little choice.",
     ),
     _q(
         28,
         3,
         "para_match",
         "Questions 28–32",
-        "Matching paragraphs",
+        "Matching information",
         "Which paragraph contains the following information? Choose A–G.",
-        "evidence that bilingual employees in some labour markets earn more than comparable monolinguals",
+        "an explanation for replacing a broad question with more specific research questions",
         ["A", "B", "C", "D", "E", "F", "G"],
-        "F",
+        "D",
         None,
-        "Paragraph F discusses the wage premium.",
+        "Paragraph D describes investigating which forms of experience link to which outcomes.",
     ),
     _q(
         29,
         3,
         "para_match",
         "Questions 28–32",
-        "Matching paragraphs",
+        "Matching information",
         "Which paragraph contains the following information? Choose A–G.",
-        "a reason some large datasets have not supported an earlier clinical claim",
+        "a reason why comparisons between participant groups can be misleading",
         ["A", "B", "C", "D", "E", "F", "G"],
-        "D",
+        "C",
         None,
-        "Paragraph D discusses failed replication and publication bias.",
+        "Paragraph C notes differences in education, immigration history and cultural experience.",
     ),
     _q(
         30,
         3,
         "para_match",
         "Questions 28–32",
-        "Matching paragraphs",
+        "Matching information",
         "Which paragraph contains the following information? Choose A–G.",
-        "a description of bilingualism once being seen as harmful to children’s thinking",
+        "a limitation of assessing language experience through short experimental exercises",
         ["A", "B", "C", "D", "E", "F", "G"],
-        "A",
+        "F",
         None,
-        "Paragraph A describes early negative portrayals.",
+        "Paragraph F argues laboratory tasks may miss meaningful real-world adaptability.",
     ),
     _q(
         31,
         3,
         "para_match",
         "Questions 28–32",
-        "Matching paragraphs",
+        "Matching information",
         "Which paragraph contains the following information? Choose A–G.",
-        "examples of school systems teaching subjects through a second language",
+        "a distinction between postponing symptoms and altering a medical condition",
         ["A", "B", "C", "D", "E", "F", "G"],
-        "G",
+        "E",
         None,
-        "Paragraph G discusses immersion programmes.",
+        "Paragraph E: delayed diagnosis is not identical to delayed disease.",
     ),
     _q(
         32,
         3,
         "para_match",
         "Questions 28–32",
-        "Matching paragraphs",
+        "Matching information",
         "Which paragraph contains the following information? Choose A–G.",
-        "neuroimaging findings related to brain structure in bilinguals",
+        "a description of the variety concealed by a common label",
         ["A", "B", "C", "D", "E", "F", "G"],
-        "E",
+        "A",
         None,
-        "Paragraph E reports grey matter density differences.",
+        "Paragraph A explains the variation concealed by the term bilingualism.",
     ),
     _q(
         33,
@@ -554,17 +563,17 @@ QUESTIONS = [
         "mc",
         "Questions 33–36",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "According to Bialystok’s line of research (Paragraph B), bilingual adults often perform better on tasks that measure",
+        "Choose the correct letter, A, B, C or D.",
+        "What was the central idea behind early claims of an advantage?",
         [
-            "A. vocabulary size in each language",
-            "B. executive function",
-            "C. long-term memory for faces",
-            "D. simple reaction speed only",
+            "A. Selecting between languages may exercise attention-management processes",
+            "B. Multilingual households provide consistently better schooling",
+            "C. Reading in two scripts increases the speed of visual perception",
+            "D. Speakers with two languages avoid demanding social situations",
         ],
-        "B",
+        "A",
         None,
-        "Paragraph B explicitly mentions executive function.",
+        "Paragraph B links selecting one linguistic system to practice in regulating competing information.",
     ),
     _q(
         34,
@@ -572,17 +581,17 @@ QUESTIONS = [
         "mc",
         "Questions 33–36",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "The writer’s main purpose in Paragraph D is to",
+        "Choose the correct letter, A, B, C or D.",
+        "Why does the writer mention publication practices?",
         [
-            "A. prove bilingualism always delays dementia",
-            "B. argue imaging studies are never reliable",
-            "C. show that findings about bilingualism and dementia are contested",
-            "D. dismiss all non-UK research on bilingualism",
+            "A. To show that journals refuse to print studies of language",
+            "B. To identify a possible source of an overly positive research record",
+            "C. To argue that large samples are less useful than small ones",
+            "D. To suggest that researchers deliberately conceal results",
         ],
-        "C",
+        "B",
         None,
-        "Paragraph D presents conflicting evidence and caveats.",
+        "Paragraph C: striking outcomes are more likely to appear than null results.",
     ),
     _q(
         35,
@@ -590,17 +599,17 @@ QUESTIONS = [
         "mc",
         "Questions 33–36",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "Paragraph E implies that differences in grey matter density",
+        "Choose the correct letter, A, B, C or D.",
+        "What does the writer imply about cognitive reserve?",
         [
-            "A. guarantee higher IQ scores",
-            "B. are observed in every bilingual without exception",
-            "C. are suggestive but not conclusive for everyday performance",
-            "D. only occur before the age of ten",
+            "A. It has been proven to prevent neurological damage",
+            "B. It may help explain a later clinical identification of impairment",
+            "C. It is found only in people who learned languages in childhood",
+            "D. It is measured primarily through reaction-time experiments",
         ],
-        "C",
+        "B",
         None,
-        "Paragraph E says suggestive rather than conclusive.",
+        "Paragraph E presents cognitive reserve as one explanation for later diagnosis.",
     ),
     _q(
         36,
@@ -608,17 +617,17 @@ QUESTIONS = [
         "mc",
         "Questions 33–36",
         "Multiple choice",
-        "Choose the correct letter, A, B, C, or D.",
-        "According to Paragraph G, reviews of well-resourced immersion programmes suggest that students",
+        "Choose the correct letter, A, B, C or D.",
+        "Which statement best reflects the writer's overall position?",
         [
-            "A. fall permanently behind in academic subjects",
-            "B. achieve comparable academic outcomes while gaining two languages",
-            "C. must abandon their first language to succeed",
-            "D. perform worse than peers in all US states",
+            "A. The strongest findings justify promoting language learning as a mental treatment",
+            "B. Inconsistent findings make further investigation unnecessary",
+            "C. Claims require caution, but the broader value of language learning remains substantial",
+            "D. Only perfectly balanced speakers should be included in future studies",
         ],
-        "B",
+        "C",
         None,
-        "Paragraph G states comparable academic outcomes.",
+        "Paragraph G rejects both overclaiming and dismissing bilingualism's wider value.",
     ),
     _q(
         37,
@@ -631,8 +640,7 @@ QUESTIONS = [
         None,
         "executive",
         ["executive"],
-        "Paragraph B highlights executive function.",
-        None,
+        "Paragraph B identifies executive control.",
     ),
     _q(
         38,
@@ -643,10 +651,9 @@ QUESTIONS = [
         "Complete the summary. Choose NO MORE THAN ONE WORD from the passage for each answer.",
         "",
         None,
-        "burden",
-        ["burden"],
-        "Paragraph A describes bilingualism as a cognitive burden.",
-        None,
+        "publication",
+        ["publication"],
+        "Paragraph C discusses publication practices.",
     ),
     _q(
         39,
@@ -657,10 +664,9 @@ QUESTIONS = [
         "Complete the summary. Choose NO MORE THAN ONE WORD from the passage for each answer.",
         "",
         None,
-        "publication",
-        ["publication"],
-        "Paragraph D mentions publication bias.",
-        None,
+        "burden",
+        ["burden"],
+        "Paragraph D contrasts cognitive burden across language settings.",
     ),
     _q(
         40,
@@ -673,13 +679,12 @@ QUESTIONS = [
         None,
         "premium",
         ["premium"],
-        "Paragraph F discusses a wage premium.",
-        None,
+        "Paragraph G rejects an automatic cognitive premium.",
     ),
 ]
 
 SUMMARY_INTRO_HTML = """
-<p class="art-sum-intro">Bialystok’s programme of research suggests bilinguals can excel on tasks involving <span class="art-sum-slot" data-q="37" tabindex="0">37</span> control. Historical work in Paragraph A claimed bilingualism could impose a cognitive <span class="art-sum-slot" data-q="38" tabindex="0">38</span>. More recent large-scale analyses in Paragraph D raise concerns about <span class="art-sum-slot" data-q="39" tabindex="0">39</span> bias affecting which studies reach print. Separately, labour-market evidence in Paragraph F links bilingualism to a wage <span class="art-sum-slot" data-q="40" tabindex="0">40</span>.</p>
+<p class="art-sum-intro">Modern scholarship has moved away from a simple claim that using two languages gives everyone the same mental advantage. Earlier work linked language management to <span class="art-sum-slot" data-q="37" tabindex="0">37</span> control, but later studies raised concerns about sampling and selective <span class="art-sum-slot" data-q="38" tabindex="0">38</span>. Researchers now examine whether particular communicative settings create a cognitive <span class="art-sum-slot" data-q="39" tabindex="0">39</span>, while cautioning against describing bilingualism as an automatic intellectual <span class="art-sum-slot" data-q="40" tabindex="0">40</span>.</p>
 """
 
 
@@ -717,10 +722,15 @@ def answer_matches(q: dict, raw: str) -> bool:
     return _norm_gap(raw) in opts
 
 
-def score_answers(answers: dict) -> tuple[int, int, int, int]:
+def score_answers(answers: dict, test_number: int = 1) -> tuple[int, int, int, int]:
     """Return total score and part1, part2, part3 sub-scores."""
+    from .academic_tests import get_questions as registry_questions
+
+    questions = QUESTIONS if test_number == 1 else registry_questions(test_number)
+    if not questions:
+        return 0, 0, 0, 0
     p1 = p2 = p3 = 0
-    for q in QUESTIONS:
+    for q in questions:
         qid = str(q["id"])
         raw = answers.get(qid, "")
         ok = answer_matches(q, raw)
@@ -760,8 +770,14 @@ def enrich_question_for_client(q: dict) -> dict:
     return d
 
 
-def get_client_test_payload() -> dict:
+def get_client_test_payload(test_number: int = 1) -> dict:
     """Full payload for authenticated test page (includes correct for instant Check UI)."""
+    if test_number != 1:
+        from .academic_tests import get_client_payload
+
+        payload = get_client_payload(test_number)
+        if payload:
+            return payload
     return {
         "testTitleBar": "IELTS Academic Reading · Test 1",
         "timeLimitSeconds": 60 * 60,
@@ -771,7 +787,7 @@ def get_client_test_payload() -> dict:
         "summaryIntroHtml": SUMMARY_INTRO_HTML.strip(),
         "questions": [enrich_question_for_client(dict(q)) for q in QUESTIONS],
         "resultsMeta": {
-            "part1Title": "Part 1 — Notices & accommodation",
+            "part1Title": "Part 1 — Roman concrete",
             "part2Title": "Part 2 — Flexible working",
             "part3Title": "Part 3 — Bilingualism",
         },

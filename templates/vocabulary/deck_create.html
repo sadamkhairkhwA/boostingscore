@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 
 {% block title %}Create deck — Boosting Score{% endblock %}
 
@@ -14,12 +14,18 @@
     <nav class="fc-create-breadcrumb" aria-label="Breadcrumb">
       <a href="{% url 'vocabulary:index' %}">Flashcard studio</a>
       <span class="fc-create-breadcrumb-sep" aria-hidden="true">/</span>
-      <span class="fc-create-breadcrumb-current">Create deck</span>
+      <span class="fc-create-breadcrumb-current">{% if editing_deck_id %}Edit deck{% else %}Create deck{% endif %}</span>
     </nav>
 
     <header class="fc-create-page-head">
-      <h1 class="fc-create-heading" id="deck-create-heading">Create a deck</h1>
+      <h1 class="fc-create-heading" id="deck-create-heading">{{ page_heading|default:"Create a deck" }}</h1>
       <div class="fc-create-deck-head-actions">
+        {% if editing_deck_id %}
+        <form method="post" action="{% url 'vocabulary:deck_delete' deck_id=editing_deck_id %}" onsubmit="return confirm('Delete this deck and all its cards?');">
+          {% csrf_token %}
+          <button type="submit" class="fc-create-btn fc-create-btn--outline" style="color:#991B1B;border-color:#FECACA;">Delete deck</button>
+        </form>
+        {% endif %}
         <button type="button" class="fc-create-btn fc-create-btn--outline fc-create-deck-save" data-practice="0">Save</button>
         <button type="button" class="fc-create-btn fc-create-btn--primary fc-create-deck-save" data-practice="1">Save and practice</button>
       </div>
@@ -155,6 +161,10 @@
       const saveUrl = "{% url 'vocabulary:deck_create_save' %}";
       const generateUrl = "{% url 'vocabulary:flashcard_set_generate' %}";
       const aiImageUrl = "{% url 'vocabulary:custom_ai_image_preview' %}";
+      const editingDeckId = {% if editing_deck_id %}{{ editing_deck_id }}{% else %}null{% endif %};
+      const initialCards = {{ initial_cards_json|safe }};
+      const initialDeckName = "{{ initial_deck_name|escapejs }}";
+      const initialDeckDescription = "{{ initial_deck_description|escapejs }}";
       const rowImageB64 = new WeakMap();
 
       function csrf() {
@@ -245,11 +255,11 @@
           } else if (valid === total) {
             validLine.hidden = false;
             validLine.className = "fc-create-valid-line fc-create-valid-line--ok";
-            validLine.textContent = "✓ All " + total + " card" + (total === 1 ? "" : "s") + " valid";
+            validLine.innerHTML = BSIcons.check() + " All " + total + " card" + (total === 1 ? "" : "s") + " valid";
           } else {
             validLine.hidden = false;
             validLine.className = "fc-create-valid-line fc-create-valid-line--warn";
-            validLine.textContent = "⚠️ " + valid + " of " + total + " valid — each row needs a term";
+            validLine.innerHTML = BSIcons.warn() + " " + valid + " of " + total + " valid — each row needs a term";
           }
         }
       }
@@ -562,6 +572,7 @@
               level: selectedLevel,
               cards: cards,
               practice: practice,
+              deck_id: editingDeckId,
             }),
           });
           const data = await r.json();
@@ -587,7 +598,15 @@
         });
       });
 
-      appendRow("", "");
+      if (nameEl && initialDeckName) nameEl.value = initialDeckName;
+      if (descEl && initialDeckDescription) descEl.value = initialDeckDescription;
+      if (initialCards && initialCards.length) {
+        initialCards.forEach(function (c) {
+          appendRow(c.word || "", c.definition || "");
+        });
+      } else {
+        appendRow("", "");
+      }
       updateCounts();
     })();
   </script>

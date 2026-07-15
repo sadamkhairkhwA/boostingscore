@@ -1,0 +1,96 @@
+{% extends "listening/_base.html" %}
+{% load bs_icons %}
+{% block title %}{{ lecture.title }}{% endblock %}
+{% block content %}
+<div class="ll-practice">
+  <div class="ll-practice__head">
+    <a href="{% url 'listening:section4_notes' %}" class="ll-back">← Section 4 notes</a>
+    <span class="ll-practice__tag">Section 4</span>
+  </div>
+  <h1 class="ll-practice__title">{{ lecture.title }}</h1>
+
+  {% if mode == "results" %}
+  <div class="ll-score">
+    <div class="ll-score__ring ll-score__ring--{% if percent >= 80 %}good{% elif percent >= 50 %}ok{% else %}low{% endif %}">
+      <span class="ll-score__num">{{ score }}/{{ total }}</span>
+      <span class="ll-score__pct">{{ percent }}%</span>
+    </div>
+    <div class="ll-score__txt"><h2>Note-taking results</h2><p>Compare your notes with the answer key below.</p></div>
+  </div>
+  <ol class="ll-results">
+    {% for r in results %}
+    <li class="ll-result {% if r.ok %}is-correct{% else %}is-wrong{% endif %}">
+      <div class="ll-result__top">
+        <span class="ll-result__badge">{% if r.ok %}{% bs_icon "check" "green" "sm" %}{% else %}{% bs_icon "x" "red" "sm" %}{% endif %}</span>
+        <span class="ll-result__q">{{ r.label }}</span>
+      </div>
+      <div class="ll-result__ans">
+        <span>Your answer: <b>{{ r.given|default:"—" }}</b></span>
+        {% if not r.ok %}<span class="ll-result__correct">Correct: <b>{{ r.correct }}</b></span>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  <div class="ll-practice__actions">
+    <a href="{% url 'listening:section4_notes_session' lecture.id %}" class="ll-btn">Try again</a>
+    <a href="{% url 'listening:section4_notes' %}" class="ll-btn ll-btn--ghost">All lectures</a>
+  </div>
+
+  {% else %}
+  <p class="ll-practice__instr">{{ lecture.instructions }}</p>
+  {% if audio_missing %}
+  <div class="ll-warn"><b>Audio not found.</b> Add <code>static/listening_practice/{{ lecture.audio }}</code> or run the listening audio prepare command.</div>
+  {% endif %}
+
+  <form method="post" id="s4-form">
+    {% csrf_token %}
+    <div class="ll-aud">
+      <button type="button" class="ll-aud__btn" id="ll-play" disabled aria-label="Play"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7L8 5z"/></svg></button>
+      <div class="ll-aud__main">
+        <div class="ll-aud__status" id="ll-status">Press Begin to play the recording once.</div>
+        <div class="ll-aud__bar"><div class="ll-aud__fill" id="ll-fill"></div></div>
+        <div class="ll-aud__time"><span id="ll-now">0:00</span> / <span id="ll-dur">—:—</span></div>
+      </div>
+      <span class="ll-aud__once">Plays once</span>
+      <audio id="ll-audio" preload="auto" src="{{ audio_url }}"></audio>
+    </div>
+    <div class="ll-begin" id="ll-begin">
+      <p class="ll-begin__txt">The lecture plays <b>once only</b>. Fill the gaps as you listen.</p>
+      <button type="button" class="ll-btn ll-btn--primary" id="ll-begin-btn" {% if audio_missing %}disabled{% endif %}>Begin</button>
+    </div>
+
+    <div class="s4-notes-template">
+      {% for field in lecture.template %}
+      <div class="s4-notes-row">
+        <label class="s4-notes-lbl" for="gap_{{ field.id }}">{{ field.label }}</label>
+        <p class="s4-notes-line">{{ field.prefix }}<input type="text" name="gap_{{ field.id }}" id="gap_{{ field.id }}" class="ll-input s4-gap" disabled autocomplete="off">{{ field.suffix }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="ll-practice__actions">
+      <button type="submit" class="ll-btn ll-btn--primary" id="ll-submit" disabled>Check answers</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% if mode == "play" %}
+<script>
+(function(){
+  var form=document.getElementById('s4-form'), audio=document.getElementById('ll-audio'), playBtn=document.getElementById('ll-play'),
+      fill=document.getElementById('ll-fill'), nowEl=document.getElementById('ll-now'), durEl=document.getElementById('ll-dur'),
+      statEl=document.getElementById('ll-status'), begin=document.getElementById('ll-begin'), beginBtn=document.getElementById('ll-begin-btn');
+  function fmt(s){if(!isFinite(s)||s<0)return'0:00';var m=Math.floor(s/60),r=Math.floor(s%60);return m+':'+(r<10?'0':'')+r;}
+  function setOn(on){form.querySelectorAll('.s4-gap').forEach(function(el){el.disabled=!on;}); document.getElementById('ll-submit').disabled=!on;}
+  setOn(false);
+  beginBtn.addEventListener('click',function(){begin.hidden=true;setOn(true);statEl.textContent='Playing — fill notes as you listen.';audio.play().catch(function(){});});
+  audio.addEventListener('loadedmetadata',function(){durEl.textContent=fmt(audio.duration);});
+  var lastT=0;
+  audio.addEventListener('timeupdate',function(){nowEl.textContent=fmt(audio.currentTime);if(audio.duration)fill.style.width=(audio.currentTime/audio.duration*100)+'%';lastT=audio.currentTime;});
+  audio.addEventListener('seeking',function(){if(Math.abs(audio.currentTime-lastT)>0.4)audio.currentTime=lastT;});
+  audio.addEventListener('ended',function(){statEl.textContent='Recording finished — submit when ready.';});
+})();
+</script>
+{% endif %}
+{% endblock %}

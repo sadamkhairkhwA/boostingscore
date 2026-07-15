@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Vocabulary — Boosting Score{% endblock %}
 {% block content %}
 <div class="bs-page">
   <p class="bs-sec-lbl">Your level</p>
   <div style="margin-bottom:18px;">
-    <span class="bs-badge bs-badge-level">⭐ {{ request.user.profile.level_label }} · {{ request.user.profile.band_range }}</span>
+    <span class="bs-badge bs-badge-level">{% bs_icon "star" "amber" "sm" %} {{ request.user.profile.level_label }} · {{ request.user.profile.band_range }}</span>
   </div>
   <h1 class="bs-page-title">Vocabulary studio</h1>
   <p class="bs-page-sub">Build IELTS-ready word power with flashcards, quizzes, and AI-assisted “Type it” practice.</p>
@@ -17,7 +17,7 @@
       <div class="bs-stat-sub">Across all methods</div>
     </div>
     <div class="bs-stat animate-up delay-2">
-      <div class="bs-stat-val">🔥 {{ streak|default:0 }}</div>
+      <div class="bs-stat-val" style="display:flex;align-items:center;justify-content:center;gap:8px;">{% bs_icon "flame" "amber" "sm" %} {{ streak|default:0 }}</div>
       <div class="bs-stat-lbl">Streak</div>
       <div class="bs-stat-sub">Keep momentum</div>
     </div>
@@ -50,7 +50,7 @@
   <div class="bs-methods">
     <a class="bs-method animate-up delay-1" href="{% url 'vocabulary:index' %}">
       <span class="bs-method-badge" style="background:#EAF3DE;color:#27500A;">Core</span>
-      <div class="bs-method-icon">🗂️</div>
+      <div class="bs-method-icon">{% bs_icon "cards" "green" "lg" %}</div>
       <div class="bs-method-name">Flashcards</div>
       <div class="bs-method-desc">Open the studio for topic hubs (AI word tiers + mastery), due reviews, and custom decks — then flip cards with spaced repetition.</div>
       <div class="bs-method-foot">
@@ -60,7 +60,7 @@
     </a>
     <a class="bs-method animate-up delay-2" href="{% url 'vocabulary:quiz_setup' %}">
       <span class="bs-method-badge" style="background:#F3F4F6;color:#374151;">Quiz</span>
-      <div class="bs-method-icon">🧠</div>
+      <div class="bs-method-icon">{% bs_icon "brain" "purple" "lg" %}</div>
       <div class="bs-method-name">Quick quiz</div>
       <div class="bs-method-desc">Set topic, level, and batch size — then test recall under pressure.</div>
       <div class="bs-method-foot">
@@ -70,7 +70,7 @@
     </a>
     <a class="bs-method animate-up delay-3" href="{% url 'vocabulary:type_it_deck' %}">
       <span class="bs-method-badge" style="background:#DCFCE7;color:#166534;">AI</span>
-      <div class="bs-method-icon">⌨️</div>
+      <div class="bs-method-icon">{% bs_icon "keyboard" "navy" "lg" %}</div>
       <div class="bs-method-name">Type it</div>
       <div class="bs-method-desc">Write a sentence using the word — get band-style feedback.</div>
       <div class="bs-method-foot">
@@ -80,7 +80,7 @@
     </a>
     <a class="bs-method animate-up delay-4" href="{% url 'vocabulary:word_list' %}">
       <span class="bs-method-badge" style="background:#EFF6FF;color:#1D4ED8;">Browse</span>
-      <div class="bs-method-icon">📋</div>
+      <div class="bs-method-icon">{% bs_icon "clipboard" "navy" "lg" %}</div>
       <div class="bs-method-name">Word list</div>
       <div class="bs-method-desc">Filter by topic and level; star words to revisit later.</div>
       <div class="bs-method-foot">
@@ -90,7 +90,7 @@
     </a>
     <a class="bs-method animate-up delay-5" href="{% url 'vocabulary:favored' %}">
       <span class="bs-method-badge" style="background:#FFF7ED;color:#C2410C;">Saved</span>
-      <div class="bs-method-icon">⭐️</div>
+      <div class="bs-method-icon">{% bs_icon "star" "amber" "lg" %}</div>
       <div class="bs-method-name">Favored words</div>
       <div class="bs-method-desc">Your starred list for fast review before test day.</div>
       <div class="bs-method-foot">
@@ -100,7 +100,7 @@
     </a>
     <a class="bs-method animate-up delay-6" href="{% url 'vocabulary:guide' %}">
       <span class="bs-method-badge" style="background:#F5F3FF;color:#5B21B6;">Guide</span>
-      <div class="bs-method-icon">📘</div>
+      <div class="bs-method-icon">{% bs_icon "guide" "green" "lg" %}</div>
       <div class="bs-method-name">IELTS vocabulary guide</div>
       <div class="bs-method-desc">Methods, tips, band descriptors, and a simple study plan.</div>
       <div class="bs-method-foot">

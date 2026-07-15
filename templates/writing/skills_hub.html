@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bs_icons %}
 {% block title %}Writing Skills{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'writing/css/task1_practice.css' %}?v=3">
@@ -22,10 +22,10 @@
     <div class="wr-skill-list">
       {% for s in skills %}
       <a href="{% url 'writing:skill_detail' s.id %}" class="wr-skill-row">
-        <div class="ic">✦</div>
+        <div class="ic" aria-hidden="true">{% bs_icon "star" "amber" "sm" %}</div>
         <div><strong>{{ s.title }}</strong><p>{{ s.desc }}</p></div>
         <div>
-          {% if s.id in done_ids %}<span class="done">Done ✓</span>{% endif %}
+          {% if s.id in done_ids %}<span class="done">Done {% bs_icon "check" "green" "sm" %}</span>{% endif %}
           {% if s.new %}<span class="new">New</span>{% endif %}
           {% if recommended and s in recommended %}<span class="rec">Recommended</span>{% endif %}
         </div>

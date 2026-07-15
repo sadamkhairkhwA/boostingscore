@@ -1,34 +1,95 @@
-BEGINNER = (
-    "climate, pollution, habitat, drought, fossil fuel, recycle, carbon, deforestation, wildlife, "
-    "conservation, flood, glacier, atmosphere, species, natural disaster, temperature, ocean, ecosystem, "
-    "energy, nature, air, water, soil, forest, rain, sun, wind, ice, landfill, erosion, acid rain, ozone, "
-    "smog, pesticide, fertiliser, sewage, exhaust, litter, waste, toxic, endangered, extinct, reserve, "
-    "national park, green space, river, lake, mountain, desert, coast, tide, wave, storm, hurricane, "
-    "earthquake, volcano, sunlight, rainfall, snowfall, heatwave, cold snap, seasons, biome, wetland, meadow"
+"""Environment topic word bank, balanced by part of speech.
+
+Each tier mixes nouns / verbs / adjectives / adverbs so every level has a spread.
+NOUNS/VERBS/ADJECTIVES/ADVERBS aggregates drive deterministic part-of-speech
+tagging (see vocabulary/pos_overrides.py). BEGINNER/STANDARD/ADVANCED are the
+lemma lists consumed by the sync pipeline.
+"""
+
+BEGINNER_NOUNS = (
+    "climate", "pollution", "habitat", "drought", "fossil fuel", "deforestation",
+    "wildlife", "conservation", "flood", "glacier", "atmosphere", "species",
+    "natural disaster", "ecosystem", "landfill", "erosion", "acid rain", "ozone layer",
+    "smog", "pesticide", "fertiliser", "sewage", "emissions", "biodiversity",
+    "renewable energy", "carbon footprint", "greenhouse gas", "waste management",
+    "air quality", "wetland", "food chain", "rainforest", "coral reef", "solar power",
+    "wind farm", "natural resource", "carbon dioxide", "sea level", "drinking water",
+    "environmental protection",
+)
+BEGINNER_VERBS = (
+    "pollute", "recycle", "conserve", "preserve", "reduce", "reuse", "emit",
+    "consume", "restore", "dispose", "threaten", "contaminate", "damage",
+    "protect", "dump", "replant", "purify", "harm", "overuse", "safeguard",
+)
+BEGINNER_ADJECTIVES = (
+    "sustainable", "renewable", "toxic", "endangered", "extinct", "polluted",
+    "harmful", "organic", "environmental", "ecological", "wasteful", "scarce",
+    "abundant", "fragile", "fertile", "arid", "hazardous", "eco-friendly",
+    "biodegradable", "clean",
+)
+BEGINNER_ADVERBS = (
+    "environmentally", "globally", "naturally", "increasingly", "worldwide", "heavily",
 )
 
-STANDARD = (
-    "renewable energy, emissions, sustainable, biodiversity, carbon footprint, greenhouse gas, depletion, "
-    "contamination, reforestation, habitat loss, global warming, sea level rise, toxic waste, air quality, "
-    "water scarcity, solar panel, wind turbine, natural resource, overpopulation, industrialisation, "
-    "clean energy, carbon neutral, food chain, ecosystem services, environmental impact, pollution control, "
-    "energy efficiency, waste management, recycling scheme, carbon offset, ecological balance, species extinction, "
-    "urban sprawl, green technology, sustainable farming, water treatment, noise pollution, light pollution, "
-    "soil degradation, ocean acidification, coral bleaching, flash flood, drought conditions, wildfire, "
-    "carbon cycle, food security, environmental law, green policy, climate change, climate action, net zero, "
-    "fossil fuel dependency, energy transition, land use, biodegradable, eco-friendly, carbon tax, environmental damage, "
-    "air pollution, water pollution, plastic waste, e-waste, organic farming, conservation area, protected species, "
-    "invasive species, deforestation rate"
+STANDARD_NOUNS = (
+    "depletion", "contamination", "reforestation", "habitat loss", "global warming",
+    "water scarcity", "solar panel", "wind turbine", "overpopulation",
+    "industrialisation", "carbon offset", "urban sprawl", "soil degradation",
+    "ocean acidification", "coral bleaching", "wildfire", "carbon cycle",
+    "food security", "plastic waste", "e-waste", "conservation area",
+    "invasive species", "mitigation strategy", "green infrastructure",
+    "circular economy", "sustainable development", "carbon tax", "waste disposal",
+    "land use", "environmental impact", "energy efficiency", "climate change",
+    "net zero", "greenhouse effect", "fossil fuel dependency",
+)
+STANDARD_VERBS = (
+    "mitigate", "deplete", "offset", "curb", "alleviate", "degrade", "exploit",
+    "replenish", "regulate", "monitor", "discharge", "foster", "hinder",
+    "implement", "allocate", "undermine", "generate", "phase out", "conserve",
+    "harness", "reinforce",
+)
+STANDARD_ADJECTIVES = (
+    "detrimental", "adverse", "prevalent", "viable", "substantial", "considerable",
+    "non-renewable", "finite", "widespread", "irreversible", "alarming", "drastic",
+    "unprecedented", "significant", "beneficial", "feasible", "extensive",
+    "pervasive", "degradable", "unsustainable", "man-made",
+)
+STANDARD_ADVERBS = (
+    "consequently", "considerably", "subsequently", "notably", "drastically",
+    "adversely", "whereas", "thereby", "significantly",
 )
 
-ADVANCED = (
-    "mitigate, exacerbate, anthropogenic, sequestration, desertification, eutrophication, microplastics, geothermal, "
-    "particulate matter, acidification, permafrost, carbon sink, tipping point, albedo effect, biomass, aquifer, "
-    "salinisation, stratosphere, phytoplankton, thermocline, remediation, bioaccumulation, ecological footprint, "
-    "nitrification, leachate, turbidity, volatile organic compound, riparian zone, pedosphere, hydrological cycle, "
-    "cryosphere, lithosphere, biosphere, abiotic factor, biotic factor, trophic level, symbiosis, carrying capacity, "
-    "ecological niche, succession, biomagnification, phytoremediation, rewilding, afforestation, carbon sequestration, "
-    "climate resilience, adaptive capacity, mitigation strategy, environmental governance, planetary boundary, "
-    "green infrastructure, circular economy, degrowth, ecocide, environmental justice, sustainable development, "
-    "xenobiotic, endocrine disruptor, mutualism, parasitism, commensalism, atmospheric deposition"
+ADVANCED_NOUNS = (
+    "sequestration", "desertification", "eutrophication", "microplastics",
+    "particulate matter", "permafrost", "carbon sink", "tipping point", "biomass",
+    "aquifer", "bioaccumulation", "ecological footprint", "hydrological cycle",
+    "biosphere", "trophic level", "carrying capacity", "afforestation", "rewilding",
+    "precautionary principle", "intergenerational equity",
+    "environmental externalities", "remediation", "anthropogenic emissions",
+    "planetary boundary", "ecological resilience",
 )
+ADVANCED_VERBS = (
+    "sequester", "ameliorate", "remediate", "jeopardise", "precipitate", "aggravate",
+    "decarbonise", "acidify", "destabilise", "engender", "exert", "incur", "impede",
+    "bolster", "diminish", "perpetuate", "counteract", "forestall", "attenuate",
+    "exacerbate", "spearhead",
+)
+ADVANCED_ADJECTIVES = (
+    "anthropogenic", "negligible", "profound", "inexorable", "deleterious",
+    "catastrophic", "cumulative", "systemic", "resilient", "ubiquitous",
+    "precarious", "insidious", "endemic", "latent", "acute", "disproportionate",
+    "marginal", "tenuous", "salient", "far-reaching", "indispensable",
+)
+ADVANCED_ADVERBS = (
+    "arguably", "ostensibly", "invariably", "predominantly", "markedly",
+    "conversely", "nonetheless", "disproportionately", "inexorably",
+)
+
+BEGINNER = BEGINNER_NOUNS + BEGINNER_VERBS + BEGINNER_ADJECTIVES + BEGINNER_ADVERBS
+STANDARD = STANDARD_NOUNS + STANDARD_VERBS + STANDARD_ADJECTIVES + STANDARD_ADVERBS
+ADVANCED = ADVANCED_NOUNS + ADVANCED_VERBS + ADVANCED_ADJECTIVES + ADVANCED_ADVERBS
+
+NOUNS = BEGINNER_NOUNS + STANDARD_NOUNS + ADVANCED_NOUNS
+VERBS = BEGINNER_VERBS + STANDARD_VERBS + ADVANCED_VERBS
+ADJECTIVES = BEGINNER_ADJECTIVES + STANDARD_ADJECTIVES + ADVANCED_ADJECTIVES
+ADVERBS = BEGINNER_ADVERBS + STANDARD_ADVERBS + ADVANCED_ADVERBS

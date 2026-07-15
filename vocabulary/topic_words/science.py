@@ -1,30 +1,96 @@
-BEGINNER = (
-    "science, experiment, lab, result, test, theory, fact, discovery, invention, research, technology, nature, animal, plant, "
-    "human, body, brain, cell, energy, light, heat, sound, water, air, earth, space, planet, star, moon, sun, gravity, force, "
-    "motion, speed, weight, mass, temperature, electricity, magnet, chemical, reaction, element, atom, molecule, gas, liquid, "
-    "solid, metal, glass, plastic, rubber, paper, wood, rock, soil, seed, leaf, root, flower, fruit, fish, bird, insect, mammal, reptile"
+"""Science topic word bank, balanced by part of speech."""
+
+BEGINNER_NOUNS = (
+    "experiment", "research", "theory", "hypothesis", "evidence", "discovery",
+    "laboratory", "data", "analysis", "observation", "method", "result",
+    "scientist", "measurement", "variable", "sample", "reaction", "element",
+    "compound", "organism", "genetics", "biology", "chemistry", "physics",
+    "scientific method", "clinical trial", "peer review", "research paper",
+    "data collection", "control group", "natural science", "space exploration",
+    "medical research", "scientific breakthrough", "cause and effect",
+    "renewable resource", "human genome", "scientific evidence", "research funding",
+    "laboratory equipment",
+)
+BEGINNER_VERBS = (
+    "observe", "measure", "analyse", "experiment", "discover", "investigate",
+    "test", "prove", "examine", "record", "predict", "conclude", "verify",
+    "calculate", "classify", "detect", "demonstrate", "replicate", "hypothesise",
+    "quantify",
+)
+BEGINNER_ADJECTIVES = (
+    "scientific", "experimental", "empirical", "theoretical", "chemical",
+    "biological", "physical", "accurate", "reliable", "measurable", "systematic",
+    "quantitative", "qualitative", "objective", "innovative", "significant",
+    "controlled", "observable", "precise", "valid",
+)
+BEGINNER_ADVERBS = (
+    "scientifically", "empirically", "accurately", "systematically", "precisely",
+    "objectively",
 )
 
-STANDARD = (
-    "hypothesis, methodology, observation, variable, control group, data analysis, peer review, scientific method, reproducibility, "
-    "empirical evidence, laboratory experiment, field study, quantitative research, qualitative research, systematic review, "
-    "meta-analysis, randomised trial, sample size, statistical significance, correlation, causation, bias, scientific consensus, "
-    "climate science, evolutionary biology, genetics, neuroscience, quantum physics, relativity, thermodynamics, electromagnetism, "
-    "biochemistry, organic chemistry, periodic table, isotope, radioactivity, nuclear energy, particle accelerator, telescope, "
-    "microscope, satellite, space exploration, Mars mission, artificial satellite, renewable energy research, gene editing, "
-    "stem cell, cloning, vaccination science, epidemiology, mathematical modelling, computer simulation, artificial intelligence research, "
-    "nanotechnology, materials science, biotechnology, environmental science, ecology, oceanography, geology, seismology, volcanology, "
-    "meteorology, astronomy, astrophysics"
+STANDARD_NOUNS = (
+    "innovation", "methodology", "correlation", "causation", "phenomenon",
+    "breakthrough", "genetic engineering", "clinical study", "data analysis",
+    "scientific consensus", "research methodology", "control variable",
+    "empirical evidence", "statistical significance", "scientific inquiry",
+    "biotechnology", "nanotechnology", "vaccine development", "gene therapy",
+    "research ethics", "scientific literacy", "theoretical framework",
+    "experimental design", "sample size", "margin of error", "peer-reviewed study",
+    "research grant", "scientific advancement", "laboratory analysis",
+    "quantitative data", "qualitative data", "scientific rigour",
+    "reproducibility", "research outcome", "hypothesis testing",
+)
+STANDARD_VERBS = (
+    "hypothesise", "substantiate", "corroborate", "extrapolate", "synthesise",
+    "validate", "refute", "replicate", "quantify", "formulate", "isolate",
+    "manipulate", "correlate", "innovate", "undermine", "establish", "derive",
+    "assess", "simulate", "postulate", "infer", "calibrate", "theorise", "model",
+)
+STANDARD_ADJECTIVES = (
+    "empirical", "rigorous", "conclusive", "inconclusive", "reproducible",
+    "statistical", "methodological", "verifiable", "quantifiable", "robust",
+    "credible", "substantial", "prevalent", "innovative", "hypothetical",
+    "analytical", "systematic", "unbiased", "peer-reviewed", "cutting-edge",
+    "significant",
+)
+STANDARD_ADVERBS = (
+    "consequently", "notably", "significantly", "empirically", "considerably",
+    "whereas", "thereby", "subsequently", "statistically",
 )
 
-ADVANCED = (
-    "epistemology of science, falsifiability, paradigm shift, Kuhnian revolution, reductionism, emergentism, determinism, "
-    "indeterminism, quantum entanglement, wave-particle duality, Heisenberg uncertainty, Schrödinger equation, string theory, "
-    "multiverse, dark matter, dark energy, singularity, black hole thermodynamics, entropy, second law of thermodynamics, "
-    "Boltzmann constant, Planck constant, speed of light, standard model, Higgs boson, supersymmetry, loop quantum gravity, "
-    "cosmological constant, fine-tuned universe, anthropic principle, abiogenesis, panspermia, CRISPR-Cas9, epigenetics, "
-    "proteomics, genomics, transcriptomics, metabolomics, systems biology, synthetic biology, bioengineering, neuroplasticity, "
-    "connectome, optogenetics, psychedelics research, placebo neuroscience, consciousness studies, integrated information theory, "
-    "global workspace theory, cognitive neuroscience, computational psychiatry, precision medicine, pharmacogenomics, immunotherapy, "
-    "monoclonal antibody, mRNA vaccine, CRISPR therapeutics, bioinformatics, computational biology, protein folding, AlphaFold"
+ADVANCED_NOUNS = (
+    "epistemology", "paradigm shift", "scientific paradigm", "causal mechanism",
+    "meta-analysis", "confounding variable", "statistical inference",
+    "genome sequencing", "quantum mechanics", "molecular biology",
+    "biochemical pathway", "research reproducibility", "scientific determinism",
+    "empirical validation", "theoretical model", "systematic review",
+    "experimental replication", "scientific objectivity", "data integrity",
+    "interdisciplinary research", "computational modelling", "peer scrutiny",
+    "evidentiary basis", "scientific validation", "research integrity",
 )
+ADVANCED_VERBS = (
+    "corroborate", "extrapolate", "elucidate", "delineate", "substantiate",
+    "underpin", "invalidate", "reconcile", "synthesise", "postulate",
+    "operationalise", "disprove", "converge", "diverge", "attenuate",
+    "counteract", "consolidate", "expedite", "engender", "reinforce", "discern",
+)
+ADVANCED_ADJECTIVES = (
+    "axiomatic", "reproducible", "seminal", "rigorous", "definitive",
+    "provisional", "counterintuitive", "systemic", "profound", "far-reaching",
+    "negligible", "cumulative", "nuanced", "indispensable", "salient",
+    "unprecedented", "disproportionate", "multifaceted", "inextricable",
+    "tentative", "robust",
+)
+ADVANCED_ADVERBS = (
+    "arguably", "ostensibly", "invariably", "markedly", "conversely",
+    "nonetheless", "fundamentally", "substantially", "inherently",
+)
+
+BEGINNER = BEGINNER_NOUNS + BEGINNER_VERBS + BEGINNER_ADJECTIVES + BEGINNER_ADVERBS
+STANDARD = STANDARD_NOUNS + STANDARD_VERBS + STANDARD_ADJECTIVES + STANDARD_ADVERBS
+ADVANCED = ADVANCED_NOUNS + ADVANCED_VERBS + ADVANCED_ADJECTIVES + ADVANCED_ADVERBS
+
+NOUNS = BEGINNER_NOUNS + STANDARD_NOUNS + ADVANCED_NOUNS
+VERBS = BEGINNER_VERBS + STANDARD_VERBS + ADVANCED_VERBS
+ADJECTIVES = BEGINNER_ADJECTIVES + STANDARD_ADJECTIVES + ADVANCED_ADJECTIVES
+ADVERBS = BEGINNER_ADVERBS + STANDARD_ADVERBS + ADVANCED_ADVERBS

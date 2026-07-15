@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bs_icons %}
 
 {% block title %}Type it — session result{% endblock %}
 
@@ -166,11 +167,11 @@
 <div class="ti-result-page">
   <div class="ti-res-card">
     {% if avg_band >= 7 %}
-      <span class="ti-res-emoji" aria-hidden="true">🌟</span>
+      <span class="ti-res-emoji" aria-hidden="true">{% bs_icon "star" "amber" "xl" %}</span>
     {% elif avg_band >= 6 %}
-      <span class="ti-res-emoji" aria-hidden="true">✅</span>
+      <span class="ti-res-emoji" aria-hidden="true">{% bs_icon "check" "green" "xl" %}</span>
     {% else %}
-      <span class="ti-res-emoji" aria-hidden="true">📚</span>
+      <span class="ti-res-emoji" aria-hidden="true">{% bs_icon "book" "green" "xl" %}</span>
     {% endif %}
     <div class="ti-res-title">Session complete</div>
     <div class="ti-res-sub">Here is how your sentences scored this round.</div>

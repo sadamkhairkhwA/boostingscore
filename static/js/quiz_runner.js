@@ -21,6 +21,11 @@
     } catch (e) {}
   }
 
+  function getCsrf() {
+    var match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+  }
+
   function escHtml(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -30,6 +35,13 @@
   }
   function escAttr(s) {
     return escHtml(s).replace(/"/g, "&quot;");
+  }
+
+  function fbOk(msg) {
+    return (typeof BSIcons !== "undefined" ? BSIcons.check() : "") + " " + msg;
+  }
+  function fbBad(prefix, answer) {
+    return (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + " " + prefix + answer;
   }
 
   function shuffle(a) {
@@ -50,6 +62,7 @@
 
   var deckWords = cfg.deck || [];
   var quizMethod = cfg.quizMethod || "mc";
+  var RATE_URL = cfg.rateUrl || "";
   if (!deckWords.length) {
     root.innerHTML = "<p>No words to quiz. <a href=\"" + escAttr(cfg.setupUrl || "/vocabulary/quiz/setup/") + "\">Back to setup</a></p>";
     return;
@@ -162,6 +175,25 @@
     return "Question " + (qIndex + 1) + " of " + order.length + " · " + modeLabel(quizMethod);
   }
 
+  function reportHard(card) {
+    var wordId = card && (card.word_id || card.id) ? card.word_id || card.id : null;
+    var cardId = card && card.card_id ? card.card_id : null;
+    if (!RATE_URL || (!wordId && !cardId)) return;
+    fetch(RATE_URL, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCsrf(),
+      },
+      body: JSON.stringify({
+        rating: "hard",
+        word_id: wordId,
+        card_id: cardId,
+      }),
+    }).catch(function () {});
+  }
+
   function pickTriple(correctIdx) {
     var pool = deckWords
       .map(function (_, i) {
@@ -215,6 +247,7 @@
     var word = card.word || "";
     var correctDef = String(dc.correctDef || "").trim();
     var options = dc.options;
+    var reportedWrong = false;
     var optsHtml = "";
     options.forEach(function (defText) {
       var dt = String(defText || "").trim();
@@ -237,6 +270,10 @@
       btn.addEventListener("click", function () {
         var picked = String(btn.getAttribute("data-def") || "").trim();
         var ok = picked === correctDef;
+        if (!ok && !reportedWrong) {
+          reportedWrong = true;
+          reportHard(card);
+        }
         root.querySelectorAll(".qqmc-opt").forEach(function (b) {
           b.disabled = true;
           var d = String(b.getAttribute("data-def") || "").trim();
@@ -251,6 +288,7 @@
   function paintFillBlank(idx, card) {
     var ex = ((card.example || "") + "").trim();
     var wtxt = ((card.word || "") + "").trim();
+    var answered = false;
     var sentenceHtml = "";
     if (ex && wtxt && ex.toLowerCase().indexOf(wtxt.toLowerCase()) >= 0) {
       var re = new RegExp(wtxt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
@@ -281,9 +319,14 @@
       if (inp) inp.focus();
     }, 50);
     function doFbCheck() {
+      if (answered) return;
+      answered = true;
       var ok = (inp.value || "").trim().toLowerCase() === wtxt.toLowerCase();
-      fb.textContent = ok ? "✓ Correct!" : "✗ The correct answer is: " + wtxt;
+      if (!ok) reportHard(card);
+      fb.innerHTML = ok ? fbOk("Correct!") : fbBad("The correct answer is: ", wtxt);
       fb.className = "qqfb-feedback " + (ok ? "is-ok" : "is-bad");
+      inp.disabled = true;
+      document.getElementById("qqfb-check").disabled = true;
       enableNext();
     }
     document.getElementById("qqfb-check").addEventListener("click", doFbCheck);
@@ -295,6 +338,7 @@
   function paintTrueFalse(idx, card) {
     var really = Math.random() < 0.5;
     var correctBtn = "true";
+    var reportedWrong = false;
     var statement = "";
     if (really) {
       statement =
@@ -318,8 +362,8 @@
       '<div class="qqtf-statement">' +
       statement +
       '</div><div class="qqtf-row">' +
-      '<button type="button" class="qqtf-btn qqtf-btn--true" data-tf="true">✓ True</button>' +
-      '<button type="button" class="qqtf-btn qqtf-btn--false" data-tf="false">✗ False</button>' +
+      '<button type="button" class="qqtf-btn qqtf-btn--true" data-tf="true">' + (typeof BSIcons !== "undefined" ? BSIcons.check() : "") + ' True</button>' +
+      '<button type="button" class="qqtf-btn qqtf-btn--false" data-tf="false">' + (typeof BSIcons !== "undefined" ? BSIcons.cross() : "") + ' False</button>' +
       "</div>";
     root.innerHTML = shell("QQ-card--tf", inner, metaLine());
     bindNext();
@@ -327,6 +371,10 @@
       b.addEventListener("click", function () {
         var v = b.getAttribute("data-tf");
         var ok = v === correctBtn;
+        if (!ok && !reportedWrong) {
+          reportedWrong = true;
+          reportHard(card);
+        }
         root.querySelectorAll(".qqtf-btn").forEach(function (x) {
           x.disabled = true;
           if (x === b) x.classList.add("is-picked");
@@ -340,6 +388,7 @@
   function paintMatch(idx, card) {
     var triple = pickTriple(idx);
     var pairColors = ["c0", "c1", "c2"];
+    var reportedWrong = false;
     var wordSide = shuffle(
       triple.map(function (ti) {
         return { pair: ti, text: deckWords[ti].word };
@@ -386,6 +435,10 @@
       var pw = parseInt(wordEl.getAttribute("data-pair"), 10);
       var pd = parseInt(defEl.getAttribute("data-pair"), 10);
       if (pw !== pd) {
+        if (!reportedWrong) {
+          reportedWrong = true;
+          reportHard(card);
+        }
         wordEl.classList.add("qqmp-shake");
         defEl.classList.add("qqmp-shake");
         setTimeout(function () {
@@ -430,6 +483,7 @@
     var answer = (card.word || "").trim();
     var chars = answer.split("");
     var defSafe = escHtml((card.definition || "—").trim());
+    var answered = false;
     var boxesHtml = "";
     for (var i = 0; i < chars.length; i++) {
       boxesHtml += '<span class="qqsp-lbox" data-i="' + i + '"></span>';
@@ -449,8 +503,11 @@
     var fb = document.getElementById("qqsp-fb");
     var boxes = root.querySelectorAll(".qqsp-lbox");
     document.getElementById("qqsp-check").addEventListener("click", function () {
+      if (answered) return;
+      answered = true;
       var guess = (inp.value || "").trim();
       var okAll = guess.toLowerCase() === answer.toLowerCase();
+      if (!okAll) reportHard(card);
       for (var i = 0; i < boxes.length; i++) {
         var g = (guess[i] || "").toLowerCase();
         var a = (chars[i] || "").toLowerCase();
@@ -462,8 +519,10 @@
         if (g === a) boxes[i].classList.add("is-ok");
         else boxes[i].classList.add("is-bad");
       }
-      fb.textContent = okAll ? "✓ Correct!" : "✗ Answer: " + answer;
+      fb.innerHTML = okAll ? fbOk("Correct!") : fbBad("Answer: ", answer);
       fb.className = "qqsp-feedback " + (okAll ? "is-ok" : "is-bad");
+      inp.disabled = true;
+      document.getElementById("qqsp-check").disabled = true;
       enableNext();
     });
   }
@@ -473,6 +532,7 @@
     var correctDef = String(dc.correctDef || "").trim();
     var options = dc.options;
     var word = card.word || "";
+    var reportedWrong = false;
 
     var inner =
       '<div class="qqln-play-wrap" id="qqln-stage">' +
@@ -536,6 +596,10 @@
         btn.addEventListener("click", function () {
           var picked = String(btn.getAttribute("data-def") || "").trim();
           var ok = picked === correctDef;
+          if (!ok && !reportedWrong) {
+            reportedWrong = true;
+            reportHard(card);
+          }
           grid.querySelectorAll(".qqln-opt").forEach(function (b) {
             b.disabled = true;
             var d = String(b.getAttribute("data-def") || "").trim();

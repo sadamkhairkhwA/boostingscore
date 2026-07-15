@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ question_type_card.title }} practice{% endblock %}
+{% block body_class %}reading-strategies-page{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'reading/css/question_type_flow.css' %}?v=1" />
+{% endblock %}
+{% block content %}
+<div class="bs-page rqt-page">
+  <header class="rqt-head">
+    <a class="rqt-back" href="{{ chooser_url }}">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
+      Back to question types
+    </a>
+  </header>
+
+  {% if not practice_set %}
+  <section class="rqt-coming">
+    <p class="rqt-kicker">Practice set {{ set_number }}</p>
+    <h1 class="rqt-coming-title">{{ question_type_card.title }}</h1>
+    <p class="rqt-coming-sub">This practice set is coming soon. The page is ready for future set numbers, but only set 1 has been added so far where available.</p>
+    <div class="rqt-actions rqt-coming-actions">
+      <a class="rqt-btn-secondary" href="{{ learn_url }}">Go to learn page</a>
+      <a class="rqt-btn" href="{{ chooser_url }}">Back to question types</a>
+    </div>
+  </section>
+  {% else %}
+  <div class="rqt-panel">
+    <div class="rqt-practice-head">
+      <div>
+        <p class="rqt-kicker">{{ question_type_card.title }} · {{ practice_set.title }}</p>
+        <h1 class="rqt-practice-title">{{ practice_set.passage_title }}</h1>
+        <p class="rqt-practice-sub">{{ practice_set.passage_intro }}</p>
+      </div>
+      <div class="rqt-timer">
+        <span class="rqt-timer-label">Suggested timer</span>
+        <span class="rqt-timer-value" id="rqt-timer">{{ practice_set.timer_minutes }}:00</span>
+      </div>
+    </div>
+    <p class="rqt-practice-sub">{{ practice_set.instruction }}</p>
+  </div>
+
+  {% if submitted %}
+  <section class="rqt-summary">
+    <div class="rqt-score-grid">
+      <div class="rqt-meta-card">
+        <span class="rqt-stat-k">{{ score }}/{{ total_questions }}</span>
+        <span class="rqt-stat-l">Score</span>
+      </div>
+      <div class="rqt-meta-card">
+        <span class="rqt-stat-k">{{ time_taken_seconds }}s</span>
+        <span class="rqt-stat-l">Time used</span>
+      </div>
+      <div class="rqt-meta-card">
+        <span class="rqt-stat-k">20 min</span>
+        <span class="rqt-stat-l">Suggested time</span>
+      </div>
+    </div>
+    <div class="rqt-row-actions">
+      <a class="rqt-btn-secondary" href="{{ chooser_url }}">Back to question types</a>
+      <a class="rqt-btn-ghost" href="{{ retry_url }}">Try this set again</a>
+      <a class="rqt-btn" href="{{ next_set_url }}">Try another set</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="rqt-panel">
+    <div class="rqt-passage">
+      <h2>{{ practice_set.passage_title }}</h2>
+      {% for para in practice_set.passage_paragraphs %}
+      <p>
+        {% if para.label %}<span class="rqt-para-label">{{ para.label }}</span>{% endif %}
+        {{ para.text }}
+      </p>
+      {% endfor %}
+      {% if practice_set.headings %}
+      <div class="rqt-heading-box">
+        <h3>Headings</h3>
+        <ol class="rqt-heading-list">
+          {% for heading in practice_set.headings %}
+          <li>{{ heading }}</li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="rqt-panel">
+    {% if submitted %}
+    <div class="rqt-question-list">
+      {% for row in results %}
+      <article class="rqt-question">
+        <p class="rqt-question-title"><strong>{{ row.question.number }}.</strong> {{ row.question.prompt }}</p>
+        <p class="{% if row.ok %}rqt-result-ok{% else %}rqt-result-bad{% endif %}">
+          {% if row.ok %}
+            Correct
+          {% else %}
+            Your answer: {{ row.user_answer|default:"—" }} · Correct answer: {{ row.correct_answer }}
+          {% endif %}
+        </p>
+        <p class="rqt-result-exp">{{ row.question.explanation }}</p>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <form method="post" id="rqt-practice-form">
+      {% csrf_token %}
+      <input type="hidden" name="time_taken_seconds" id="rqt-time-taken" value="0" />
+      <div class="rqt-question-list">
+        {% for question in practice_set.questions %}
+        <article class="rqt-question">
+          <p class="rqt-question-title"><strong>{{ question.number }}.</strong> {{ question.prompt }}</p>
+          {% if question.input_type == "text" %}
+          <input class="rqt-answer-input" type="text" name="q_{{ question.number }}" />
+          {% else %}
+          <div class="rqt-option-list">
+            {% for option in question.options %}
+            <label class="rqt-option">
+              <input type="radio" name="q_{{ question.number }}" value="{{ option }}" required />
+              <span>{{ option }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      <div class="rqt-submit-row">
+        <button class="rqt-btn" type="submit">Check answers</button>
+        <a class="rqt-btn-ghost" href="{{ learn_url }}">Back to learn page</a>
+      </div>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if practice_set and not submitted %}
+<script>
+(function () {
+  var timer = document.getElementById("rqt-timer");
+  var timeTaken = document.getElementById("rqt-time-taken");
+  if (!timer || !timeTaken) return;
+  var total = {{ practice_set.timer_minutes|default:20 }} * 60;
+  var elapsed = 0;
+  function fmt(seconds) {
+    var mins = Math.floor(seconds / 60);
+    var secs = seconds % 60;
+    return mins + ":" + (secs < 10 ? "0" : "") + secs;
+  }
+  timer.textContent = fmt(total);
+  setInterval(function () {
+    elapsed += 1;
+    timeTaken.value = String(elapsed);
+    timer.textContent = fmt(Math.max(0, total - elapsed));
+  }, 1000);
+})();
+</script>
+{% endif %}
+{% endblock %}
