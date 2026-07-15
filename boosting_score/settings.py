@@ -11,7 +11,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-local-dev-key-change-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS = ["https://boostingscore-production.up.railway.app"]
+# Comma-separated origins, e.g. https://app.example.com,https://www.example.com
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        "https://boostingscore-production.up.railway.app",
+    ).split(",")
+    if origin.strip()
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -88,6 +96,11 @@ else:
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Public base URL for large media gitignored from the repo (speaking tips/videos,
+# listening_audio). Example: https://pub-xxxx.r2.dev or https://media.example.com
+# Leave empty/unset for local development — files are served from static/ as usual.
+MEDIA_CDN_URL = (os.environ.get("MEDIA_CDN_URL", "") or "").strip().rstrip("/")
 
 OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY", "") or "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
