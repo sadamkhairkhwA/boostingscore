@@ -45,6 +45,9 @@ class FeedbackWidgetMiddleware:
             return response
 
         try:
+            from django.middleware.csrf import get_token
+
+            get_token(request)  # ensure CSR cookie is set on this response
             widget = render_to_string(
                 "includes/feedback_widget.html",
                 request=request,

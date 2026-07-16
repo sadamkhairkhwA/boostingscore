@@ -13,7 +13,7 @@
   var errorEl = document.getElementById("bs-fb-error");
   var sendBtn = document.getElementById("bs-fb-send");
   var pills = root.querySelectorAll(".bs-fb__pill");
-  var submitUrl = root.getAttribute("data-submit-url") || "";
+  var submitUrl = root.getAttribute("data-submit-url") || "/feedback/";
   var selectedType = "suggestion";
   var closeTimer = null;
   var sending = false;
@@ -81,6 +81,14 @@
     closeTimer = setTimeout(closePanel, 2000);
   }
 
+  function resetSendButton() {
+    sending = false;
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send feedback";
+    }
+  }
+
   pills.forEach(function (pill) {
     pill.addEventListener("click", function () {
       setType(pill.getAttribute("data-type") || "suggestion");
@@ -113,32 +121,45 @@
     sendBtn.disabled = true;
     sendBtn.textContent = "Sending…";
 
+    var token = csrfToken();
+    var body = new FormData();
+    body.append("csrfmiddlewaretoken", token);
+    body.append("type", selectedType);
+    body.append("message", message);
+    body.append("page_url", window.location.href);
+    body.append("user_agent", navigator.userAgent || "");
+
     fetch(submitUrl, {
       method: "POST",
       credentials: "same-origin",
       headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken(),
+        "X-CSRFToken": token,
         "X-Requested-With": "XMLHttpRequest",
       },
-      body: JSON.stringify({
-        type: selectedType,
-        message: message,
-        page_url: window.location.href,
-        user_agent: navigator.userAgent || "",
-      }),
+      body: body,
     })
       .then(function (res) {
-        return res.json().then(function (data) {
-          return { ok: res.ok, data: data };
+        var ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.indexOf("application/json") !== -1) {
+          return res.json().then(function (data) {
+            return { ok: res.ok, status: res.status, data: data || {} };
+          });
+        }
+        return res.text().then(function () {
+          var err =
+            res.status === 403
+              ? "Session expired — refresh the page and try again."
+              : "Couldn't send just now. Please try again.";
+          return { ok: false, status: res.status, data: { error: err } };
         });
       })
       .then(function (result) {
-        if (!result.ok && result.data && result.data.error) {
-          showError(result.data.error);
-          sending = false;
-          sendBtn.disabled = false;
-          sendBtn.textContent = "Send feedback";
+        if (!result.ok) {
+          showError(
+            (result.data && result.data.error) ||
+              "Couldn't send just now. Please try again."
+          );
+          resetSendButton();
           return;
         }
         messageEl.value = "";
@@ -147,9 +168,7 @@
       })
       .catch(function () {
         showError("Couldn't send just now. Please try again.");
-        sending = false;
-        sendBtn.disabled = false;
-        sendBtn.textContent = "Send feedback";
+        resetSendButton();
       });
   });
 })();

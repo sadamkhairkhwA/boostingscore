@@ -357,7 +357,7 @@ class FeedbackSubmission(models.Model):
         max_length=20, choices=TYPE_CHOICES, default=TYPE_SUGGESTION
     )
     message = models.TextField()
-    page_url = models.URLField(max_length=500, blank=True, default="")
+    page_url = models.CharField(max_length=500, blank=True, default="")
     user_agent = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
