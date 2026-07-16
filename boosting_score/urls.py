@@ -8,6 +8,7 @@ import views as home_views
 from boosting_score.landing import landing_view
 from boosting_score.onboarding import welcome_view
 from boostingscore.diagnostic_views import diagnostic_view, diagnostic_results_view
+from boostingscore.feedback_views import feedback_submit
 from boostingscore.legal_views import privacy_view, terms_view, contact_view
 from boostingscore.placement_views import (
     placement_dismiss_card,
@@ -37,11 +38,8 @@ urlpatterns = [
         verify_email_change,
         name="profile_verify_email",
     ),
-    path(
-        "accounts/speaking-ai-notice/",
-        home_views.speaking_ai_notice_ack,
-        name="speaking_ai_notice_ack",
-    ),
+    path("accounts/speaking-ai-notice/", home_views.speaking_ai_notice_ack, name="speaking_ai_notice_ack"),
+    path("feedback/", feedback_submit, name="feedback_submit"),
     path("", landing_view, name="landing"),
     path("welcome/", welcome_view, name="welcome"),
     path("privacy/", privacy_view, name="privacy"),

@@ -216,6 +216,13 @@ class TypeItAttempt(models.Model):
         null=True,
         blank=True,
     )
+    custom_card = models.ForeignKey(
+        "CustomCard",
+        on_delete=models.CASCADE,
+        related_name="type_it_attempts",
+        null=True,
+        blank=True,
+    )
     deck_slug = models.CharField(max_length=80, db_index=True)
     mode = models.CharField(max_length=16, choices=MODE_CHOICES, default=MODE_BOTH, db_index=True)
     definition_score = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -232,6 +239,10 @@ class TypeItAttempt(models.Model):
         indexes = [
             models.Index(fields=["student", "word"]),
             models.Index(fields=["student", "deck_slug"]),
+            models.Index(
+                fields=["student", "custom_card"],
+                name="vocabulary__student_8a1f2c_idx",
+            ),
         ]
 
     def __str__(self):
@@ -322,3 +333,45 @@ class AiUsageLog(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.feature} @ {self.created_at}"
+
+
+class FeedbackSubmission(models.Model):
+    TYPE_BUG = "bug"
+    TYPE_SUGGESTION = "suggestion"
+    TYPE_OTHER = "other"
+    TYPE_CHOICES = [
+        (TYPE_BUG, "Bug"),
+        (TYPE_SUGGESTION, "Suggestion"),
+        (TYPE_OTHER, "Something else"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="feedback_submissions",
+    )
+    email = models.EmailField(blank=True, default="")
+    feedback_type = models.CharField(
+        max_length=20, choices=TYPE_CHOICES, default=TYPE_SUGGESTION
+    )
+    message = models.TextField()
+    page_url = models.URLField(max_length=500, blank=True, default="")
+    user_agent = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["user", "-created_at"], name="vocab_fb_user_created_idx"
+            ),
+            models.Index(
+                fields=["feedback_type", "-created_at"],
+                name="vocab_fb_type_created_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.feedback_type} from {self.email or self.user_id} @ {self.created_at}"

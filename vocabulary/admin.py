@@ -6,6 +6,7 @@ from .models import (
     CustomDeck,
     CustomDeckWord,
     DailyAiUsage,
+    FeedbackSubmission,
     TopicIELTSWordCache,
     TypeItAttempt,
     TypeItResult,
@@ -78,3 +79,26 @@ class AiUsageLogAdmin(admin.ModelAdmin):
     list_filter = ("feature", "created_at")
     search_fields = ("user__username", "feature")
     readonly_fields = ("user", "feature", "created_at")
+
+
+@admin.register(FeedbackSubmission)
+class FeedbackSubmissionAdmin(admin.ModelAdmin):
+    list_display = ("feedback_type", "email", "user", "short_message", "page_url", "created_at")
+    list_filter = ("feedback_type", "created_at")
+    search_fields = ("email", "message", "page_url", "user__username", "user__email")
+    readonly_fields = (
+        "user",
+        "email",
+        "feedback_type",
+        "message",
+        "page_url",
+        "user_agent",
+        "created_at",
+    )
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+
+    @admin.display(description="Message")
+    def short_message(self, obj):
+        text = (obj.message or "").strip()
+        return text if len(text) <= 80 else text[:77] + "…"
