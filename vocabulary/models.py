@@ -363,6 +363,8 @@ class FeedbackSubmission(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        verbose_name = "Feedback submission"
+        verbose_name_plural = "Feedback submissions"
         indexes = [
             models.Index(
                 fields=["user", "-created_at"], name="vocab_fb_user_created_idx"
