@@ -83,8 +83,8 @@ class AiUsageLogAdmin(admin.ModelAdmin):
 
 @admin.register(FeedbackSubmission)
 class FeedbackSubmissionAdmin(admin.ModelAdmin):
-    list_display = ("feedback_type", "email", "user", "short_message", "page_url", "created_at")
-    list_filter = ("feedback_type", "created_at")
+    list_display = ("feedback_type", "short_message", "page_url", "user", "created_at")
+    list_filter = ("feedback_type",)
     search_fields = ("email", "message", "page_url", "user__username", "user__email")
     readonly_fields = (
         "user",
@@ -97,8 +97,9 @@ class FeedbackSubmissionAdmin(admin.ModelAdmin):
     )
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
+    list_display_links = ("short_message",)
 
-    @admin.display(description="Message")
+    @admin.display(description="Message", ordering="message")
     def short_message(self, obj):
         text = (obj.message or "").strip()
         return text if len(text) <= 80 else text[:77] + "…"
