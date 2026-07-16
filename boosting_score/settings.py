@@ -16,6 +16,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         "CSRF_TRUSTED_ORIGINS",
+        "https://boostingscore.com,https://www.boostingscore.com,"
         "https://boostingscore-production.up.railway.app",
     ).split(",")
     if origin.strip()
