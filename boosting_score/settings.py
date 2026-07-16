@@ -10,7 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-local-dev-key-change-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
-ALLOWED_HOSTS = ["*"]
+# Comma-separated hostnames (no scheme), e.g. localhost,127.0.0.1,boostingscore.com
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 # Comma-separated origins, e.g. https://app.example.com,https://www.example.com
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -21,6 +26,9 @@ CSRF_TRUSTED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+# TEMP: confirm Railway env is applied — remove once CSRF is verified in prod.
+print(f"[startup] CSRF_TRUSTED_ORIGINS={CSRF_TRUSTED_ORIGINS!r}", flush=True)
+print(f"[startup] ALLOWED_HOSTS={ALLOWED_HOSTS!r}", flush=True)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
