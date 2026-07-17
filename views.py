@@ -360,10 +360,11 @@ def signup_view(request):
 
                 from boostingscore.signup_verification import send_signup_verification
 
-                ok, msg = send_signup_verification(request, user)
+                ok, msg, verify_url = send_signup_verification(request, user)
                 request.session["signup_pending_email"] = user.email
                 request.session["signup_verify_msg"] = msg
                 request.session["signup_verify_ok"] = ok
+                request.session["signup_verify_url"] = verify_url
                 return redirect("signup_check_email")
     else:
         form = SignupForm()
@@ -382,6 +383,8 @@ def signup_check_email(request):
             "email": email,
             "message": request.session.get("signup_verify_msg", ""),
             "ok": request.session.get("signup_verify_ok", True),
+            "verify_url": request.session.get("signup_verify_url", ""),
+            "show_dev_link": bool(request.session.get("signup_verify_url")),
         },
     )
 
@@ -397,9 +400,10 @@ def signup_resend_verification(request):
     if email:
         user = User.objects.filter(email__iexact=email, is_active=False).first()
         if user is not None:
-            ok, msg = send_signup_verification(request, user)
+            ok, msg, verify_url = send_signup_verification(request, user)
             request.session["signup_verify_msg"] = msg
             request.session["signup_verify_ok"] = ok
+            request.session["signup_verify_url"] = verify_url
     return redirect("signup_check_email")
 
 
@@ -423,10 +427,11 @@ def login_view(request):
             if pending is not None and pending.check_password(password):
                 from boostingscore.signup_verification import send_signup_verification
 
-                ok, msg = send_signup_verification(request, pending)
+                ok, msg, verify_url = send_signup_verification(request, pending)
                 request.session["signup_pending_email"] = pending.email
                 request.session["signup_verify_msg"] = msg
                 request.session["signup_verify_ok"] = ok
+                request.session["signup_verify_url"] = verify_url
                 return redirect("signup_check_email")
 
     return LoginView.as_view(template_name="registration/login.html")(request)
@@ -472,6 +477,7 @@ def signup_verify(request, token: str):
     request.session.pop("signup_pending_email", None)
     request.session.pop("signup_verify_msg", None)
     request.session.pop("signup_verify_ok", None)
+    request.session.pop("signup_verify_url", None)
 
     login(request, user)
     return redirect("placement")

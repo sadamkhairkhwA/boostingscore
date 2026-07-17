@@ -29,16 +29,24 @@ def load_signup_token(token: str) -> dict:
     return signing.loads(token, salt=SIGNUP_SALT, max_age=SIGNUP_MAX_AGE)
 
 
-def send_signup_verification(request, user) -> tuple[bool, str]:
+def _using_console_email() -> bool:
+    backend = (getattr(settings, "EMAIL_BACKEND", "") or "").lower()
+    return "console" in backend or "locmem" in backend or "dummy" in backend
+
+
+def send_signup_verification(request, user) -> tuple[bool, str, str]:
     """Email a verification link to a freshly-created (inactive) account.
 
-    Returns (ok, message_for_user). On dev/misconfigured mail the link is
-    surfaced in the message so local signups can still be completed.
+    Returns ``(ok, message_for_user, verify_url_for_ui)``.
+    ``verify_url_for_ui`` is only set in console/DEBUG mode so the check-email
+    page can show a clickable link (nothing reaches a real inbox locally).
+    In production with SMTP it is empty — the link goes only in the email.
     """
     email = (user.email or "").lower().strip()
     token = make_signup_token(user.id, email)
     path = reverse("signup_verify", kwargs={"token": token})
     verify_url = request.build_absolute_uri(path)
+    show_link = _using_console_email() or settings.DEBUG
 
     subject = "Confirm your email — BoostingScore"
     body = (
@@ -54,16 +62,38 @@ def send_signup_verification(request, user) -> tuple[bool, str]:
     try:
         sent = send_mail(subject, body, from_email, [email], fail_silently=False)
         if sent:
-            return True, f"We sent a verification link to {email}. Open it to activate your account."
+            if show_link:
+                return (
+                    True,
+                    (
+                        f"Local/dev mode: email is not delivered to an inbox "
+                        f"(console backend). Use the button below to verify "
+                        f"{email}."
+                    ),
+                    verify_url,
+                )
+            return (
+                True,
+                f"We sent a verification link to {email}. Open it to activate your account.",
+                "",
+            )
     except Exception as exc:
         logger.warning("signup verification send failed: %s", exc)
 
-    if settings.DEBUG:
-        return True, (
-            f"Verification email could not be delivered (check EMAIL settings). "
-            f"Dev link: {verify_url}"
+    if show_link:
+        return (
+            True,
+            (
+                f"Verification email could not be delivered (check EMAIL settings). "
+                f"Use the button below to verify {email}."
+            ),
+            verify_url,
         )
-    return False, (
-        "We created your account but could not send the verification email. "
-        "Use the resend button below or try again later."
+    return (
+        False,
+        (
+            "We created your account but could not send the verification email. "
+            "Use the resend button below or try again later."
+        ),
+        "",
     )
