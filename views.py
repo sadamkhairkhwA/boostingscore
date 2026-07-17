@@ -353,12 +353,128 @@ def signup_view(request):
             if len(password) < 8:
                 form.add_error("password2", "Password must be at least 8 characters.")
             if not form.errors:
-                user = form.save()
-                login(request, user)
-                return redirect("placement")
+                # Create the account inactive until the email is verified.
+                user = form.save(commit=False)
+                user.is_active = False
+                user.save()
+
+                from boostingscore.signup_verification import send_signup_verification
+
+                ok, msg = send_signup_verification(request, user)
+                request.session["signup_pending_email"] = user.email
+                request.session["signup_verify_msg"] = msg
+                request.session["signup_verify_ok"] = ok
+                return redirect("signup_check_email")
     else:
         form = SignupForm()
     return render(request, "registration/signup.html", {"form": form})
+
+
+def signup_check_email(request):
+    """Post-signup page telling the user to open the verification link."""
+    email = request.session.get("signup_pending_email", "")
+    if not email:
+        return redirect("signup")
+    return render(
+        request,
+        "registration/signup_check_email.html",
+        {
+            "email": email,
+            "message": request.session.get("signup_verify_msg", ""),
+            "ok": request.session.get("signup_verify_ok", True),
+        },
+    )
+
+
+@require_POST
+def signup_resend_verification(request):
+    """Resend the verification email for the pending (inactive) signup."""
+    from django.contrib.auth.models import User
+
+    from boostingscore.signup_verification import send_signup_verification
+
+    email = (request.session.get("signup_pending_email") or "").strip().lower()
+    if email:
+        user = User.objects.filter(email__iexact=email, is_active=False).first()
+        if user is not None:
+            ok, msg = send_signup_verification(request, user)
+            request.session["signup_verify_msg"] = msg
+            request.session["signup_verify_ok"] = ok
+    return redirect("signup_check_email")
+
+
+def login_view(request):
+    """Login that routes unverified accounts to the verification page.
+
+    The default backend rejects inactive users with a generic "incorrect
+    username or password" error. Here we detect a correct-password login for an
+    unverified account and send them to the check-email page with a fresh link.
+    """
+    from django.contrib.auth.views import LoginView
+    from django.contrib.auth.models import User
+
+    if request.method == "POST":
+        username = (request.POST.get("username") or "").strip()
+        password = request.POST.get("password") or ""
+        if username and password:
+            pending = User.objects.filter(
+                username__iexact=username, is_active=False
+            ).first()
+            if pending is not None and pending.check_password(password):
+                from boostingscore.signup_verification import send_signup_verification
+
+                ok, msg = send_signup_verification(request, pending)
+                request.session["signup_pending_email"] = pending.email
+                request.session["signup_verify_msg"] = msg
+                request.session["signup_verify_ok"] = ok
+                return redirect("signup_check_email")
+
+    return LoginView.as_view(template_name="registration/login.html")(request)
+
+
+def signup_verify(request, token: str):
+    """Activate an account from the signed verification link, then log in."""
+    from django.contrib.auth.models import User
+
+    from boostingscore.signup_verification import load_signup_token
+
+    try:
+        data = load_signup_token(token)
+        uid = int(data["uid"])
+        email = (data.get("email") or "").lower().strip()
+    except Exception:
+        return render(
+            request,
+            "registration/signup_verify_result.html",
+            {"ok": False, "message": "This verification link is invalid or has expired."},
+        )
+
+    try:
+        user = User.objects.get(pk=uid)
+    except User.DoesNotExist:
+        return render(
+            request,
+            "registration/signup_verify_result.html",
+            {"ok": False, "message": "This verification link is no longer valid."},
+        )
+
+    if (user.email or "").lower() != email:
+        return render(
+            request,
+            "registration/signup_verify_result.html",
+            {"ok": False, "message": "This verification link does not match the account."},
+        )
+
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+    request.session.pop("signup_pending_email", None)
+    request.session.pop("signup_verify_msg", None)
+    request.session.pop("signup_verify_ok", None)
+
+    login(request, user)
+    return redirect("placement")
 
 
 @login_required

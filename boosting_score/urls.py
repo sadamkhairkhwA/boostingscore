@@ -28,8 +28,12 @@ from boostingscore.profile_views import (
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("accounts/login/", home_views.login_view, name="login"),
     path("accounts/", include("django.contrib.auth.urls")),
     path("accounts/signup/", home_views.signup_view, name="signup"),
+    path("accounts/signup/check-email/", home_views.signup_check_email, name="signup_check_email"),
+    path("accounts/signup/resend/", home_views.signup_resend_verification, name="signup_resend_verification"),
+    path("accounts/verify/<path:token>/", home_views.signup_verify, name="signup_verify"),
     path("accounts/profile/", profile_settings, name="profile_settings"),
     path("accounts/profile/delete/", profile_delete, name="profile_delete"),
     path("accounts/deleted/", account_deleted, name="account_deleted"),
