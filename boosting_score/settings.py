@@ -11,11 +11,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-local-dev-key-change-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 # Comma-separated hostnames (no scheme), e.g. localhost,127.0.0.1,boostingscore.com
-ALLOWED_HOSTS = [
+_allowed = [
     host.strip()
     for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if host.strip()
 ]
+# Railway injects these; include them so a missing ALLOWED_HOSTS env doesn't brick the site.
+for _extra in (
+    os.environ.get("RAILWAY_PUBLIC_DOMAIN", ""),
+    os.environ.get("RAILWAY_STATIC_URL", ""),
+):
+    _host = (_extra or "").strip().removeprefix("https://").removeprefix("http://").split("/")[0]
+    if _host and _host not in _allowed:
+        _allowed.append(_host)
+ALLOWED_HOSTS = _allowed or ["localhost", "127.0.0.1"]
 # Comma-separated origins, e.g. https://app.example.com,https://www.example.com
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
