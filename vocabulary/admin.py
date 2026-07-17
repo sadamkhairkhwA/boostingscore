@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.models import User
 
 from .models import (
     AiUsageLog,
@@ -16,9 +18,44 @@ from .models import (
 )
 
 
+# Show signed-up accounts with email, active status, and join date.
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin):
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "is_active",
+        "is_staff",
+        "date_joined",
+        "last_login",
+    )
+    list_filter = ("is_active", "is_staff", "is_superuser", "date_joined")
+    search_fields = ("username", "email", "first_name", "last_name")
+    ordering = ("-date_joined",)
+    date_hierarchy = "date_joined"
+
+
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "plan", "level", "streak", "best_streak", "placement_completed")
+    list_display = (
+        "user",
+        "user_email",
+        "plan",
+        "level",
+        "streak",
+        "best_streak",
+        "placement_completed",
+    )
+    search_fields = ("user__username", "user__email", "user__first_name")
+    list_filter = ("plan", "level", "placement_completed")
+
+    @admin.display(description="Email", ordering="user__email")
+    def user_email(self, obj):
+        return obj.user.email or "—"
 
 
 @admin.register(TopicIELTSWordCache)
