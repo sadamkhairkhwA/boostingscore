@@ -34,6 +34,21 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             reverse("admin:vocabulary_sitesettings_change", args=[obj.pk])
         )
 
+    def save_model(self, request, obj, form, change):
+        obj.pk = 1
+        super().save_model(request, obj, form, change)
+        # Re-read from DB so the message reflects what visitors will hit.
+        fresh = SiteSettings.objects.filter(pk=1).values("maintenance_mode").first()
+        on = bool(fresh and fresh["maintenance_mode"])
+        self.message_user(
+            request,
+            (
+                "Maintenance mode is ON — anonymous visitors now get HTTP 503."
+                if on
+                else "Maintenance mode is OFF — the site is public again."
+            ),
+        )
+
     def has_add_permission(self, request):
         return False
 
