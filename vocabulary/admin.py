@@ -18,8 +18,45 @@ from .models import (
 )
 
 
-# Show signed-up accounts with email, active status, and join date.
+# Show signed-up accounts with email, verification status, plan, and join date.
 admin.site.unregister(User)
+
+
+class PlanFilter(admin.SimpleListFilter):
+    """Filter users by their profile plan (free/premium/...)."""
+
+    title = "plan"
+    parameter_name = "plan"
+
+    def lookups(self, request, model_admin):
+        plans = (
+            UserProfile.objects.order_by()
+            .values_list("plan", flat=True)
+            .distinct()
+        )
+        return [(p or "free", (p or "free").title()) for p in plans]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(profile__plan=self.value())
+        return queryset
+
+
+class VerifiedFilter(admin.SimpleListFilter):
+    """Email verification = account activated via the signup link."""
+
+    title = "email verified"
+    parameter_name = "verified"
+
+    def lookups(self, request, model_admin):
+        return [("yes", "Verified"), ("no", "Not verified")]
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(is_active=True)
+        if self.value() == "no":
+            return queryset.filter(is_active=False)
+        return queryset
 
 
 @admin.register(User)
@@ -27,16 +64,32 @@ class UserAdmin(DjangoUserAdmin):
     list_display = (
         "username",
         "email",
-        "first_name",
-        "is_active",
-        "is_staff",
         "date_joined",
+        "is_active",
+        "verified",
+        "plan",
+        "is_staff",
         "last_login",
     )
-    list_filter = ("is_active", "is_staff", "is_superuser", "date_joined")
-    search_fields = ("username", "email", "first_name", "last_name")
+    list_filter = (VerifiedFilter, PlanFilter, "is_staff", "is_superuser", "date_joined")
+    search_fields = ("email", "username", "first_name", "last_name")
     ordering = ("-date_joined",)
     date_hierarchy = "date_joined"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("profile")
+
+    @admin.display(description="Email verified", boolean=True, ordering="is_active")
+    def verified(self, obj):
+        # Signup creates accounts inactive; the email link activates them.
+        return obj.is_active
+
+    @admin.display(description="Plan")
+    def plan(self, obj):
+        try:
+            return (obj.profile.plan or "free").title()
+        except UserProfile.DoesNotExist:
+            return "Free"
 
 
 @admin.register(UserProfile)
