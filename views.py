@@ -372,9 +372,9 @@ def signup_view(request):
                     user_email = user.email
 
                 # 2) Email is strictly after commit. Any failure is logged only.
-                ok, msg, verify_url = True, FALLBACK_MSG, ""
+                ok, msg, dev_code = True, FALLBACK_MSG, ""
                 try:
-                    ok, msg, verify_url = send_signup_verification(request, user)
+                    ok, msg, dev_code = send_signup_verification(request, user)
                 except Exception as exc:
                     import logging
 
@@ -383,12 +383,12 @@ def signup_view(request):
                         user_id,
                         exc,
                     )
-                    ok, msg, verify_url = True, FALLBACK_MSG, ""
+                    ok, msg, dev_code = True, FALLBACK_MSG, ""
 
                 request.session["signup_pending_email"] = user_email
                 request.session["signup_verify_msg"] = msg or FALLBACK_MSG
                 request.session["signup_verify_ok"] = True  # always show check-email UX
-                request.session["signup_verify_url"] = verify_url
+                request.session["signup_dev_code"] = dev_code
                 return redirect("signup_check_email")
     else:
         form = SignupForm()
@@ -396,7 +396,7 @@ def signup_view(request):
 
 
 def signup_check_email(request):
-    """Post-signup page telling the user to open the verification link."""
+    """Post-signup page where the user types the 6-digit verification code."""
     email = request.session.get("signup_pending_email", "")
     if not email:
         return redirect("signup")
@@ -407,30 +407,79 @@ def signup_check_email(request):
             "email": email,
             "message": request.session.get("signup_verify_msg", ""),
             "ok": request.session.get("signup_verify_ok", True),
-            "verify_url": request.session.get("signup_verify_url", ""),
-            "show_dev_link": bool(request.session.get("signup_verify_url")),
+            "code_error": request.session.pop("signup_code_error", ""),
+            "dev_code": request.session.get("signup_dev_code", ""),
         },
     )
 
 
 @require_POST
-def signup_resend_verification(request):
-    """Resend the verification email for the pending (inactive) signup."""
+def signup_verify_code(request):
+    """Activate the account when the submitted 6-digit code matches."""
     from django.contrib.auth.models import User
 
-    from boostingscore.signup_verification import FALLBACK_MSG, send_signup_verification
+    from boostingscore.signup_verification import verify_signup_code
+
+    email = (request.session.get("signup_pending_email") or "").strip().lower()
+    if not email:
+        return redirect("signup")
+
+    user = User.objects.filter(email__iexact=email, is_active=False).first()
+    if user is None:
+        # Already verified (or account removed) — send them to login.
+        request.session.pop("signup_pending_email", None)
+        return redirect("login")
+
+    ok, error = verify_signup_code(user, request.POST.get("code", ""))
+    if not ok:
+        request.session["signup_code_error"] = error
+        return redirect("signup_check_email")
+
+    user.is_active = True
+    user.save(update_fields=["is_active"])
+
+    for key in (
+        "signup_pending_email",
+        "signup_verify_msg",
+        "signup_verify_ok",
+        "signup_dev_code",
+        "signup_code_error",
+    ):
+        request.session.pop(key, None)
+
+    login(request, user)
+    return redirect("placement")
+
+
+@require_POST
+def signup_resend_verification(request):
+    """Resend the verification code for the pending (inactive) signup."""
+    from django.contrib.auth.models import User
+
+    from boostingscore.signup_verification import (
+        FALLBACK_MSG,
+        RESEND_COOLDOWN_SECONDS,
+        resend_allowed,
+        send_signup_verification,
+    )
 
     email = (request.session.get("signup_pending_email") or "").strip().lower()
     if email:
         user = User.objects.filter(email__iexact=email, is_active=False).first()
         if user is not None:
+            if not resend_allowed(user):
+                request.session["signup_code_error"] = (
+                    f"Please wait {RESEND_COOLDOWN_SECONDS} seconds before requesting "
+                    f"another code."
+                )
+                return redirect("signup_check_email")
             try:
-                ok, msg, verify_url = send_signup_verification(request, user)
+                ok, msg, dev_code = send_signup_verification(request, user)
             except Exception:
-                ok, msg, verify_url = True, FALLBACK_MSG, ""
+                ok, msg, dev_code = True, FALLBACK_MSG, ""
             request.session["signup_verify_msg"] = msg or FALLBACK_MSG
             request.session["signup_verify_ok"] = True
-            request.session["signup_verify_url"] = verify_url
+            request.session["signup_dev_code"] = dev_code
     return redirect("signup_check_email")
 
 
@@ -439,7 +488,7 @@ def login_view(request):
 
     The default backend rejects inactive users with a generic "incorrect
     username or password" error. Here we detect a correct-password login for an
-    unverified account and send them to the check-email page with a fresh link.
+    unverified account and send them to the check-email page with a fresh code.
     """
     from django.contrib.auth.views import LoginView
     from django.contrib.auth.models import User
@@ -457,64 +506,18 @@ def login_view(request):
                     send_signup_verification,
                 )
 
-                ok, msg, verify_url = True, FALLBACK_MSG, ""
+                ok, msg, dev_code = True, FALLBACK_MSG, ""
                 try:
-                    ok, msg, verify_url = send_signup_verification(request, pending)
+                    ok, msg, dev_code = send_signup_verification(request, pending)
                 except Exception:
                     pass
                 request.session["signup_pending_email"] = pending.email
                 request.session["signup_verify_msg"] = msg or FALLBACK_MSG
                 request.session["signup_verify_ok"] = True
-                request.session["signup_verify_url"] = verify_url
+                request.session["signup_dev_code"] = dev_code
                 return redirect("signup_check_email")
 
     return LoginView.as_view(template_name="registration/login.html")(request)
-
-
-def signup_verify(request, token: str):
-    """Activate an account from the signed verification link, then log in."""
-    from django.contrib.auth.models import User
-
-    from boostingscore.signup_verification import load_signup_token
-
-    try:
-        data = load_signup_token(token)
-        uid = int(data["uid"])
-        email = (data.get("email") or "").lower().strip()
-    except Exception:
-        return render(
-            request,
-            "registration/signup_verify_result.html",
-            {"ok": False, "message": "This verification link is invalid or has expired."},
-        )
-
-    try:
-        user = User.objects.get(pk=uid)
-    except User.DoesNotExist:
-        return render(
-            request,
-            "registration/signup_verify_result.html",
-            {"ok": False, "message": "This verification link is no longer valid."},
-        )
-
-    if (user.email or "").lower() != email:
-        return render(
-            request,
-            "registration/signup_verify_result.html",
-            {"ok": False, "message": "This verification link does not match the account."},
-        )
-
-    if not user.is_active:
-        user.is_active = True
-        user.save(update_fields=["is_active"])
-
-    request.session.pop("signup_pending_email", None)
-    request.session.pop("signup_verify_msg", None)
-    request.session.pop("signup_verify_ok", None)
-    request.session.pop("signup_verify_url", None)
-
-    login(request, user)
-    return redirect("placement")
 
 
 @login_required

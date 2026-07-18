@@ -53,6 +53,21 @@ class UserProfile(models.Model):
         return f"{self.user.username} — {self.level_label}"
 
 
+class SignupCode(models.Model):
+    """6-digit email verification code for activating a new account."""
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="signup_code"
+    )
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    def __str__(self):
+        return f"SignupCode for {self.user.username}"
+
+
 class Word(models.Model):
     TOPIC_CHOICES = [
         ("environment", "Environment"),

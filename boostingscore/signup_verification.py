@@ -1,7 +1,7 @@
-"""Signup email verification.
+"""Signup email verification via a 6-digit code.
 
-New accounts are created inactive and must confirm their email before they can
-log in. This mirrors the email-change flow but activates a brand-new account.
+New accounts are created inactive; the user types the emailed code on the
+check-email page to activate. No tokenized links — code-based only.
 
 IMPORTANT: email delivery must never prevent or roll back account creation.
 Callers must save the User first; this module only sends mail and never raises.
@@ -9,18 +9,19 @@ Callers must save the User first; this module only sends mail and never raises.
 from __future__ import annotations
 
 import logging
-import os
+import secrets
+from datetime import timedelta
 
 from django.conf import settings
-from django.core import signing
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.urls import reverse
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-SIGNUP_SALT = "boostingscore.signup-verify"
-SIGNUP_MAX_AGE = 60 * 60 * 24 * 3  # 3 days
+CODE_TTL_MINUTES = 15
+MAX_ATTEMPTS = 5
+RESEND_COOLDOWN_SECONDS = 60
 
 FALLBACK_MSG = (
     "Account created — if you don't receive an email shortly, "
@@ -28,96 +29,160 @@ FALLBACK_MSG = (
 )
 
 
-def make_signup_token(user_id: int, email: str) -> str:
-    return signing.dumps(
-        {"uid": user_id, "email": (email or "").lower().strip()},
-        salt=SIGNUP_SALT,
-    )
-
-
-def load_signup_token(token: str) -> dict:
-    return signing.loads(token, salt=SIGNUP_SALT, max_age=SIGNUP_MAX_AGE)
-
-
 def _using_console_email() -> bool:
     backend = (getattr(settings, "EMAIL_BACKEND", "") or "").lower()
     return "console" in backend or "locmem" in backend or "dummy" in backend
 
 
-def _deliver_signup_email(subject: str, body: str, from_email: str, email: str) -> bool:
+def _show_dev_code() -> bool:
+    """Only reveal the code in the UI when no real email leaves the machine."""
+    return _using_console_email() or settings.DEBUG
+
+
+def issue_signup_code(user) -> str:
+    """Create (or replace) the user's 6-digit code with a fresh 15-min expiry."""
+    from vocabulary.models import SignupCode
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    SignupCode.objects.update_or_create(
+        user=user,
+        defaults={
+            "code": code,
+            "created_at": timezone.now(),
+            "expires_at": timezone.now() + timedelta(minutes=CODE_TTL_MINUTES),
+            "attempts": 0,
+        },
+    )
+    return code
+
+
+def resend_allowed(user) -> bool:
+    """Basic rate limit: one code per RESEND_COOLDOWN_SECONDS."""
+    from vocabulary.models import SignupCode
+
+    row = SignupCode.objects.filter(user=user).first()
+    if row is None:
+        return True
+    return (timezone.now() - row.created_at).total_seconds() >= RESEND_COOLDOWN_SECONDS
+
+
+def verify_signup_code(user, submitted: str) -> tuple[bool, str]:
+    """Check a submitted code. Returns (ok, error_message)."""
+    from vocabulary.models import SignupCode
+
+    submitted = (submitted or "").strip()
+    if not submitted.isdigit() or len(submitted) != 6:
+        return False, "Enter the 6-digit code from the email."
+
+    row = SignupCode.objects.filter(user=user).first()
+    if row is None:
+        return False, "No code found — use Resend to get a new one."
+    if timezone.now() > row.expires_at:
+        return False, "This code has expired. Use Resend to get a new one."
+    if row.attempts >= MAX_ATTEMPTS:
+        return False, "Too many attempts. Use Resend to get a new code."
+
+    if not secrets.compare_digest(row.code, submitted):
+        row.attempts += 1
+        row.save(update_fields=["attempts"])
+        return False, "That code isn't right — check the email and try again."
+
+    row.delete()
+    return True, ""
+
+
+def _email_bodies(code: str) -> tuple[str, str]:
+    """Plain-text and inline-CSS HTML bodies for the verification email."""
+    text = (
+        f"Confirm your email\n\n"
+        f"Enter this code to activate your account:\n\n"
+        f"{code}\n\n"
+        f"This code expires in {CODE_TTL_MINUTES} minutes.\n\n"
+        f"If you didn't request this, you can ignore this email.\n"
+        f"BoostingScore · boostingscore.com\n"
+    )
+    html = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f6f7f4;">
+  <div style="max-width:440px;margin:0 auto;padding:32px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:32px 28px;">
+      <p style="margin:0 0 24px;font-size:20px;font-weight:800;color:#111827;">
+        Boosting<span style="color:#3B6D11;">Score</span>
+      </p>
+      <h1 style="margin:0 0 10px;font-size:18px;font-weight:700;color:#111827;">
+        Confirm your email
+      </h1>
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.5;color:#374151;">
+        Enter this code to activate your account:
+      </p>
+      <div style="background:#EAF3DE;border-radius:10px;padding:18px 12px;text-align:center;margin:0 0 16px;">
+        <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#27500A;">{code}</span>
+      </div>
+      <p style="margin:0 0 24px;font-size:13px;color:#374151;">
+        This code expires in {CODE_TTL_MINUTES} minutes.
+      </p>
+      <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">
+        If you didn't request this, you can ignore this email.<br>
+        BoostingScore · boostingscore.com
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+"""
+    return text, html
+
+
+def _deliver_code_email(email: str, code: str) -> bool:
     """Attempt delivery. Returns True on success. Never raises."""
     try:
-        sent = send_mail(subject, body, from_email, [email], fail_silently=False)
-        return bool(sent)
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@boostingscore.com")
+        text, html = _email_bodies(code)
+        message = EmailMultiAlternatives(
+            subject="Confirm your email — BoostingScore",
+            body=text,
+            from_email=from_email,
+            to=[email],
+        )
+        message.attach_alternative(html, "text/html")
+        return bool(message.send(fail_silently=False))
     except Exception as exc:
         logger.warning("signup verification send failed: %s", exc)
         return False
 
 
-def _absolute_verify_url(request, path: str) -> str:
-    """Build an absolute URL without letting a bad Host header abort signup."""
-    try:
-        return request.build_absolute_uri(path)
-    except Exception as exc:
-        logger.warning("build_absolute_uri failed (%s); using configured origin", exc)
-    origins = getattr(settings, "CSRF_TRUSTED_ORIGINS", None) or []
-    base = (origins[0] if origins else "").rstrip("/")
-    if not base:
-        base = (os.environ.get("PUBLIC_BASE_URL") or "https://boostingscore.com").rstrip("/")
-    return f"{base}{path}"
-
-
 def send_signup_verification(request, user) -> tuple[bool, str, str]:
-    """Queue/send a verification link for an already-saved (inactive) account.
+    """Issue a fresh code and email it to an already-saved (inactive) account.
 
-    Always returns ``(True, message, verify_url_or_empty)`` so the signup view
-    can show the check-email page. Failures are logged only.
+    Always returns ``(True, message_for_user, dev_code_or_empty)`` so the
+    signup view can show the check-email page. Failures are logged only.
+    ``dev_code_or_empty`` is only populated in local/dev (console backend or
+    DEBUG) so the page can display the code without a real inbox — never in
+    production.
 
     In production, delivery is scheduled with ``transaction.on_commit`` so it
-    cannot run (or hang) inside the same DB transaction as ``user.save()`` —
-    a killed/timed-out email request must never roll the User row back.
+    cannot run (or hang) inside the same DB transaction as ``user.save()``.
     """
     email = (user.email or "").lower().strip()
     try:
-        token = make_signup_token(user.id, email)
-        path = reverse("signup_verify", kwargs={"token": token})
-        verify_url = _absolute_verify_url(request, path)
+        code = issue_signup_code(user)
     except Exception as exc:
-        logger.warning("signup verification token/url failed: %s", exc)
+        logger.warning("signup code issue failed for user_id=%s: %s", user.id, exc)
         return True, FALLBACK_MSG, ""
 
-    show_link = _using_console_email() or settings.DEBUG
-
-    subject = "Confirm your email — BoostingScore"
-    body = (
-        f"Welcome to BoostingScore!\n\n"
-        f"Confirm your email to activate your account by opening this link "
-        f"(valid for 3 days):\n"
-        f"{verify_url}\n\n"
-        f"If you did not create this account, you can ignore this email.\n\n"
-        f"— BoostingScore\n"
-    )
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@boostingscore.com")
-
-    if show_link:
-        # Local/dev: send now so the console backend prints the link immediately.
-        ok = _deliver_signup_email(subject, body, from_email, email)
+    if _show_dev_code():
+        # Local/dev: send now so the console backend prints the email too.
+        _deliver_code_email(email, code)
         return (
             True,
-            (
-                f"Local/dev mode: email is not delivered to an inbox "
-                f"(console backend). Use the button below to verify {email}."
-                if ok or _using_console_email()
-                else FALLBACK_MSG
-            ),
-            verify_url,
+            "Local/dev mode: no real email is sent. Use the code shown below.",
+            code,
         )
 
-    # Production: only send AFTER the surrounding transaction commits, so a
-    # Resend/SMTP hang or exception cannot roll back the User row.
     def _send_after_commit():
-        ok = _deliver_signup_email(subject, body, from_email, email)
-        if not ok:
+        if not _deliver_code_email(email, code):
             logger.warning(
                 "signup verification email not delivered for user_id=%s email=%s",
                 user.id,
@@ -127,13 +192,11 @@ def send_signup_verification(request, user) -> tuple[bool, str, str]:
     try:
         transaction.on_commit(_send_after_commit)
     except Exception as exc:
-        # Extremely defensive: if on_commit itself fails, try a best-effort send
-        # but still never raise to the signup view.
         logger.warning("signup on_commit schedule failed: %s", exc)
-        _deliver_signup_email(subject, body, from_email, email)
+        _deliver_code_email(email, code)
 
     return (
         True,
-        f"We sent a verification link to {email}. Open it to activate your account.",
+        f"We sent a 6-digit code to {email}. Enter it below to activate your account.",
         "",
     )

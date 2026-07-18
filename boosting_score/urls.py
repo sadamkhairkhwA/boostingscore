@@ -26,14 +26,24 @@ from boostingscore.profile_views import (
     verify_email_change,
 )
 
+from django.contrib.auth import views as auth_views
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/login/", home_views.login_view, name="login"),
+    # Branded HTML password-reset email; overrides the include() default below.
+    path(
+        "accounts/password_reset/",
+        auth_views.PasswordResetView.as_view(
+            html_email_template_name="registration/password_reset_email_html.html",
+        ),
+        name="password_reset",
+    ),
     path("accounts/", include("django.contrib.auth.urls")),
     path("accounts/signup/", home_views.signup_view, name="signup"),
     path("accounts/signup/check-email/", home_views.signup_check_email, name="signup_check_email"),
     path("accounts/signup/resend/", home_views.signup_resend_verification, name="signup_resend_verification"),
-    path("accounts/verify/<path:token>/", home_views.signup_verify, name="signup_verify"),
+    path("accounts/signup/verify-code/", home_views.signup_verify_code, name="signup_verify_code"),
     path("accounts/profile/", profile_settings, name="profile_settings"),
     path("accounts/profile/delete/", profile_delete, name="profile_delete"),
     path("accounts/deleted/", account_deleted, name="account_deleted"),
