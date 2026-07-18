@@ -10,12 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-local-dev-key-change-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
-# Hard safety net: never run with DEBUG=True on Railway, even if the DEBUG env
-# var is missing or misset. DEBUG also gates the on-page signup dev code.
-if any(
+_on_railway = any(
     os.environ.get(var)
     for var in ("RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_PUBLIC_DOMAIN")
-):
+)
+# Hard safety net: never run with DEBUG=True on Railway, even if the DEBUG env
+# var is missing or misset. DEBUG also gates the on-page signup dev code.
+if _on_railway:
     DEBUG = False
 # Comma-separated hostnames (no scheme), e.g. localhost,127.0.0.1,boostingscore.com
 _allowed = [
@@ -42,7 +43,23 @@ CSRF_TRUSTED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
-# TEMP: confirm Railway env is applied — remove once CSRF is verified in prod.
+# Always trust every ALLOWED_HOST origin so a partial CSRF env var cannot
+# break admin/login POSTs (e.g. www missing from CSRF_TRUSTED_ORIGINS).
+for _host in ALLOWED_HOSTS:
+    if _host in ("localhost", "127.0.0.1") or _host.startswith("."):
+        continue
+    for _origin in (f"https://{_host}", f"http://{_host}"):
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
+
+# Railway terminates TLS at the proxy. Without these, Django may see the
+# request as http:// while the browser sends Origin: https://… → CSRF 403.
+if _on_railway:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+
 print(f"[startup] CSRF_TRUSTED_ORIGINS={CSRF_TRUSTED_ORIGINS!r}", flush=True)
 print(f"[startup] ALLOWED_HOSTS={ALLOWED_HOSTS!r}", flush=True)
 
@@ -100,10 +117,6 @@ WSGI_APPLICATION = "boosting_score.wsgi.application"
 # On Railway the ephemeral filesystem meant SQLite wiped all users on every
 # redeploy — refuse to start there without a real DATABASE_URL.
 _database_url = (os.environ.get("DATABASE_URL") or "").strip()
-_on_railway = any(
-    os.environ.get(var)
-    for var in ("RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_PUBLIC_DOMAIN")
-)
 
 if _database_url:
     DATABASES = {
