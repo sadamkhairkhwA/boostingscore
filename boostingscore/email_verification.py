@@ -6,6 +6,7 @@ when a logged-in user requests a new email from their Profile page.
 from __future__ import annotations
 
 import logging
+import threading
 
 from django.conf import settings
 from django.core import signing
@@ -28,6 +29,18 @@ def make_email_change_token(user_id: int, new_email: str) -> str:
 
 def load_email_change_token(token: str) -> dict:
     return signing.loads(token, salt=EMAIL_CHANGE_SALT, max_age=EMAIL_CHANGE_MAX_AGE)
+
+
+def _using_console_email() -> bool:
+    backend = (getattr(settings, "EMAIL_BACKEND", "") or "").lower()
+    return "console" in backend or "locmem" in backend or "dummy" in backend
+
+
+def _deliver_email_change(subject: str, body: str, from_email: str, new_email: str) -> None:
+    try:
+        send_mail(subject, body, from_email, [new_email], fail_silently=False)
+    except Exception as exc:
+        logger.warning("email change send failed: %s", exc)
 
 
 def send_email_change_verification(request, user, new_email: str) -> tuple[bool, str]:
@@ -55,20 +68,22 @@ def send_email_change_verification(request, user, new_email: str) -> tuple[bool,
         f"— BoostingScore\n"
     )
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@boostingscore.com")
-    try:
-        sent = send_mail(subject, body, from_email, [new_email], fail_silently=False)
-        if sent:
-            return True, f"We sent a confirmation link to {new_email}. Open it to finish the change."
-    except Exception as exc:
-        logger.warning("email change send failed: %s", exc)
+    show_link = _using_console_email() or settings.DEBUG
 
-    # Dev / misconfigured mail: still keep pending state; surface the link in the UI message.
-    if settings.DEBUG:
+    if show_link:
+        try:
+            send_mail(subject, body, from_email, [new_email], fail_silently=False)
+        except Exception as exc:
+            logger.warning("email change send failed: %s", exc)
         return True, (
-            f"Confirmation email could not be delivered (check EMAIL settings). "
-            f"Dev link: {verify_url}"
+            f"We sent a confirmation link to {new_email}. "
+            f"Dev/local link: {verify_url}"
         )
-    return False, (
-        "We saved your request but could not send the confirmation email. "
-        "Try again later or contact support."
-    )
+
+    threading.Thread(
+        target=_deliver_email_change,
+        args=(subject, body, from_email, new_email),
+        daemon=True,
+        name="email-change-verify",
+    ).start()
+    return True, f"We sent a confirmation link to {new_email}. Open it to finish the change."

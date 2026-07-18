@@ -129,17 +129,31 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
-# Email — console in local/dev; set EMAIL_HOST* in production for real delivery.
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
-)
+# Email — console in local/dev; set RESEND_API_KEY in production.
+# Railway Free/Trial/Hobby blocks outbound SMTP (ports 25/465/587), which caused
+# "[Errno 110] Connection timed out". Resend's HTTPS API (port 443) is not blocked.
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587") or 587)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
+# Fail SMTP/API attempts quickly so signup never hangs on a blocked port.
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "8") or 8)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@boostingscore.com")
+RESEND_API_KEY = (os.environ.get("RESEND_API_KEY", "") or "").strip()
+
+_email_backend_env = (os.environ.get("EMAIL_BACKEND") or "").strip()
+if _email_backend_env:
+    EMAIL_BACKEND = _email_backend_env
+elif RESEND_API_KEY:
+    # Resend HTTPS API — works on all Railway plans (no SMTP ports involved).
+    EMAIL_BACKEND = "boostingscore.email_backends.ResendAPIEmailBackend"
+elif EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    # Local development: emails print to the runserver console.
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
