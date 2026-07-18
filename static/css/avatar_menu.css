@@ -67,3 +67,18 @@
 .bs-avatar-menu__item:hover {
   background: #f3f4f6;
 }
+
+/* Make the logout submit button render exactly like the menu links. */
+.bs-avatar-menu__logout-form {
+  margin: 0;
+}
+
+.bs-avatar-menu__item--btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: inherit;
+}

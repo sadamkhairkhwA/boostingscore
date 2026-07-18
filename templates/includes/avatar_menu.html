@@ -5,6 +5,10 @@
   </button>
   <div class="bs-avatar-menu__panel" hidden data-avatar-panel>
     <a href="{% url 'profile_settings' %}" class="bs-avatar-menu__item">Profile</a>
-    <a href="{% url 'logout' %}" class="bs-avatar-menu__item">Log out</a>
+    {# Django's LogoutView requires POST; a plain link caused 405 errors. #}
+    <form method="post" action="{% url 'logout' %}" class="bs-avatar-menu__logout-form">
+      {% csrf_token %}
+      <button type="submit" class="bs-avatar-menu__item bs-avatar-menu__item--btn">Log out</button>
+    </form>
   </div>
 </div>
