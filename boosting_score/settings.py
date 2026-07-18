@@ -144,11 +144,12 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@boostingscore
 RESEND_API_KEY = (os.environ.get("RESEND_API_KEY", "") or "").strip()
 
 _email_backend_env = (os.environ.get("EMAIL_BACKEND") or "").strip()
-if _email_backend_env:
-    EMAIL_BACKEND = _email_backend_env
-elif RESEND_API_KEY:
-    # Resend HTTPS API — works on all Railway plans (no SMTP ports involved).
+# RESEND_API_KEY always wins over a leftover EMAIL_BACKEND=smtp.* env var —
+# otherwise Railway keeps dialing blocked SMTP ports and signup workers time out.
+if RESEND_API_KEY:
     EMAIL_BACKEND = "boostingscore.email_backends.ResendAPIEmailBackend"
+elif _email_backend_env:
+    EMAIL_BACKEND = _email_backend_env
 elif EMAIL_HOST:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:

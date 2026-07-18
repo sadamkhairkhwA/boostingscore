@@ -2,21 +2,30 @@
 
 New accounts are created inactive and must confirm their email before they can
 log in. This mirrors the email-change flow but activates a brand-new account.
+
+IMPORTANT: email delivery must never prevent or roll back account creation.
+Callers must save the User first; this module only sends mail and never raises.
 """
 from __future__ import annotations
 
 import logging
-import threading
+import os
 
 from django.conf import settings
 from django.core import signing
 from django.core.mail import send_mail
+from django.db import transaction
 from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
 SIGNUP_SALT = "boostingscore.signup-verify"
 SIGNUP_MAX_AGE = 60 * 60 * 24 * 3  # 3 days
+
+FALLBACK_MSG = (
+    "Account created — if you don't receive an email shortly, "
+    "use Resend below or contact support."
+)
 
 
 def make_signup_token(user_id: int, email: str) -> str:
@@ -35,26 +44,48 @@ def _using_console_email() -> bool:
     return "console" in backend or "locmem" in backend or "dummy" in backend
 
 
-def _deliver_signup_email(subject: str, body: str, from_email: str, email: str) -> None:
+def _deliver_signup_email(subject: str, body: str, from_email: str, email: str) -> bool:
+    """Attempt delivery. Returns True on success. Never raises."""
     try:
-        send_mail(subject, body, from_email, [email], fail_silently=False)
+        sent = send_mail(subject, body, from_email, [email], fail_silently=False)
+        return bool(sent)
     except Exception as exc:
         logger.warning("signup verification send failed: %s", exc)
+        return False
+
+
+def _absolute_verify_url(request, path: str) -> str:
+    """Build an absolute URL without letting a bad Host header abort signup."""
+    try:
+        return request.build_absolute_uri(path)
+    except Exception as exc:
+        logger.warning("build_absolute_uri failed (%s); using configured origin", exc)
+    origins = getattr(settings, "CSRF_TRUSTED_ORIGINS", None) or []
+    base = (origins[0] if origins else "").rstrip("/")
+    if not base:
+        base = (os.environ.get("PUBLIC_BASE_URL") or "https://boostingscore.com").rstrip("/")
+    return f"{base}{path}"
 
 
 def send_signup_verification(request, user) -> tuple[bool, str, str]:
-    """Email a verification link to a freshly-created (inactive) account.
+    """Queue/send a verification link for an already-saved (inactive) account.
 
-    Returns ``(ok, message_for_user, verify_url_for_ui)``.
-    ``verify_url_for_ui`` is only set in console/DEBUG mode so the check-email
-    page can show a clickable link (nothing reaches a real inbox locally).
-    In production the link goes only in the email; signup always proceeds to
-    the check-email page even if delivery fails (errors are logged).
+    Always returns ``(True, message, verify_url_or_empty)`` so the signup view
+    can show the check-email page. Failures are logged only.
+
+    In production, delivery is scheduled with ``transaction.on_commit`` so it
+    cannot run (or hang) inside the same DB transaction as ``user.save()`` —
+    a killed/timed-out email request must never roll the User row back.
     """
     email = (user.email or "").lower().strip()
-    token = make_signup_token(user.id, email)
-    path = reverse("signup_verify", kwargs={"token": token})
-    verify_url = request.build_absolute_uri(path)
+    try:
+        token = make_signup_token(user.id, email)
+        path = reverse("signup_verify", kwargs={"token": token})
+        verify_url = _absolute_verify_url(request, path)
+    except Exception as exc:
+        logger.warning("signup verification token/url failed: %s", exc)
+        return True, FALLBACK_MSG, ""
+
     show_link = _using_console_email() or settings.DEBUG
 
     subject = "Confirm your email — BoostingScore"
@@ -69,29 +100,38 @@ def send_signup_verification(request, user) -> tuple[bool, str, str]:
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@boostingscore.com")
 
     if show_link:
-        # Local/dev: send synchronously so console backend prints the link now.
-        try:
-            send_mail(subject, body, from_email, [email], fail_silently=False)
-        except Exception as exc:
-            logger.warning("signup verification send failed: %s", exc)
+        # Local/dev: send now so the console backend prints the link immediately.
+        ok = _deliver_signup_email(subject, body, from_email, email)
         return (
             True,
             (
                 f"Local/dev mode: email is not delivered to an inbox "
-                f"(console backend). Use the button below to verify "
-                f"{email}."
+                f"(console backend). Use the button below to verify {email}."
+                if ok or _using_console_email()
+                else FALLBACK_MSG
             ),
             verify_url,
         )
 
-    # Production: never block the signup HTTP request on SMTP/API latency.
-    # Railway Hobby blocks outbound SMTP, so a sync send can hang until timeout.
-    threading.Thread(
-        target=_deliver_signup_email,
-        args=(subject, body, from_email, email),
-        daemon=True,
-        name="signup-verify-email",
-    ).start()
+    # Production: only send AFTER the surrounding transaction commits, so a
+    # Resend/SMTP hang or exception cannot roll back the User row.
+    def _send_after_commit():
+        ok = _deliver_signup_email(subject, body, from_email, email)
+        if not ok:
+            logger.warning(
+                "signup verification email not delivered for user_id=%s email=%s",
+                user.id,
+                email,
+            )
+
+    try:
+        transaction.on_commit(_send_after_commit)
+    except Exception as exc:
+        # Extremely defensive: if on_commit itself fails, try a best-effort send
+        # but still never raise to the signup view.
+        logger.warning("signup on_commit schedule failed: %s", exc)
+        _deliver_signup_email(subject, body, from_email, email)
+
     return (
         True,
         f"We sent a verification link to {email}. Open it to activate your account.",

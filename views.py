@@ -338,6 +338,7 @@ def models_count():
 
 
 def signup_view(request):
+    """Create the account first; email is best-effort and must never undo signup."""
     if request.user.is_authenticated:
         return redirect("home")
     if request.method == "POST":
@@ -353,17 +354,40 @@ def signup_view(request):
             if len(password) < 8:
                 form.add_error("password2", "Password must be at least 8 characters.")
             if not form.errors:
-                # Create the account inactive until the email is verified.
-                user = form.save(commit=False)
-                user.is_active = False
-                user.save()
+                from django.db import transaction
 
-                from boostingscore.signup_verification import send_signup_verification
+                from boostingscore.signup_verification import (
+                    FALLBACK_MSG,
+                    send_signup_verification,
+                )
 
-                ok, msg, verify_url = send_signup_verification(request, user)
-                request.session["signup_pending_email"] = user.email
-                request.session["signup_verify_msg"] = msg
-                request.session["signup_verify_ok"] = ok
+                # 1) Persist the inactive user and COMMIT before touching email.
+                #    Email hangs used to kill the worker mid-request and roll the
+                #    User row back when the send ran in the same request lifecycle.
+                with transaction.atomic():
+                    user = form.save(commit=False)
+                    user.is_active = False
+                    user.save()
+                    user_id = user.id
+                    user_email = user.email
+
+                # 2) Email is strictly after commit. Any failure is logged only.
+                ok, msg, verify_url = True, FALLBACK_MSG, ""
+                try:
+                    ok, msg, verify_url = send_signup_verification(request, user)
+                except Exception as exc:
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        "signup verification call failed for user_id=%s: %s",
+                        user_id,
+                        exc,
+                    )
+                    ok, msg, verify_url = True, FALLBACK_MSG, ""
+
+                request.session["signup_pending_email"] = user_email
+                request.session["signup_verify_msg"] = msg or FALLBACK_MSG
+                request.session["signup_verify_ok"] = True  # always show check-email UX
                 request.session["signup_verify_url"] = verify_url
                 return redirect("signup_check_email")
     else:
@@ -394,15 +418,18 @@ def signup_resend_verification(request):
     """Resend the verification email for the pending (inactive) signup."""
     from django.contrib.auth.models import User
 
-    from boostingscore.signup_verification import send_signup_verification
+    from boostingscore.signup_verification import FALLBACK_MSG, send_signup_verification
 
     email = (request.session.get("signup_pending_email") or "").strip().lower()
     if email:
         user = User.objects.filter(email__iexact=email, is_active=False).first()
         if user is not None:
-            ok, msg, verify_url = send_signup_verification(request, user)
-            request.session["signup_verify_msg"] = msg
-            request.session["signup_verify_ok"] = ok
+            try:
+                ok, msg, verify_url = send_signup_verification(request, user)
+            except Exception:
+                ok, msg, verify_url = True, FALLBACK_MSG, ""
+            request.session["signup_verify_msg"] = msg or FALLBACK_MSG
+            request.session["signup_verify_ok"] = True
             request.session["signup_verify_url"] = verify_url
     return redirect("signup_check_email")
 
@@ -425,12 +452,19 @@ def login_view(request):
                 username__iexact=username, is_active=False
             ).first()
             if pending is not None and pending.check_password(password):
-                from boostingscore.signup_verification import send_signup_verification
+                from boostingscore.signup_verification import (
+                    FALLBACK_MSG,
+                    send_signup_verification,
+                )
 
-                ok, msg, verify_url = send_signup_verification(request, pending)
+                ok, msg, verify_url = True, FALLBACK_MSG, ""
+                try:
+                    ok, msg, verify_url = send_signup_verification(request, pending)
+                except Exception:
+                    pass
                 request.session["signup_pending_email"] = pending.email
-                request.session["signup_verify_msg"] = msg
-                request.session["signup_verify_ok"] = ok
+                request.session["signup_verify_msg"] = msg or FALLBACK_MSG
+                request.session["signup_verify_ok"] = True
                 request.session["signup_verify_url"] = verify_url
                 return redirect("signup_check_email")
 
