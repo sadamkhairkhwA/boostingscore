@@ -68,6 +68,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # After auth so staff users can be exempted from the maintenance page.
+    "boostingscore.maintenance_middleware.MaintenanceModeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "boostingscore.feedback_middleware.FeedbackWidgetMiddleware",

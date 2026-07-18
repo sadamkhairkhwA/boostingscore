@@ -9,6 +9,7 @@ from .models import (
     CustomDeckWord,
     DailyAiUsage,
     FeedbackSubmission,
+    SiteSettings,
     TopicIELTSWordCache,
     TypeItAttempt,
     TypeItResult,
@@ -16,6 +17,28 @@ from .models import (
     VocabularyProgress,
     Word,
 )
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(admin.ModelAdmin):
+    """Single-object page: the sidebar link opens the edit form directly."""
+
+    fields = ("maintenance_mode", "maintenance_message")
+
+    def changelist_view(self, request, extra_context=None):
+        from django.shortcuts import redirect
+        from django.urls import reverse
+
+        obj = SiteSettings.load()
+        return redirect(
+            reverse("admin:vocabulary_sitesettings_change", args=[obj.pk])
+        )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 # Show signed-up accounts with email, verification status, plan, and join date.

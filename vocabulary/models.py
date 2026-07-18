@@ -53,6 +53,38 @@ class UserProfile(models.Model):
         return f"{self.user.username} — {self.level_label}"
 
 
+class SiteSettings(models.Model):
+    """Site-wide settings — a single row (pk=1) edited from Django admin."""
+
+    maintenance_mode = models.BooleanField(
+        default=False,
+        help_text="When on, visitors see the maintenance page (staff and admin are exempt).",
+    )
+    maintenance_message = models.TextField(
+        default="We're making some improvements. BoostingScore will be back shortly.",
+        help_text="Shown on the maintenance page.",
+    )
+
+    class Meta:
+        verbose_name = "Site settings"
+        verbose_name_plural = "Site settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # enforce a single row
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # the settings row must always exist
+
+    @classmethod
+    def load(cls) -> "SiteSettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Site settings"
+
+
 class SignupCode(models.Model):
     """6-digit email verification code for activating a new account."""
 
