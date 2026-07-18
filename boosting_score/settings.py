@@ -10,6 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-local-dev-key-change-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
+# Hard safety net: never run with DEBUG=True on Railway, even if the DEBUG env
+# var is missing or misset. DEBUG also gates the on-page signup dev code.
+if any(
+    os.environ.get(var)
+    for var in ("RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_PUBLIC_DOMAIN")
+):
+    DEBUG = False
 # Comma-separated hostnames (no scheme), e.g. localhost,127.0.0.1,boostingscore.com
 _allowed = [
     host.strip()

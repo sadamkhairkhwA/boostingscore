@@ -35,8 +35,13 @@ def _using_console_email() -> bool:
 
 
 def _show_dev_code() -> bool:
-    """Only reveal the code in the UI when no real email leaves the machine."""
-    return _using_console_email() or settings.DEBUG
+    """Reveal the code in the UI ONLY with DEBUG=True (local development).
+
+    Never keyed off the email backend: a misconfigured production instance can
+    fall back to the console backend, and the code must not appear on the page
+    there — that would defeat email verification entirely.
+    """
+    return bool(settings.DEBUG)
 
 
 def issue_signup_code(user) -> str:
@@ -179,6 +184,15 @@ def send_signup_verification(request, user) -> tuple[bool, str, str]:
             True,
             "Local/dev mode: no real email is sent. Use the code shown below.",
             code,
+        )
+
+    if _using_console_email():
+        # Production with no real email backend: the code goes nowhere. Log
+        # loudly, but never surface the code on the page.
+        logger.error(
+            "EMAIL MISCONFIGURED: console backend active with DEBUG=False; "
+            "verification code for %s was not delivered. Set RESEND_API_KEY.",
+            email,
         )
 
     def _send_after_commit():

@@ -397,9 +397,19 @@ def signup_view(request):
 
 def signup_check_email(request):
     """Post-signup page where the user types the 6-digit verification code."""
+    from django.conf import settings
+
     email = request.session.get("signup_pending_email", "")
     if not email:
         return redirect("signup")
+
+    # SECURITY: the on-page code is a local-development convenience only.
+    # Re-check DEBUG at render time so a stale session value (or any bug
+    # upstream) can never expose the code on the production site.
+    dev_code = request.session.get("signup_dev_code", "") if settings.DEBUG else ""
+    if not settings.DEBUG:
+        request.session.pop("signup_dev_code", None)
+
     return render(
         request,
         "registration/signup_check_email.html",
@@ -408,7 +418,7 @@ def signup_check_email(request):
             "message": request.session.get("signup_verify_msg", ""),
             "ok": request.session.get("signup_verify_ok", True),
             "code_error": request.session.pop("signup_code_error", ""),
-            "dev_code": request.session.get("signup_dev_code", ""),
+            "dev_code": dev_code,
         },
     )
 
