@@ -96,20 +96,46 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "boosting_score.wsgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3")
-    )
-}
+# Database: Postgres when DATABASE_URL is set; SQLite only for local/dev.
+# On Railway the ephemeral filesystem meant SQLite wiped all users on every
+# redeploy — refuse to start there without a real DATABASE_URL.
+_database_url = (os.environ.get("DATABASE_URL") or "").strip()
+_on_railway = any(
+    os.environ.get(var)
+    for var in ("RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_PUBLIC_DOMAIN")
+)
 
-# SQLite locks the entire database file on every write. Under multiple gunicorn
-# workers (as on Railway) concurrent writes — e.g. session saves on every
-# request — surface as "database is locked" / SessionInterrupted. Giving writers
-# up to 30s to wait for the lock (instead of failing instantly) plus WAL mode
-# (enabled in practice_test.apps.ready, so reads don't block the writer) makes
-# SQLite safe for this level of concurrency. For heavy traffic, set DATABASE_URL
-# to a Postgres instance and these options are simply ignored.
-if DATABASES["default"].get("ENGINE", "").endswith("sqlite3"):
+if _database_url:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            _database_url,
+            conn_max_age=int(os.environ.get("DB_CONN_MAX_AGE", "60") or 60),
+            ssl_require=os.environ.get("DB_SSL_REQUIRE", "False") == "True",
+        )
+    }
+else:
+    if _on_railway:
+        raise RuntimeError(
+            "DATABASE_URL is not set on Railway. Refusing to use SQLite "
+            "(ephemeral disk — all user data would be lost on redeploy). "
+            "Add a Postgres plugin and set DATABASE_URL=${{Postgres.DATABASE_URL}} "
+            "on the web service."
+        )
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
+        }
+    }
+
+_engine = DATABASES["default"].get("ENGINE", "")
+print(
+    f"[startup] DB engine={_engine} host={DATABASES['default'].get('HOST') or '(local file)'}",
+    flush=True,
+)
+
+# SQLite lock timeout for local multi-process use only.
+if _engine.endswith("sqlite3"):
     DATABASES["default"].setdefault("OPTIONS", {})
     DATABASES["default"]["OPTIONS"]["timeout"] = 30
 
