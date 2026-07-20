@@ -60,6 +60,10 @@ if _on_railway:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
 
+# Invalidate any pre-SECRET_KEY-rotation CSRF cookies still sitting in browsers.
+CSRF_COOKIE_NAME = "csrftoken_v2"
+CSRF_FAILURE_VIEW = "boostingscore.csrf.csrf_failure"
+
 print(f"[startup] CSRF_TRUSTED_ORIGINS={CSRF_TRUSTED_ORIGINS!r}", flush=True)
 print(f"[startup] ALLOWED_HOSTS={ALLOWED_HOSTS!r}", flush=True)
 
@@ -90,6 +94,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "boostingscore.feedback_middleware.FeedbackWidgetMiddleware",
+    # Last: mark /admin and /accounts responses uncacheable so stale CSRF
+    # tokens in cached HTML cannot cause 403s after deploys.
+    "boostingscore.nocache_middleware.NoCacheAuthPagesMiddleware",
 ]
 
 ROOT_URLCONF = "boosting_score.urls"
